@@ -1,13 +1,27 @@
-import { Plus, Search } from "lucide-react";
+"use client";
+
+import { Menu, Plus, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useSidebar } from "@/components/dashboard/sidebar-context";
 
-// Display-only top bar for Dashboard Phase 1. Search and "New Item" are not
-// wired up yet — interactivity arrives in later phases.
+// Top bar for the dashboard. Search and "New Item" are display-only for now —
+// interactivity arrives in later phases. The menu button opens the mobile drawer.
 export function TopBar() {
+  const { setMobileOpen } = useSidebar();
+
   return (
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border px-4">
+      <button
+        type="button"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Open sidebar"
+        className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+      >
+        <Menu className="size-5" />
+      </button>
+
       <div className="relative mx-auto w-full max-w-2xl">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
