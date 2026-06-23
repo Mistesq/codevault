@@ -128,9 +128,9 @@ function userInitials(name: string) {
 
 export function SidebarNav({ collapsed }: { collapsed: boolean }) {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Scrollable navigation */}
-      <nav className="flex-1 overflow-y-auto p-2">
+      <nav className="min-h-0 flex-1 overflow-y-auto p-2">
         <NavRow href="/items" icon={LayoutGrid} label="All Items" count={items.length} collapsed={collapsed} />
         <NavRow href="/favorites" icon={Star} label="Favorites" count={favoriteCount} collapsed={collapsed} />
         <NavRow href="/pinned" icon={Pin} label="Pinned" count={pinnedCount} collapsed={collapsed} />
