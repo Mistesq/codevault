@@ -96,6 +96,7 @@ enum ContentType {
 model User {
   id                   String   @id @default(cuid())
   email                String   @unique
+  emailVerified        DateTime?
   name                 String?
   image                String?
   password             String?  // null for OAuth-only accounts
