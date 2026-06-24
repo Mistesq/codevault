@@ -5,7 +5,6 @@ import {
   collections,
   items,
   itemTypes,
-  type Collection,
   type Item,
   type ItemType,
 } from "./mock-data";
@@ -35,25 +34,6 @@ export function getRecentItems(limit = 10): Item[] {
     .sort(
       (a, b) =>
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    )
-    .slice(0, limit);
-}
-
-export function getRecentCollections(limit = 4): Collection[] {
-  // Order by the most recent activity of the items each collection contains,
-  // since collections themselves carry no timestamp yet.
-  const latestActivity = new Map<string, number>();
-  for (const item of items) {
-    if (!item.collectionId) continue;
-    const time = new Date(item.updatedAt).getTime();
-    if (time > (latestActivity.get(item.collectionId) ?? 0)) {
-      latestActivity.set(item.collectionId, time);
-    }
-  }
-  return [...collections]
-    .sort(
-      (a, b) =>
-        (latestActivity.get(b.id) ?? 0) - (latestActivity.get(a.id) ?? 0),
     )
     .slice(0, limit);
 }
