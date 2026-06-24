@@ -36,6 +36,22 @@ export interface DashboardStats {
   favoriteCollections: number;
 }
 
+export interface SidebarItemType {
+  id: string;
+  name: string;
+  // lucide icon-name string, resolved in the UI via getTypeIcon().
+  icon: string | null;
+  color: string | null;
+  // Number of the user's items of this type.
+  count: number;
+}
+
+export interface SidebarItemCounts {
+  total: number;
+  favorites: number;
+  pinned: number;
+}
+
 // Shared shape of the Prisma query — keeps the two item selectors in sync.
 const itemSelect = {
   id: true,
@@ -145,4 +161,71 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     ]);
 
   return { totalItems, totalCollections, favoriteItems, favoriteCollections };
+}
+
+// Display order for the sidebar "Types" section (the table has no sort column).
+// Lowercased type names; anything not listed falls to the end alphabetically.
+const SYSTEM_TYPE_ORDER = [
+  "snippet",
+  "prompt",
+  "command",
+  "note",
+  "file",
+  "image",
+  "url",
+];
+
+function typeOrderIndex(name: string): number {
+  const i = SYSTEM_TYPE_ORDER.indexOf(name.toLowerCase());
+  return i === -1 ? SYSTEM_TYPE_ORDER.length : i;
+}
+
+/**
+ * System item types (shared across all users) for the sidebar "Types" section,
+ * each with the demo user's item count of that type. Ordered to match the
+ * sidebar's intended layout (see SYSTEM_TYPE_ORDER).
+ */
+export async function getSystemItemTypes(): Promise<SidebarItemType[]> {
+  const types = await prisma.itemType.findMany({
+    where: { isSystem: true },
+    select: { id: true, name: true, icon: true, color: true },
+  });
+
+  types.sort((a, b) => {
+    const order = typeOrderIndex(a.name) - typeOrderIndex(b.name);
+    return order !== 0 ? order : a.name.localeCompare(b.name);
+  });
+
+  const user = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+  if (!user) return types.map((type) => ({ ...type, count: 0 }));
+
+  // One grouped query for all per-type counts, then merge by type id.
+  const grouped = await prisma.item.groupBy({
+    by: ["typeId"],
+    where: { userId: user.id },
+    _count: { _all: true },
+  });
+  const countByType = new Map(grouped.map((g) => [g.typeId, g._count._all]));
+
+  return types.map((type) => ({
+    ...type,
+    count: countByType.get(type.id) ?? 0,
+  }));
+}
+
+/**
+ * Item counts for the sidebar's All Items / Favorites / Pinned rows,
+ * scoped to the demo user.
+ */
+export async function getSidebarItemCounts(): Promise<SidebarItemCounts> {
+  const user = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+  if (!user) return { total: 0, favorites: 0, pinned: 0 };
+
+  const [total, favorites, pinned] = await Promise.all([
+    prisma.item.count({ where: { userId: user.id } }),
+    prisma.item.count({ where: { userId: user.id, isFavorite: true } }),
+    prisma.item.count({ where: { userId: user.id, isPinned: true } }),
+  ]);
+
+  return { total, favorites, pinned };
 }

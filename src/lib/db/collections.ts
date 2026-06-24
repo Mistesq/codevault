@@ -22,6 +22,32 @@ export interface DashboardCollection {
   types: CollectionType[];
 }
 
+export interface SidebarCollection {
+  id: string;
+  name: string;
+  itemCount: number;
+}
+
+/**
+ * The demo user's favorite collections for the sidebar, alphabetical.
+ */
+export async function getFavoriteCollections(): Promise<SidebarCollection[]> {
+  const user = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+  if (!user) return [];
+
+  const collections = await prisma.collection.findMany({
+    where: { userId: user.id, isFavorite: true },
+    orderBy: { name: "asc" },
+    include: { _count: { select: { items: true } } },
+  });
+
+  return collections.map((collection) => ({
+    id: collection.id,
+    name: collection.name,
+    itemCount: collection._count.items,
+  }));
+}
+
 /**
  * Fetch the demo user's collections for the dashboard "Recent Collections" grid,
  * newest first. Each collection carries its item count, the distinct item types

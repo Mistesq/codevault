@@ -1,6 +1,6 @@
 # Current Feature
 
-Dashboard Items — Real Data
+Stats & Sidebar — Real Data
 
 ## Status
 
@@ -8,14 +8,14 @@ Completed
 
 ## Goals
 
-Replace the dummy item data in the dashboard main area (pinned and recent items) with real data from the Neon database via Prisma, instead of `src/lib/mock-data.ts`. The layout and design stay the same — reference `context/screenshots/dashboard-ui-main.png` if needed.
+Show the dashboard stats and the sidebar (system item types + collections) from the Neon database via Prisma instead of `src/lib/mock-data.ts`, keeping the current design/layout.
 
-- Create `src/lib/db/items.ts` with data fetching functions
-- Fetch items directly in the server component
-- Derive the item card icon/border from the item type
-- Display item type tags and everything currently shown on the cards
-- If there are no pinned items, render nothing in the pinned section
-- Update the collection stats display
+- Display stats from database data, keeping the current design/layout
+- Display item types in the sidebar with their icons, linking to `/items/[typename]`
+- Show actual collection data from the database in the sidebar
+- Add a "View all collections" link under the collections list, going to `/collections`
+- Keep the star icon for favorite collections; for recents, show a colored circle based on the most-used item type in that collection
+- Add the needed database functions to `src/lib/db/items.ts` (use `src/lib/db/collections.ts` for reference)
 
 ## Notes
 
@@ -33,3 +33,4 @@ Replace the dummy item data in the dashboard main area (pinned and recent items)
 - Database Seed Script — added `emailVerified` to User (migration `add_email_verified`); idempotent `prisma/seed.ts` seeds demo user (bcryptjs-hashed password), 7 system item types (URL→Link icon), and 5 collections / 18 items with real content; wired via `prisma.config.ts` `migrations.seed` + `db:seed` script; expanded `db:test` to fetch/display seed data with count checks; build & lint pass
 - Dashboard Collections — Real Data — replaced mock "Recent Collections" with live Neon/Prisma data via `src/lib/db/collections.ts` (item count, distinct types, most-used-type border color); `/dashboard` now an async `force-dynamic` server component; `CollectionCard` redesigned for DB shape with data-driven border color + small type icons (shared `src/lib/type-icons.ts` resolver); items under collections deferred; build & lint pass
 - Dashboard Items — Real Data — replaced mock pinned/recent items and stats with live Neon/Prisma data via `src/lib/db/items.ts` (`getPinnedItems`, `getRecentItems`, `getDashboardStats`, demo-user scoped; items carry embedded type icon/color + tag names, dates as ISO); `/dashboard` fetches items/stats/collections in parallel; `ItemCard` consumes the DB shape and renders the type icon via a new stable `TypeIcon` (type-icons `.ts`→`.tsx`); `StatsCards` takes DB stats as props; `dashboard-data.ts` trimmed to pure formatters (sidebar still on mock data, out of scope); build & lint pass
+- Stats & Sidebar — Real Data — moved the sidebar fully onto Neon/Prisma data (no more `mock-data`): dashboard `layout.tsx` is now an async `force-dynamic` server component fetching sidebar data in parallel and passing it through `Sidebar` → `SidebarNav` as props; added `getSystemItemTypes` (with per-type item counts + custom `SYSTEM_TYPE_ORDER`: Snippet/Prompt/Command/Note/File/Image/URL) and `getSidebarItemCounts` to `items.ts`, `getFavoriteCollections` to `collections.ts`, and new `src/lib/db/user.ts` `getCurrentUser`; `SidebarNav` rewritten to consume props (type icons via shared `getTypeIcon`, per-type counts, favorites keep star, recents show a colored `TypeDot` by most-used type, added "View all collections" → `/collections`); `mock-data.ts` now unused (left in place); build & lint pass

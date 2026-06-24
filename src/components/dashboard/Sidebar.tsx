@@ -4,10 +4,10 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Brand } from "./Brand";
-import { SidebarNav } from "./SidebarNav";
+import { SidebarNav, type SidebarData } from "./SidebarNav";
 import { useSidebar } from "./sidebar-context";
 
-export function Sidebar() {
+export function Sidebar({ data }: { data: SidebarData }) {
   const { collapsed, mobileOpen, setMobileOpen } = useSidebar();
 
   return (
@@ -20,7 +20,7 @@ export function Sidebar() {
           collapsed ? "w-16" : "w-64",
         )}
       >
-        <SidebarNav collapsed={collapsed} />
+        <SidebarNav collapsed={collapsed} data={data} />
       </aside>
 
       {/* Mobile: overlay drawer. */}
@@ -50,7 +50,7 @@ export function Sidebar() {
             <X className="size-4" />
           </button>
         </div>
-        <SidebarNav collapsed={false} />
+        <SidebarNav collapsed={false} data={data} />
       </aside>
     </>
   );
