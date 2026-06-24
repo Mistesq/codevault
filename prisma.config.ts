@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
 // Prisma 7 configuration. The CLI no longer auto-loads `.env`, so we load it
 // explicitly above. The runtime client (src/lib/prisma.ts) gets its connection
@@ -11,6 +11,8 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: env("DATABASE_URL"),
+    // Prisma Migrate / CLI uses a direct (non-pooled) connection when available
+    // — DIRECT_URL is set in production — and falls back to DATABASE_URL locally.
+    url: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
   },
 });
