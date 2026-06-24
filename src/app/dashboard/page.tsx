@@ -3,11 +3,11 @@ import { Clock, Folder, Pin } from "lucide-react";
 import { CollectionCard } from "@/components/dashboard/CollectionCard";
 import { ItemCard } from "@/components/dashboard/ItemCard";
 import { StatsCards } from "@/components/dashboard/StatsCards";
-import {
-  getPinnedItems,
-  getRecentCollections,
-  getRecentItems,
-} from "@/lib/dashboard-data";
+import { getPinnedItems, getRecentItems } from "@/lib/dashboard-data";
+import { getDashboardCollections } from "@/lib/db/collections";
+
+// User-specific data fetched from the database — render per request.
+export const dynamic = "force-dynamic";
 
 function SectionHeading({
   icon: Icon,
@@ -24,9 +24,9 @@ function SectionHeading({
   );
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
   const pinnedItems = getPinnedItems();
-  const recentCollections = getRecentCollections();
+  const recentCollections = await getDashboardCollections();
   const recentItems = getRecentItems(10);
 
   return (
