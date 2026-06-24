@@ -30,3 +30,19 @@ export function getTypeIcon(name: string | null | undefined): IconComponent {
   if (name && TYPE_ICONS[name]) return TYPE_ICONS[name];
   return FileIcon;
 }
+
+// Renders the lucide icon for an item type. Resolves via a map lookup (not a
+// call) so it's a stable, statically-referenced component, not one created
+// during render.
+export function TypeIcon({
+  name,
+  className,
+  style,
+}: {
+  name: string | null | undefined;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const Icon = (name && TYPE_ICONS[name]) || FileIcon;
+  return <Icon className={className} style={style} />;
+}

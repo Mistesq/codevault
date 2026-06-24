@@ -1,41 +1,11 @@
-import type { ComponentType, CSSProperties } from "react";
-import {
-  Code2,
-  ExternalLink,
-  File as FileIcon,
-  FileText,
-  Image as ImageIcon,
-  Link as LinkIcon,
-  Pin,
-  Sparkles,
-  Star,
-  Terminal,
-} from "lucide-react";
+import { ExternalLink, Pin, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import {
-  formatFileSize,
-  getItemType,
-  relativeTime,
-} from "@/lib/dashboard-data";
-import type { Item } from "@/lib/mock-data";
+import { formatFileSize, relativeTime } from "@/lib/dashboard-data";
+import type { DashboardItem } from "@/lib/db/items";
+import { TypeIcon } from "@/lib/type-icons";
 
-type IconComponent = ComponentType<{
-  className?: string;
-  style?: CSSProperties;
-}>;
-
-const TYPE_ICONS: Record<string, IconComponent> = {
-  Code2,
-  Sparkles,
-  FileText,
-  Terminal,
-  File: FileIcon,
-  Image: ImageIcon,
-  Link: LinkIcon,
-};
-
-function ContentPreview({ item }: { item: Item }) {
+function ContentPreview({ item }: { item: DashboardItem }) {
   if (item.contentType === "FILE" && item.fileName) {
     return (
       <p className="truncate font-mono text-xs text-muted-foreground">
@@ -65,19 +35,16 @@ function ContentPreview({ item }: { item: Item }) {
   return null;
 }
 
-export function ItemCard({ item }: { item: Item }) {
-  const type = getItemType(item.typeId);
-  const Icon = type ? TYPE_ICONS[type.icon] ?? FileIcon : FileIcon;
-
+export function ItemCard({ item }: { item: DashboardItem }) {
   return (
     <article className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-ring/40">
       <div className="flex items-start gap-3">
         {/* Inline color is data-driven (per item type) so it can't be a static class. */}
         <span
           className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted"
-          style={type ? { color: type.color } : undefined}
+          style={item.type.color ? { color: item.type.color } : undefined}
         >
-          <Icon className="size-4" />
+          <TypeIcon name={item.type.icon} className="size-4" />
         </span>
 
         <div className="min-w-0 flex-1">

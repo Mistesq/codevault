@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import { Boxes, FolderClosed, FolderHeart, Star } from "lucide-react";
 
-import { getStats } from "@/lib/dashboard-data";
+import type { DashboardStats } from "@/lib/db/items";
 
 type IconComponent = ComponentType<{ className?: string }>;
 
@@ -11,9 +11,7 @@ interface Stat {
   icon: IconComponent;
 }
 
-export function StatsCards() {
-  const stats = getStats();
-
+export function StatsCards({ stats }: { stats: DashboardStats }) {
   const cards: Stat[] = [
     { label: "Items", value: stats.totalItems, icon: Boxes },
     { label: "Collections", value: stats.totalCollections, icon: FolderClosed },

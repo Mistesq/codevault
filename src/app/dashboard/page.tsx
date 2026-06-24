@@ -3,8 +3,12 @@ import { Clock, Folder, Pin } from "lucide-react";
 import { CollectionCard } from "@/components/dashboard/CollectionCard";
 import { ItemCard } from "@/components/dashboard/ItemCard";
 import { StatsCards } from "@/components/dashboard/StatsCards";
-import { getPinnedItems, getRecentItems } from "@/lib/dashboard-data";
 import { getDashboardCollections } from "@/lib/db/collections";
+import {
+  getDashboardStats,
+  getPinnedItems,
+  getRecentItems,
+} from "@/lib/db/items";
 
 // User-specific data fetched from the database — render per request.
 export const dynamic = "force-dynamic";
@@ -25,13 +29,17 @@ function SectionHeading({
 }
 
 export default async function DashboardPage() {
-  const pinnedItems = getPinnedItems();
-  const recentCollections = await getDashboardCollections();
-  const recentItems = getRecentItems(10);
+  const [stats, pinnedItems, recentCollections, recentItems] =
+    await Promise.all([
+      getDashboardStats(),
+      getPinnedItems(),
+      getDashboardCollections(),
+      getRecentItems(10),
+    ]);
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-8">
-      <StatsCards />
+      <StatsCards stats={stats} />
 
       {pinnedItems.length > 0 && (
         <section>
