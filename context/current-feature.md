@@ -1,23 +1,16 @@
-# Demo-User Query Dedup
+# Current Feature
 
 ## Status
 
-In Progress
+<!-- Not Started | In Progress | Complete -->
 
 ## Goals
 
-DB-layer quick wins from the codebase audit — low/no-risk cleanups, no behavior change for the user. All Prisma, no raw SQL.
-
-- **Cached demo-user resolver** — add a single `getDemoUser()` wrapped in React `cache()` in a shared DB module, using `prisma.user.findUnique` selecting only `id`. Replace the ~9 independent `prisma.user.findUnique({ where: { email: DEMO_EMAIL } })` lookups across `items.ts`, `collections.ts`, and `user.ts` so a dashboard request resolves the demo user once instead of ~9 times.
-- **Dedupe `DEMO_EMAIL`** — co-locate the `"demo@codevault.io"` constant with the resolver and import it across `src/lib/db/*`. Leave `prisma/seed.ts` and `scripts/test-db.ts` copies alone (outside `src/`).
-
-Success: `/dashboard` renders identically, the demo user is fetched once per request, all DB access stays on Prisma conventions, and build & lint pass.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Source: full-codebase audit (0 Critical, 0 High, 2 Medium, 2 Low). The two Medium findings collapse into the cached resolver; the constant dedupe is the related Low.
-- `src/lib/mock-data.ts` is intentionally left in place (per user) — not part of this scope.
-- Scope discipline: no new features, no auth/mutation work (still staged in roadmap), no raw SQL — purely the demo-user query deduplication and constant cleanup.
+<!-- Any extra notes -->
 
 ## History
 
@@ -33,3 +26,4 @@ Success: `/dashboard` renders identically, the demo user is fetched once per req
 - Dashboard Items — Real Data — replaced mock pinned/recent items and stats with live Neon/Prisma data via `src/lib/db/items.ts` (`getPinnedItems`, `getRecentItems`, `getDashboardStats`, demo-user scoped; items carry embedded type icon/color + tag names, dates as ISO); `/dashboard` fetches items/stats/collections in parallel; `ItemCard` consumes the DB shape and renders the type icon via a new stable `TypeIcon` (type-icons `.ts`→`.tsx`); `StatsCards` takes DB stats as props; `dashboard-data.ts` trimmed to pure formatters (sidebar still on mock data, out of scope); build & lint pass
 - Stats & Sidebar — Real Data — moved the sidebar fully onto Neon/Prisma data (no more `mock-data`): dashboard `layout.tsx` is now an async `force-dynamic` server component fetching sidebar data in parallel and passing it through `Sidebar` → `SidebarNav` as props; added `getSystemItemTypes` (with per-type item counts + custom `SYSTEM_TYPE_ORDER`: Snippet/Prompt/Command/Note/File/Image/URL) and `getSidebarItemCounts` to `items.ts`, `getFavoriteCollections` to `collections.ts`, and new `src/lib/db/user.ts` `getCurrentUser`; `SidebarNav` rewritten to consume props (type icons via shared `getTypeIcon`, per-type counts, favorites keep star, recents show a colored `TypeDot` by most-used type, added "View all collections" → `/collections`); `mock-data.ts` now unused (left in place); build & lint pass
 - Add Pro Badge to Sidebar — added a clean, subtle uppercase "PRO" badge next to the File and Image item types in the sidebar to mark them Pro-only; added the shadcn/ui `Badge` component (`base-nova` style), gave `NavRow` an optional trailing `badge` slot (hidden in the collapsed icon rail), and a `secondary`-variant `ProBadge` whose transparent border fades to `border` on row hover via a named `group/navrow`; build & lint pass
+- Demo-User Query Dedup — quick win from the full-codebase audit: replaced the ~9 independent `prisma.user.findUnique({ where: { email: DEMO_EMAIL } })` lookups across `items.ts`/`collections.ts`/`user.ts` with a single `getDemoUser()` resolver wrapped in React `cache()` (selects `id`/`name`/`isPro`), so a dashboard request resolves the demo user once instead of ~9 times; made `DEMO_EMAIL` a single exported constant in `user.ts`; output unchanged (consumers only read `user.id`, `getCurrentUser` keeps name/isPro); `mock-data.ts` left in place, all DB access stays on Prisma, no raw SQL; build & lint pass
