@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { DashboardCollection, SidebarCollection } from "@/lib/db/collections";
 import type { SidebarItemCounts, SidebarItemType } from "@/lib/db/items";
@@ -39,6 +40,23 @@ function typeLabel(name: string) {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
+// File and Image item types are Pro-only.
+function isProType(name: string) {
+  return ["file", "image"].includes(name.toLowerCase());
+}
+
+// Clean, subtle "PRO" badge for Pro-only sidebar entries.
+function ProBadge() {
+  return (
+    <Badge
+      variant="secondary"
+      className="h-4 border-transparent px-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground transition-colors group-hover/navrow:border-border"
+    >
+      PRO
+    </Badge>
+  );
+}
+
 // ---------- Building blocks ----------
 
 interface NavRowProps {
@@ -47,6 +65,8 @@ interface NavRowProps {
   // Either a lucide icon component or a custom leading element (e.g. a dot).
   icon?: IconComponent;
   leading?: ReactNode;
+  // Optional trailing badge (e.g. a "PRO" tag), hidden when collapsed.
+  badge?: ReactNode;
   count?: number;
   // Optional data-driven accent for the icon (item type / collection color).
   color?: string;
@@ -58,6 +78,7 @@ function NavRow({
   label,
   icon: Icon,
   leading,
+  badge,
   count,
   color,
   collapsed,
@@ -73,7 +94,7 @@ function NavRow({
       title={collapsed ? label : undefined}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+        "group/navrow flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
         active && "bg-sidebar-accent text-sidebar-foreground",
         collapsed && "justify-center px-0",
       )}
@@ -84,6 +105,7 @@ function NavRow({
           <Icon className="size-4 shrink-0" style={color ? { color } : undefined} />
         ) : null)}
       {!collapsed && <span className="flex-1 truncate">{label}</span>}
+      {!collapsed && badge}
       {!collapsed && count !== undefined && (
         <span className="text-xs text-muted-foreground">{count}</span>
       )}
@@ -153,6 +175,7 @@ export function SidebarNav({
               href={`/items/${typeSlug(type.name)}`}
               icon={getTypeIcon(type.icon)}
               label={typeLabel(type.name)}
+              badge={isProType(type.name) ? <ProBadge /> : undefined}
               count={type.count}
               color={type.color ?? undefined}
               collapsed={collapsed}
