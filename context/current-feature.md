@@ -1,16 +1,35 @@
-# Current Feature
+# Current Feature: Auth UI — Sign In, Register & Sign Out (Phase 3)
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- **Custom Sign In page (`/sign-in`)**: email + password fields, "Sign in with GitHub" button, link to `/register`, client-side validation + error display.
+- **Custom Register page (`/register`)**: name, email, password, confirm-password fields; validation (passwords match, email format); submits to `POST /api/auth/register`; redirects to `/sign-in` on success.
+- **Replace NextAuth default pages** — point NextAuth at `/sign-in` so all sign-in entry points use the custom UI.
+- **Sidebar footer user area**: avatar (GitHub image or initials fallback), user name; click avatar → dropdown with "Sign out"; clicking the icon navigates to `/profile`.
+- **Reusable Avatar component**: uses `user.image` if present, otherwise initials from the name (e.g. "Alex Shapovalov" → "AS").
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Replaces** the NextAuth default `/api/auth/signin` UI with branded pages. Set `pages: { signIn: "/sign-in" }` in `auth.config.ts` so the proxy redirect (`src/proxy.ts`) and `signIn()` calls land on the custom page.
+- **Sign-in form** uses the NextAuth client `signIn("credentials", …)` / `signIn("github")`; handle the returned error to show inline messages. Validation reuses the shared Zod schemas from `src/lib/validations/auth.ts` (`signInSchema`, `registerSchema`) added in Phase 2.
+- **Register flow**: POST to the existing `/api/auth/register` (built in Phase 2), then redirect to `/sign-in` on success.
+- **Avatar logic**: if `user.image` (GitHub) → render image; else → initials from name. Build one reusable component handling both cases.
+- **Sidebar**: the footer user area currently lives in the sidebar (`SidebarNav` / dashboard `layout.tsx`, fed by `getCurrentUser`). Add the dropdown (sign out + `/profile` link) there. Likely needs a client component for the dropdown interactivity (shadcn `DropdownMenu`).
+- `/profile` route may not exist yet — the avatar link target; confirm whether to stub it or just link.
+
+### Testing
+
+1. Go to `/sign-in` — verify the custom page renders.
+2. Sign in with GitHub — verify flow works.
+3. Sign in with email/password — verify flow works.
+4. Verify avatar shows in the sidebar (GitHub image or initials).
+5. Click avatar — verify dropdown appears.
+6. Click "Sign out" — verify logout + redirect.
+7. Go to `/register` — create a new account — verify redirect to `/sign-in`.
 
 ## History
 
