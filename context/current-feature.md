@@ -1,21 +1,16 @@
-# Current Feature: Add Pro Badge to Sidebar
+# Current Feature
 
 ## Status
 
-Complete
+<!-- Not Started | In Progress | Complete -->
 
 ## Goals
 
-Add a "PRO" badge to the **File** and **Image** item types in the sidebar, indicating these are Pro-only features.
-
-- Add a clean, subtle PRO badge next to the File and Image type entries in the sidebar
-- Use the shadcn/ui `Badge` component
-- Render the label as `PRO` in all uppercase
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Spec: `context/features/add-pro-badge-sidebar.md`
-- Keep the badge clean and subtle to fit the existing sidebar design
+<!-- Any extra notes -->
 
 ## History
 
@@ -30,3 +25,4 @@ Add a "PRO" badge to the **File** and **Image** item types in the sidebar, indic
 - Dashboard Collections — Real Data — replaced mock "Recent Collections" with live Neon/Prisma data via `src/lib/db/collections.ts` (item count, distinct types, most-used-type border color); `/dashboard` now an async `force-dynamic` server component; `CollectionCard` redesigned for DB shape with data-driven border color + small type icons (shared `src/lib/type-icons.ts` resolver); items under collections deferred; build & lint pass
 - Dashboard Items — Real Data — replaced mock pinned/recent items and stats with live Neon/Prisma data via `src/lib/db/items.ts` (`getPinnedItems`, `getRecentItems`, `getDashboardStats`, demo-user scoped; items carry embedded type icon/color + tag names, dates as ISO); `/dashboard` fetches items/stats/collections in parallel; `ItemCard` consumes the DB shape and renders the type icon via a new stable `TypeIcon` (type-icons `.ts`→`.tsx`); `StatsCards` takes DB stats as props; `dashboard-data.ts` trimmed to pure formatters (sidebar still on mock data, out of scope); build & lint pass
 - Stats & Sidebar — Real Data — moved the sidebar fully onto Neon/Prisma data (no more `mock-data`): dashboard `layout.tsx` is now an async `force-dynamic` server component fetching sidebar data in parallel and passing it through `Sidebar` → `SidebarNav` as props; added `getSystemItemTypes` (with per-type item counts + custom `SYSTEM_TYPE_ORDER`: Snippet/Prompt/Command/Note/File/Image/URL) and `getSidebarItemCounts` to `items.ts`, `getFavoriteCollections` to `collections.ts`, and new `src/lib/db/user.ts` `getCurrentUser`; `SidebarNav` rewritten to consume props (type icons via shared `getTypeIcon`, per-type counts, favorites keep star, recents show a colored `TypeDot` by most-used type, added "View all collections" → `/collections`); `mock-data.ts` now unused (left in place); build & lint pass
+- Add Pro Badge to Sidebar — added a clean, subtle uppercase "PRO" badge next to the File and Image item types in the sidebar to mark them Pro-only; added the shadcn/ui `Badge` component (`base-nova` style), gave `NavRow` an optional trailing `badge` slot (hidden in the collapsed icon rail), and a `secondary`-variant `ProBadge` whose transparent border fades to `border` on row hover via a named `group/navrow`; build & lint pass
