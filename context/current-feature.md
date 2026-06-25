@@ -1,35 +1,16 @@
-# Current Feature: Auth UI — Sign In, Register & Sign Out (Phase 3)
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- **Custom Sign In page (`/sign-in`)**: email + password fields, "Sign in with GitHub" button, link to `/register`, client-side validation + error display.
-- **Custom Register page (`/register`)**: name, email, password, confirm-password fields; validation (passwords match, email format); submits to `POST /api/auth/register`; redirects to `/sign-in` on success.
-- **Replace NextAuth default pages** — point NextAuth at `/sign-in` so all sign-in entry points use the custom UI.
-- **Sidebar footer user area**: avatar (GitHub image or initials fallback), user name; click avatar → dropdown with "Sign out"; clicking the icon navigates to `/profile`.
-- **Reusable Avatar component**: uses `user.image` if present, otherwise initials from the name (e.g. "Alex Shapovalov" → "AS").
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Replaces** the NextAuth default `/api/auth/signin` UI with branded pages. Set `pages: { signIn: "/sign-in" }` in `auth.config.ts` so the proxy redirect (`src/proxy.ts`) and `signIn()` calls land on the custom page.
-- **Sign-in form** uses the NextAuth client `signIn("credentials", …)` / `signIn("github")`; handle the returned error to show inline messages. Validation reuses the shared Zod schemas from `src/lib/validations/auth.ts` (`signInSchema`, `registerSchema`) added in Phase 2.
-- **Register flow**: POST to the existing `/api/auth/register` (built in Phase 2), then redirect to `/sign-in` on success.
-- **Avatar logic**: if `user.image` (GitHub) → render image; else → initials from name. Build one reusable component handling both cases.
-- **Sidebar**: the footer user area currently lives in the sidebar (`SidebarNav` / dashboard `layout.tsx`, fed by `getCurrentUser`). Add the dropdown (sign out + `/profile` link) there. Likely needs a client component for the dropdown interactivity (shadcn `DropdownMenu`).
-- `/profile` route may not exist yet — the avatar link target; confirm whether to stub it or just link.
-
-### Testing
-
-1. Go to `/sign-in` — verify the custom page renders.
-2. Sign in with GitHub — verify flow works.
-3. Sign in with email/password — verify flow works.
-4. Verify avatar shows in the sidebar (GitHub image or initials).
-5. Click avatar — verify dropdown appears.
-6. Click "Sign out" — verify logout + redirect.
-7. Go to `/register` — create a new account — verify redirect to `/sign-in`.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -48,3 +29,4 @@ In Progress
 - Demo-User Query Dedup — quick win from the full-codebase audit: replaced the ~9 independent `prisma.user.findUnique({ where: { email: DEMO_EMAIL } })` lookups across `items.ts`/`collections.ts`/`user.ts` with a single `getDemoUser()` resolver wrapped in React `cache()` (selects `id`/`name`/`isPro`), so a dashboard request resolves the demo user once instead of ~9 times; made `DEMO_EMAIL` a single exported constant in `user.ts`; output unchanged (consumers only read `user.id`, `getCurrentUser` keeps name/isPro); `mock-data.ts` left in place, all DB access stays on Prisma, no raw SQL; build & lint pass
 - Auth Setup — NextAuth + GitHub Provider (Phase 1) — wired NextAuth v5 (`next-auth@5.0.0-beta.31`) + `@auth/prisma-adapter` using the split-config pattern: `src/auth.config.ts` (edge-safe, GitHub provider only), `src/auth.ts` (Prisma adapter via the existing `prisma` singleton + `session: { strategy: 'jwt' }`, `session` callback exposing `user.id` from `token.sub`), `src/app/api/auth/[...nextauth]/route.ts` (GET/POST handlers), `src/proxy.ts` (named `export const proxy = auth(...)`, dedicated adapter-free instance, `matcher: ['/dashboard/:path*']`, redirects unauthenticated users to NextAuth's default sign-in page), and `src/types/next-auth.d.ts` (Session `user.id`); verified locally — unauth `/dashboard` → 307 → `/api/auth/signin?callbackUrl=…`, sign-in page 200, GitHub in `/api/auth/providers`, and the full GitHub OAuth click-through (sign in → GitHub → back to `/dashboard`) verified; build & lint pass
 - Auth Credentials — Email/Password Provider (Phase 2) — added a NextAuth Credentials provider alongside GitHub using the edge-safe split-config pattern: `auth.config.ts` holds a placeholder Credentials provider (`authorize: () => null`) so the proxy stays Prisma-free, and `auth.ts` overrides it (via `providers.map`, leaving the GitHub function reference untouched) with real `bcryptjs` validation — looks the user up, rejects OAuth-only/no-password accounts, `bcrypt.compare`, and returns `{id,email,name,image}` without the hash; returns `null` uniformly to avoid user enumeration. New `POST /api/auth/register` route (validate → dedupe by email `409` → bcrypt cost-12 hash → create `201`). Added `zod@4` with shared `signInSchema`/`registerSchema` in `src/lib/validations/auth.ts` (per coding standards). No migration needed (`User.password` already existed). Verified by curl: register `201`/duplicate `409`/validation `400`s, both providers in `/api/auth/providers`, credentials sign-in `302 → /dashboard` with `user.id` in session and `/dashboard` `200`, wrong password → `CredentialsSignin` + null session; build & lint pass
+- Auth UI — Sign In, Register & Sign Out (Phase 3) — replaced the NextAuth default pages with branded UI and surfaced the signed-in user in the sidebar. New `(auth)` route group with a shared centered layout: custom `/sign-in` (`SignInForm`: email+password via client `signIn("credentials", { redirect: false })`, "Sign in with GitHub", inline errors, Zod validation, open-redirect-safe `callbackUrl` sanitizer, inline GitHub SVG since lucide dropped brand icons) and `/register` (`RegisterForm`: POSTs to the Phase-2 `/api/auth/register`, redirects to `/sign-in?registered=true`). Pointed NextAuth at the custom page via `pages: { signIn: "/sign-in" }`; `proxy.ts` now redirects unauth users to `/sign-in` and also protects `/profile`. Sidebar footer rewritten to a `UserMenu` (shadcn `DropdownMenu`) with a reusable image-or-initials `UserAvatar`, name/email, a Profile link and Sign out (`signOut({ callbackUrl: "/sign-in" })`); `getCurrentUser` now reads the real auth session (name/email/image) with a fresh `isPro` lookup (dashboard items/collections stay demo-scoped for now). Protected `/profile` stub shows the session user. Toast on successful registration ("Account created — you can now sign in.") via shadcn `sonner` (`Toaster` mounted in root layout, pinned to dark theme — removed the unused `next-themes` dep it pulled in). Added shadcn `dropdown-menu`/`avatar`/`label`/`sonner`; `.playwright-mcp/` gitignored. Verified end-to-end in the browser (register→toast→sign-in→dashboard avatar/dropdown→sign out; wrong-password inline error; `/dashboard` & `/profile` protection; GitHub button initiates OAuth); build & lint pass
