@@ -1,7 +1,5 @@
 import { prisma } from "@/lib/prisma";
-
-// Until auth exists, the dashboard reads the seeded demo user's data.
-const DEMO_EMAIL = "demo@codevault.io";
+import { getDemoUser } from "@/lib/db/user";
 
 export interface DashboardItemType {
   name: string;
@@ -108,7 +106,7 @@ function toDashboardItem(row: ItemRow): DashboardItem {
  * Returns an empty array when nothing is pinned (the section then hides).
  */
 export async function getPinnedItems(): Promise<DashboardItem[]> {
-  const user = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+  const user = await getDemoUser();
   if (!user) return [];
 
   const rows = await prisma.item.findMany({
@@ -124,7 +122,7 @@ export async function getPinnedItems(): Promise<DashboardItem[]> {
  * The demo user's most recently updated items for the "Recent Items" grid.
  */
 export async function getRecentItems(limit = 10): Promise<DashboardItem[]> {
-  const user = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+  const user = await getDemoUser();
   if (!user) return [];
 
   const rows = await prisma.item.findMany({
@@ -142,7 +140,7 @@ export async function getRecentItems(limit = 10): Promise<DashboardItem[]> {
  * favorites of each), scoped to the demo user.
  */
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const user = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+  const user = await getDemoUser();
   if (!user) {
     return {
       totalItems: 0,
@@ -196,7 +194,7 @@ export async function getSystemItemTypes(): Promise<SidebarItemType[]> {
     return order !== 0 ? order : a.name.localeCompare(b.name);
   });
 
-  const user = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+  const user = await getDemoUser();
   if (!user) return types.map((type) => ({ ...type, count: 0 }));
 
   // One grouped query for all per-type counts, then merge by type id.
@@ -218,7 +216,7 @@ export async function getSystemItemTypes(): Promise<SidebarItemType[]> {
  * scoped to the demo user.
  */
 export async function getSidebarItemCounts(): Promise<SidebarItemCounts> {
-  const user = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+  const user = await getDemoUser();
   if (!user) return { total: 0, favorites: 0, pinned: 0 };
 
   const [total, favorites, pinned] = await Promise.all([

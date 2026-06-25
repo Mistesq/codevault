@@ -1,7 +1,5 @@
 import { prisma } from "@/lib/prisma";
-
-// Until auth exists, the dashboard reads the seeded demo user's data.
-const DEMO_EMAIL = "demo@codevault.io";
+import { getDemoUser } from "@/lib/db/user";
 
 export interface CollectionType {
   id: string;
@@ -32,7 +30,7 @@ export interface SidebarCollection {
  * The demo user's favorite collections for the sidebar, alphabetical.
  */
 export async function getFavoriteCollections(): Promise<SidebarCollection[]> {
-  const user = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+  const user = await getDemoUser();
   if (!user) return [];
 
   const collections = await prisma.collection.findMany({
@@ -56,7 +54,7 @@ export async function getFavoriteCollections(): Promise<SidebarCollection[]> {
 export async function getDashboardCollections(
   limit = 6,
 ): Promise<DashboardCollection[]> {
-  const user = await prisma.user.findUnique({ where: { email: DEMO_EMAIL } });
+  const user = await getDemoUser();
   if (!user) return [];
 
   const collections = await prisma.collection.findMany({
