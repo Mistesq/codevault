@@ -1,16 +1,40 @@
-# Current Feature
+# Current Feature: Auth Credentials — Email/Password Provider (Phase 2)
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Add a Credentials provider for email/password authentication alongside the existing GitHub OAuth.
+- Ensure the `User.password` field exists (add via migration if missing).
+- `auth.config.ts`: add the Credentials provider with an `authorize: () => null` placeholder (edge-safe).
+- `auth.ts`: override the Credentials provider with real bcryptjs validation logic.
+- Create a registration API route at `POST /api/auth/register`.
+- Sign in with email/password works and redirects to `/dashboard`; GitHub OAuth still works.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Use **bcryptjs** for hashing (already installed; seed script already hashes the demo user's password).
+- **Registration API** `POST /api/auth/register`:
+  - Accept `name`, `email`, `password`, `confirmPassword`.
+  - Validate passwords match.
+  - Check if a user with that email already exists.
+  - Hash password with bcryptjs.
+  - Create the user in the database.
+  - Return a success/error response.
+- **Credentials provider in the split pattern** (per the spec & Phase 1 architecture):
+  - `auth.config.ts` (edge-safe): Credentials provider with `authorize: () => null` placeholder.
+  - `auth.ts` (Node runtime, has Prisma adapter): override the Credentials provider with the actual bcrypt validation.
+- Session strategy is already JWT (set in Phase 1), which is required for the Credentials provider.
+- Reference: Credentials provider — https://authjs.dev/getting-started/authentication/credentials
+
+### Testing
+1. `curl -X POST http://localhost:3000/api/auth/register -H "Content-Type: application/json" -d '{"name":"Test","email":"test@test.com","password":"password123","confirmPassword":"password123"}'`
+2. Go to `/api/auth/signin`
+3. Sign in with email/password
+4. Verify redirect to `/dashboard`
+5. Verify GitHub OAuth still works
 
 ## History
 
