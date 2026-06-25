@@ -8,7 +8,6 @@ import {
   Clock,
   LayoutGrid,
   Pin,
-  Settings,
   Sparkles,
   Star,
 } from "lucide-react";
@@ -16,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/auth/UserMenu";
 import type { DashboardCollection, SidebarCollection } from "@/lib/db/collections";
 import type { SidebarItemCounts, SidebarItemType } from "@/lib/db/items";
 import type { CurrentUser } from "@/lib/db/user";
@@ -136,15 +136,6 @@ function SectionLabel({ children }: { children: ReactNode }) {
   );
 }
 
-function userInitials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
-
 // ---------- Sidebar content ----------
 
 export function SidebarNav({
@@ -243,36 +234,7 @@ export function SidebarNav({
           </Button>
         )}
 
-        <div
-          className={cn(
-            "flex items-center gap-3 rounded-md px-2 py-2",
-            collapsed && "justify-center px-0",
-          )}
-        >
-          <span
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-xs font-medium text-sidebar-primary-foreground"
-            title={collapsed ? user.name : undefined}
-          >
-            {userInitials(user.name)}
-          </span>
-          {!collapsed && (
-            <>
-              <div className="flex-1 overflow-hidden">
-                <p className="truncate text-sm font-medium">{user.name}</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {user.isPro ? "Pro plan" : "Free plan"}
-                </p>
-              </div>
-              <button
-                type="button"
-                aria-label="Settings"
-                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              >
-                <Settings className="size-4" />
-              </button>
-            </>
-          )}
-        </div>
+        <UserMenu user={user} collapsed={collapsed} />
       </div>
     </div>
   );

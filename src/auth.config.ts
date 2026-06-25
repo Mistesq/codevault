@@ -11,6 +11,10 @@ import type { NextAuthConfig } from "next-auth";
 // runtime), which overrides this provider. Keeping the heavy logic out of the
 // shared config is what keeps the proxy edge-safe.
 export default {
+  // Use the custom branded auth pages instead of NextAuth's default UI.
+  pages: {
+    signIn: "/sign-in",
+  },
   providers: [
     GitHub,
     Credentials({
