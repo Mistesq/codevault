@@ -1,25 +1,21 @@
-# Current Feature
-
-Stats & Sidebar — Real Data
+# Current Feature: Add Pro Badge to Sidebar
 
 ## Status
 
-Completed
+Complete
 
 ## Goals
 
-Show the dashboard stats and the sidebar (system item types + collections) from the Neon database via Prisma instead of `src/lib/mock-data.ts`, keeping the current design/layout.
+Add a "PRO" badge to the **File** and **Image** item types in the sidebar, indicating these are Pro-only features.
 
-- Display stats from database data, keeping the current design/layout
-- Display item types in the sidebar with their icons, linking to `/items/[typename]`
-- Show actual collection data from the database in the sidebar
-- Add a "View all collections" link under the collections list, going to `/collections`
-- Keep the star icon for favorite collections; for recents, show a colored circle based on the most-used item type in that collection
-- Add the needed database functions to `src/lib/db/items.ts` (use `src/lib/db/collections.ts` for reference)
+- Add a clean, subtle PRO badge next to the File and Image type entries in the sidebar
+- Use the shadcn/ui `Badge` component
+- Render the label as `PRO` in all uppercase
 
 ## Notes
 
-<!-- Any extra notes -->
+- Spec: `context/features/add-pro-badge-sidebar.md`
+- Keep the badge clean and subtle to fit the existing sidebar design
 
 ## History
 
