@@ -1,16 +1,23 @@
-# Current Feature
+# Demo-User Query Dedup
 
 ## Status
 
-<!-- Not Started | In Progress | Complete -->
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+DB-layer quick wins from the codebase audit — low/no-risk cleanups, no behavior change for the user. All Prisma, no raw SQL.
+
+- **Cached demo-user resolver** — add a single `getDemoUser()` wrapped in React `cache()` in a shared DB module, using `prisma.user.findUnique` selecting only `id`. Replace the ~9 independent `prisma.user.findUnique({ where: { email: DEMO_EMAIL } })` lookups across `items.ts`, `collections.ts`, and `user.ts` so a dashboard request resolves the demo user once instead of ~9 times.
+- **Dedupe `DEMO_EMAIL`** — co-locate the `"demo@codevault.io"` constant with the resolver and import it across `src/lib/db/*`. Leave `prisma/seed.ts` and `scripts/test-db.ts` copies alone (outside `src/`).
+
+Success: `/dashboard` renders identically, the demo user is fetched once per request, all DB access stays on Prisma conventions, and build & lint pass.
 
 ## Notes
 
-<!-- Any extra notes -->
+- Source: full-codebase audit (0 Critical, 0 High, 2 Medium, 2 Low). The two Medium findings collapse into the cached resolver; the constant dedupe is the related Low.
+- `src/lib/mock-data.ts` is intentionally left in place (per user) — not part of this scope.
+- Scope discipline: no new features, no auth/mutation work (still staged in roadmap), no raw SQL — purely the demo-user query deduplication and constant cleanup.
 
 ## History
 
