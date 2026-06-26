@@ -1,16 +1,35 @@
-# Current Feature
+# Current Feature: Forgot Password (Reset via Email Link)
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- A "Forgot password?" link on the sign-in page (`SignInForm`) → `/forgot-password`.
+- `/forgot-password` page: email input → submits to a new `POST /api/auth/request-password-reset`.
+  - Always returns a generic 200 (no user enumeration), then routes to a "check your email" confirmation (reuse `AuthStatusCard`, mirror `/check-email`).
+  - Only actually sends a reset email for an existing credentials account (has `password`). OAuth-only / missing accounts silently get the same generic response.
+- Reset email sent via Resend with a single-use, SHA-256-hashed, time-limited token link → `/reset-password?token=…`.
+- `/reset-password` page: new password + confirm password form → submits to `POST /api/auth/reset-password`.
+  - On success: update the user's `password` (bcrypt cost 12), invalidate the token (single use), and show a success state linking back to `/sign-in`.
+  - On expired/invalid token: show a failure state (reuse the `AuthStatusCard` success/failure pattern from `/verify-email`).
+- `npm run build` and `npm run lint` pass; flow verified in the browser.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Reuse the existing `VerificationToken` model** (per request) for reset tokens — do NOT add a schema/migration.
+  - The model is keyed by `identifier`. Email-verification tokens already use `identifier = email`. To avoid the two flows clobbering each other (e.g. `createVerificationToken`'s `deleteMany({ where: { identifier: email } })`), **namespace reset tokens**, e.g. `identifier = "password-reset:{email}"`.
+  - Add a dedicated helper module `src/lib/auth/password-reset-token.ts` mirroring `src/lib/auth/verification-token.ts` (`createPasswordResetToken` / `consumePasswordResetToken`): raw token only in the link, store SHA-256 hash, single-use (delete on consume regardless of outcome), shorter TTL (suggest **1 hour**). Keep token hashing identical to the verification helper.
+  - `consumePasswordResetToken` should return the target email (or a `{ status, email }` shape) on success so the reset route can update the right user; do not set `emailVerified` here.
+- **Email**: add `sendPasswordResetEmail` in `src/lib/email/` (new `password-reset.ts`, mirror `verification.ts`'s branded HTML + `getResend`/`EMAIL_FROM`/`getAppUrl`). Link → `${getAppUrl()}/reset-password?token=…`. Note the reset page is a normal page (token consumed on POST), unlike verify-email which consumes on GET.
+- **Validation**: add a `resetPasswordSchema` (password ≥ 8 + confirmPassword match) to `src/lib/validations/auth.ts`, reusing the existing `emailSchema` for the request route.
+- **Routes** (App Router, per coding standards these are API routes since they're POST mutations / could be hit by external clients):
+  - `POST /api/auth/request-password-reset` — validate email, look up credentials user, create token + send email, always generic 200.
+  - `POST /api/auth/reset-password` — validate `{ token, password, confirmPassword }`, consume token, update password, return success/expired/invalid.
+- **UI**: new `(auth)` route-group pages `forgot-password/page.tsx` and `reset-password/page.tsx` with client form components in `src/components/auth/` (`ForgotPasswordForm`, `ResetPasswordForm`) following `SignInForm`/`RegisterForm` conventions (Zod, inline errors, `Loader2` pending, dark-first). Add the "Forgot password?" link in `SignInForm` near the password field.
+- **Toggle interaction**: password reset should work regardless of `EMAIL_VERIFICATION_ENABLED` (it's a separate flow). It does, however, depend on Resend being configured — same real-delivery caveat as email verification (`onboarding@resend.dev` only delivers to the account owner until a domain is verified).
+- Keep changes minimal and match existing patterns; no rate limiting yet (note it as a follow-up, same email-bomb caveat as resend-verification).
 
 ## History
 
