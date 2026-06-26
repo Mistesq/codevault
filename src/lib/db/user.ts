@@ -28,14 +28,16 @@ export interface CurrentUser {
 /**
  * The signed-in user for the sidebar footer / profile, read from the auth
  * session. `isPro` is read fresh from the database (the JWT doesn't carry it).
- * Falls back to a sensible default if there is no session.
+ * Callers must guarantee an authenticated session (e.g. the dashboard layout's
+ * `auth()` guard); a missing session is a bug, so we throw rather than silently
+ * rendering a placeholder identity.
  */
 export async function getCurrentUser(): Promise<CurrentUser> {
   const session = await auth();
   const sessionUser = session?.user;
 
   if (!sessionUser?.id) {
-    return { name: "User", email: "", image: null, isPro: false };
+    throw new Error("getCurrentUser called without an authenticated session");
   }
 
   const dbUser = await prisma.user.findUnique({
