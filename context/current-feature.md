@@ -1,46 +1,16 @@
-# Current Feature: Email Verification on Register
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- On email/password registration, send a verification email via Resend with a
-  unique link the user must click to verify their address.
-- Clicking the link verifies the account (sets `User.emailVerified`) and lands
-  on a clear success state.
-- Unverified email/password users cannot sign in; they get a clear "verify your
-  email" message instead of a generic error.
-- GitHub OAuth users are unaffected (the adapter already marks them verified).
-- A "resend verification email" action for users who didn't receive the email
-  or whose link expired.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Provider:** Resend. `RESEND_API_KEY` is set in `.env` / `.env.production`.
-  `resend` is NOT yet a dependency — needs installing. Use Context7 for the
-  current Resend + Auth.js email-verification docs at implement time.
-- **Token store:** reuse the existing `VerificationToken` model
-  (`identifier` = email, `token`, `expires`). Generate a cryptographically
-  random token, set a short expiry (~24h), single-use (delete on verify).
-- **Register flow:** `POST /api/auth/register` (`src/app/api/auth/register/route.ts`)
-  currently creates the user and returns 201. Add: create token + send email
-  after user creation. Keep the uniform responses (no enumeration).
-- **Verify endpoint:** new `/verify-email?token=…` (likely a route handler or
-  server component) → validate token + expiry, set `emailVerified = now()`,
-  delete token, redirect to `/sign-in?verified=true` (toast on sign-in page).
-- **Sign-in gate:** in `auth.ts` Credentials `authorize`, reject when
-  `!user.emailVerified`. Surface a distinct, friendly "verify your email"
-  message in the sign-in UI (without leaking whether the account exists).
-- **Base URL:** use `NEXT_PUBLIC_APP_URL` (needs adding to env) to build absolute
-  links in emails (e.g. https://codevault-gray.vercel.app locally fall back to
-  http://localhost:3000).
-- **From address:** Resend needs a verified sender/domain; use `onboarding@resend.dev`
-  for dev and a configured `EMAIL_FROM` for prod.
-- **Resend action (in scope):** a "resend verification email" endpoint + UI
-  affordance on the sign-in / verify pages; rate-limit / invalidate prior tokens
-  to avoid abuse.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -61,3 +31,5 @@ In Progress
 - Auth Credentials — Email/Password Provider (Phase 2) — added a NextAuth Credentials provider alongside GitHub using the edge-safe split-config pattern: `auth.config.ts` holds a placeholder Credentials provider (`authorize: () => null`) so the proxy stays Prisma-free, and `auth.ts` overrides it (via `providers.map`, leaving the GitHub function reference untouched) with real `bcryptjs` validation — looks the user up, rejects OAuth-only/no-password accounts, `bcrypt.compare`, and returns `{id,email,name,image}` without the hash; returns `null` uniformly to avoid user enumeration. New `POST /api/auth/register` route (validate → dedupe by email `409` → bcrypt cost-12 hash → create `201`). Added `zod@4` with shared `signInSchema`/`registerSchema` in `src/lib/validations/auth.ts` (per coding standards). No migration needed (`User.password` already existed). Verified by curl: register `201`/duplicate `409`/validation `400`s, both providers in `/api/auth/providers`, credentials sign-in `302 → /dashboard` with `user.id` in session and `/dashboard` `200`, wrong password → `CredentialsSignin` + null session; build & lint pass
 - Auth UI — Sign In, Register & Sign Out (Phase 3) — replaced the NextAuth default pages with branded UI and surfaced the signed-in user in the sidebar. New `(auth)` route group with a shared centered layout: custom `/sign-in` (`SignInForm`: email+password via client `signIn("credentials", { redirect: false })`, "Sign in with GitHub", inline errors, Zod validation, open-redirect-safe `callbackUrl` sanitizer, inline GitHub SVG since lucide dropped brand icons) and `/register` (`RegisterForm`: POSTs to the Phase-2 `/api/auth/register`, redirects to `/sign-in?registered=true`). Pointed NextAuth at the custom page via `pages: { signIn: "/sign-in" }`; `proxy.ts` now redirects unauth users to `/sign-in` and also protects `/profile`. Sidebar footer rewritten to a `UserMenu` (shadcn `DropdownMenu`) with a reusable image-or-initials `UserAvatar`, name/email, a Profile link and Sign out (`signOut({ callbackUrl: "/sign-in" })`); `getCurrentUser` now reads the real auth session (name/email/image) with a fresh `isPro` lookup (dashboard items/collections stay demo-scoped for now). Protected `/profile` stub shows the session user. Toast on successful registration ("Account created — you can now sign in.") via shadcn `sonner` (`Toaster` mounted in root layout, pinned to dark theme — removed the unused `next-themes` dep it pulled in). Added shadcn `dropdown-menu`/`avatar`/`label`/`sonner`; `.playwright-mcp/` gitignored. Verified end-to-end in the browser (register→toast→sign-in→dashboard avatar/dropdown→sign out; wrong-password inline error; `/dashboard` & `/profile` protection; GitHub button initiates OAuth); build & lint pass
 - Fix: Dashboard Auth Bypass — closed a production hole where visiting `/dashboard` rendered the (demo-scoped) dashboard for unauthenticated visitors. Root cause: the dashboard route had no server-side session check and relied entirely on the proxy (`src/proxy.ts`), whose matcher isn't matching on prod (`/dashboard`, `/dashboard/foo`, `/profile/foo` all fall through — only `/profile` is gated, via `profile/page.tsx`'s own `auth()` redirect), while `getCurrentUser` silently fell back to a fake "User / Free plan". Fix: added a defense-in-depth `auth()` check + `redirect("/sign-in?callbackUrl=/dashboard")` to `dashboard/layout.tsx` (mirrors the proven `profile/page.tsx` pattern; per NextAuth v5 docs the proxy is an optimistic gate, not a substitute for page/layout session verification), and made `getCurrentUser` throw on a missing session instead of returning a placeholder identity. Follow-up: verify the proxy matcher after the next deploy. Verified locally — unauth `/dashboard` & `/dashboard/anything` → 307 → `/sign-in`; build & lint pass
+- Email Verification on Register — new email/password accounts must verify their address before signing in. On register, `POST /api/auth/register` creates a single-use, SHA-256-hashed, 24h `VerificationToken` (raw token only in the email link) and sends a Resend email via new `src/lib/email/resend.ts` (server-only client, `EMAIL_FROM`, `getAppUrl()` from `NEXT_PUBLIC_APP_URL`) + `src/lib/email/verification.ts` (branded HTML); token logic in `src/lib/auth/verification-token.ts` (`createVerificationToken` invalidates prior tokens; `consumeVerificationToken` is single-use, sets `emailVerified`). Verify link → `GET /api/auth/verify-email` consumes the token and redirects to a new `/verify-email` result page (`?status=success|expired|invalid`) with a dialog (green check / alert) built on a shared `AuthStatusCard`; register now routes to a new `/check-email` dialog instead of a toast. Sign-in gate: `auth.ts` Credentials `authorize` throws `EmailNotVerifiedError extends CredentialsSignin` (code `email_not_verified`) after a password match (no enumeration), and `SignInForm` shows a "verify your email" message + "Resend verification email" button (→ generic-200 `POST /api/auth/resend-verification`). GitHub OAuth users unaffected (adapter marks them verified). Added `resend` dep; `emailSchema` in validations; trimmed dead register/verify toast+param logic from `SignInForm`. Follow-ups: no resend rate limiting yet (email-bomb vector), verify-on-GET can be consumed by link scanners, and real delivery to arbitrary inboxes needs a verified Resend domain (`onboarding@resend.dev` only delivers to the account owner). Verified: build & lint pass; deterministic token round-trip (success/reuse/missing/expired + resend 200) and browser flow (register→check-email, unverified sign-in→gate+resend, success/verified dialogs)
+- Chore: prune-users script — added `scripts/delete-non-demo-users.ts` (npm `db:prune-users`) to delete every user and their cascaded content except `demo@codevault.io`; dry run by default, `--yes` to apply; committed separately from the email-verification feature
