@@ -1,16 +1,44 @@
-# Current Feature
+# Current Feature: Email Verification Toggle
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- A single flag that turns the whole email-verification system on/off without
+  code changes, so registration works with any email while no Resend domain is
+  linked.
+- When **disabled**: registration creates an already-verified account, sends no
+  email, and skips the sign-in verification gate (previously-unverified users
+  can sign in too).
+- When **enabled**: current behavior is unchanged (email sent, gate enforced).
+- Secure by default — verification stays on unless explicitly turned off.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Mechanism (decided):** env variable `EMAIL_VERIFICATION_ENABLED`, read
+  server-side. Default **enabled**; disable only with an explicit falsy value
+  (`false` / `0` / `off`, case-insensitive). Not `NEXT_PUBLIC_*` — it's
+  security-relevant and only used on the server.
+- **Single source of truth:** add `isEmailVerificationEnabled()` (e.g.
+  `src/lib/auth/email-verification.ts`) and use it everywhere; don't read
+  `process.env` directly in multiple places.
+- **Register flow** (`src/app/api/auth/register/route.ts`): when disabled,
+  create the user with `emailVerified` already set, skip token creation + email,
+  and redirect to `/sign-in` instead of `/check-email`. The `RegisterForm`
+  redirect needs to branch on the flag (the API response can tell the client
+  whether verification is required, e.g. a field in the JSON).
+- **Sign-in gate** (`src/auth.ts` Credentials `authorize`): only throw
+  `EmailNotVerifiedError` when the flag is enabled.
+- **Untouched when disabled:** `/verify-email`, `/check-email`, and
+  `/api/auth/resend-verification` can stay in place (harmless — the gate never
+  fires, so the resend UI never appears). No need to delete them.
+- **GitHub OAuth:** unaffected either way (adapter marks those verified).
+- **Env files:** document `EMAIL_VERIFICATION_ENABLED` in `.env` /
+  `.env.production` (set it to `false` now since no domain is linked).
+- **Out of scope:** the earlier follow-ups (resend rate limiting, verify-on-GET
+  prefetch, verified Resend domain) — separate concerns.
 
 ## History
 

@@ -43,15 +43,20 @@ export function RegisterForm() {
         body: JSON.stringify({ name, email, password, confirmPassword }),
       });
 
+      const data = (await res.json().catch(() => null)) as
+        | { error?: string; verificationRequired?: boolean }
+        | null;
+
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as
-          | { error?: string }
-          | null;
         setError(data?.error ?? "Something went wrong. Please try again.");
         return;
       }
 
-      router.push("/check-email");
+      // If verification is disabled the account is ready to use, so go straight
+      // to sign-in; otherwise prompt the user to check their email.
+      router.push(
+        data?.verificationRequired === false ? "/sign-in" : "/check-email",
+      );
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
