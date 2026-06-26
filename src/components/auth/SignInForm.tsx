@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -38,22 +38,35 @@ export function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
-  const justRegistered = searchParams.get("registered") === "true";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<"credentials" | "github" | null>(null);
+  const [showResend, setShowResend] = useState(false);
+  const [resending, setResending] = useState(false);
 
-  // After registration the user is redirected here with `?registered=true`;
-  // greet them with a toast (guarded so it fires once, not on every render).
-  const toastShown = useRef(false);
-  useEffect(() => {
-    if (justRegistered && !toastShown.current) {
-      toastShown.current = true;
-      toast.success("Account created — you can now sign in.");
+  async function handleResend() {
+    if (!email) {
+      setError("Enter your email above, then resend the verification link.");
+      return;
     }
-  }, [justRegistered]);
+    setResending(true);
+    try {
+      await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      // The endpoint always responds generically (no enumeration), so we always
+      // confirm optimistically.
+      toast.success("Verification email sent — check your inbox.");
+    } catch {
+      toast.error("Couldn't send the email. Please try again.");
+    } finally {
+      setResending(false);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -66,6 +79,7 @@ export function SignInForm() {
     }
 
     setPending("credentials");
+    setShowResend(false);
     const result = await signIn("credentials", {
       email,
       password,
@@ -74,7 +88,12 @@ export function SignInForm() {
     setPending(null);
 
     if (result?.error) {
-      setError("Invalid email or password.");
+      if (result.code === "email_not_verified") {
+        setError("Please verify your email before signing in.");
+        setShowResend(true);
+      } else {
+        setError("Invalid email or password.");
+      }
       return;
     }
 
@@ -145,6 +164,19 @@ export function SignInForm() {
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
+
+        {showResend && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleResend}
+            disabled={resending || pending !== null}
+          >
+            {resending && <Loader2 className="size-4 animate-spin" />}
+            Resend verification email
+          </Button>
+        )}
 
         <Button type="submit" className="w-full" disabled={pending !== null}>
           {pending === "credentials" && <Loader2 className="size-4 animate-spin" />}

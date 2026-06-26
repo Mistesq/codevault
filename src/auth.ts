@@ -1,10 +1,17 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import authConfig from "@/auth.config";
 import { signInSchema } from "@/lib/validations/auth";
+
+// Thrown when credentials are valid but the email hasn't been verified yet. The
+// `code` is surfaced to the client (via signIn's returned `code`) so the sign-in
+// UI can show a "verify your email" message and offer to resend the link.
+class EmailNotVerifiedError extends CredentialsSignin {
+  code = "email_not_verified";
+}
 
 // Full auth instance: Prisma adapter for account/user persistence plus the JWT
 // session strategy (required when mixing OAuth with the Credentials provider).
@@ -36,7 +43,14 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email },
-          select: { id: true, email: true, name: true, image: true, password: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            image: true,
+            password: true,
+            emailVerified: true,
+          },
         });
 
         // No account, or an OAuth-only account with no password set.
@@ -44,6 +58,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
         const passwordMatches = await bcrypt.compare(password, user.password);
         if (!passwordMatches) return null;
+
+        // Credentials are valid but the email isn't verified — block sign-in and
+        // signal the UI to prompt for verification. (Only reachable with the
+        // correct password, so this doesn't enable user enumeration.)
+        if (!user.emailVerified) throw new EmailNotVerifiedError();
 
         // Never leak the password hash into the session/JWT.
         return {

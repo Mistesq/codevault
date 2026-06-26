@@ -8,6 +8,10 @@ export const signInSchema = z.object({
   password: z.string().min(1, "Password is required."),
 });
 
+export const emailSchema = z.object({
+  email: z.email("Enter a valid email address."),
+});
+
 export const registerSchema = z
   .object({
     name: z.string().trim().min(1, "Name is required.").max(100),

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { createVerificationToken } from "@/lib/auth/verification-token";
+import { sendVerificationEmail } from "@/lib/email/verification";
 import { registerSchema } from "@/lib/validations/auth";
 
 // POST /api/auth/register — create a new email/password account.
@@ -40,6 +42,15 @@ export async function POST(request: Request) {
       data: { name, email, password: hashedPassword },
       select: { id: true, name: true, email: true },
     });
+
+    // Send the verification email. A delivery failure shouldn't fail the
+    // registration — the account exists and the user can request a new link.
+    try {
+      const token = await createVerificationToken(email);
+      await sendVerificationEmail(email, token, name);
+    } catch (error) {
+      console.error("Verification email failed to send:", error);
+    }
 
     return NextResponse.json({ success: true, user }, { status: 201 });
   } catch (error) {

@@ -1,16 +1,46 @@
-# Current Feature
+# Current Feature: Email Verification on Register
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- On email/password registration, send a verification email via Resend with a
+  unique link the user must click to verify their address.
+- Clicking the link verifies the account (sets `User.emailVerified`) and lands
+  on a clear success state.
+- Unverified email/password users cannot sign in; they get a clear "verify your
+  email" message instead of a generic error.
+- GitHub OAuth users are unaffected (the adapter already marks them verified).
+- A "resend verification email" action for users who didn't receive the email
+  or whose link expired.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Provider:** Resend. `RESEND_API_KEY` is set in `.env` / `.env.production`.
+  `resend` is NOT yet a dependency — needs installing. Use Context7 for the
+  current Resend + Auth.js email-verification docs at implement time.
+- **Token store:** reuse the existing `VerificationToken` model
+  (`identifier` = email, `token`, `expires`). Generate a cryptographically
+  random token, set a short expiry (~24h), single-use (delete on verify).
+- **Register flow:** `POST /api/auth/register` (`src/app/api/auth/register/route.ts`)
+  currently creates the user and returns 201. Add: create token + send email
+  after user creation. Keep the uniform responses (no enumeration).
+- **Verify endpoint:** new `/verify-email?token=…` (likely a route handler or
+  server component) → validate token + expiry, set `emailVerified = now()`,
+  delete token, redirect to `/sign-in?verified=true` (toast on sign-in page).
+- **Sign-in gate:** in `auth.ts` Credentials `authorize`, reject when
+  `!user.emailVerified`. Surface a distinct, friendly "verify your email"
+  message in the sign-in UI (without leaking whether the account exists).
+- **Base URL:** use `NEXT_PUBLIC_APP_URL` (needs adding to env) to build absolute
+  links in emails (e.g. https://codevault-gray.vercel.app locally fall back to
+  http://localhost:3000).
+- **From address:** Resend needs a verified sender/domain; use `onboarding@resend.dev`
+  for dev and a configured `EMAIL_FROM` for prod.
+- **Resend action (in scope):** a "resend verification email" endpoint + UI
+  affordance on the sign-in / verify pages; rate-limit / invalidate prior tokens
+  to avoid abuse.
 
 ## History
 
