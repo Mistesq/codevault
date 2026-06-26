@@ -1,44 +1,16 @@
-# Current Feature: Email Verification Toggle
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- A single flag that turns the whole email-verification system on/off without
-  code changes, so registration works with any email while no Resend domain is
-  linked.
-- When **disabled**: registration creates an already-verified account, sends no
-  email, and skips the sign-in verification gate (previously-unverified users
-  can sign in too).
-- When **enabled**: current behavior is unchanged (email sent, gate enforced).
-- Secure by default — verification stays on unless explicitly turned off.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Mechanism (decided):** env variable `EMAIL_VERIFICATION_ENABLED`, read
-  server-side. Default **enabled**; disable only with an explicit falsy value
-  (`false` / `0` / `off`, case-insensitive). Not `NEXT_PUBLIC_*` — it's
-  security-relevant and only used on the server.
-- **Single source of truth:** add `isEmailVerificationEnabled()` (e.g.
-  `src/lib/auth/email-verification.ts`) and use it everywhere; don't read
-  `process.env` directly in multiple places.
-- **Register flow** (`src/app/api/auth/register/route.ts`): when disabled,
-  create the user with `emailVerified` already set, skip token creation + email,
-  and redirect to `/sign-in` instead of `/check-email`. The `RegisterForm`
-  redirect needs to branch on the flag (the API response can tell the client
-  whether verification is required, e.g. a field in the JSON).
-- **Sign-in gate** (`src/auth.ts` Credentials `authorize`): only throw
-  `EmailNotVerifiedError` when the flag is enabled.
-- **Untouched when disabled:** `/verify-email`, `/check-email`, and
-  `/api/auth/resend-verification` can stay in place (harmless — the gate never
-  fires, so the resend UI never appears). No need to delete them.
-- **GitHub OAuth:** unaffected either way (adapter marks those verified).
-- **Env files:** document `EMAIL_VERIFICATION_ENABLED` in `.env` /
-  `.env.production` (set it to `false` now since no domain is linked).
-- **Out of scope:** the earlier follow-ups (resend rate limiting, verify-on-GET
-  prefetch, verified Resend domain) — separate concerns.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -61,3 +33,4 @@ In Progress
 - Fix: Dashboard Auth Bypass — closed a production hole where visiting `/dashboard` rendered the (demo-scoped) dashboard for unauthenticated visitors. Root cause: the dashboard route had no server-side session check and relied entirely on the proxy (`src/proxy.ts`), whose matcher isn't matching on prod (`/dashboard`, `/dashboard/foo`, `/profile/foo` all fall through — only `/profile` is gated, via `profile/page.tsx`'s own `auth()` redirect), while `getCurrentUser` silently fell back to a fake "User / Free plan". Fix: added a defense-in-depth `auth()` check + `redirect("/sign-in?callbackUrl=/dashboard")` to `dashboard/layout.tsx` (mirrors the proven `profile/page.tsx` pattern; per NextAuth v5 docs the proxy is an optimistic gate, not a substitute for page/layout session verification), and made `getCurrentUser` throw on a missing session instead of returning a placeholder identity. Follow-up: verify the proxy matcher after the next deploy. Verified locally — unauth `/dashboard` & `/dashboard/anything` → 307 → `/sign-in`; build & lint pass
 - Email Verification on Register — new email/password accounts must verify their address before signing in. On register, `POST /api/auth/register` creates a single-use, SHA-256-hashed, 24h `VerificationToken` (raw token only in the email link) and sends a Resend email via new `src/lib/email/resend.ts` (server-only client, `EMAIL_FROM`, `getAppUrl()` from `NEXT_PUBLIC_APP_URL`) + `src/lib/email/verification.ts` (branded HTML); token logic in `src/lib/auth/verification-token.ts` (`createVerificationToken` invalidates prior tokens; `consumeVerificationToken` is single-use, sets `emailVerified`). Verify link → `GET /api/auth/verify-email` consumes the token and redirects to a new `/verify-email` result page (`?status=success|expired|invalid`) with a dialog (green check / alert) built on a shared `AuthStatusCard`; register now routes to a new `/check-email` dialog instead of a toast. Sign-in gate: `auth.ts` Credentials `authorize` throws `EmailNotVerifiedError extends CredentialsSignin` (code `email_not_verified`) after a password match (no enumeration), and `SignInForm` shows a "verify your email" message + "Resend verification email" button (→ generic-200 `POST /api/auth/resend-verification`). GitHub OAuth users unaffected (adapter marks them verified). Added `resend` dep; `emailSchema` in validations; trimmed dead register/verify toast+param logic from `SignInForm`. Follow-ups: no resend rate limiting yet (email-bomb vector), verify-on-GET can be consumed by link scanners, and real delivery to arbitrary inboxes needs a verified Resend domain (`onboarding@resend.dev` only delivers to the account owner). Verified: build & lint pass; deterministic token round-trip (success/reuse/missing/expired + resend 200) and browser flow (register→check-email, unverified sign-in→gate+resend, success/verified dialogs)
 - Chore: prune-users script — added `scripts/delete-non-demo-users.ts` (npm `db:prune-users`) to delete every user and their cascaded content except `demo@codevault.io`; dry run by default, `--yes` to apply; committed separately from the email-verification feature
+- Email Verification Toggle — added a single server-side env flag `EMAIL_VERIFICATION_ENABLED` to turn the whole verification system on/off without code changes (needed while no Resend domain is linked). New `src/lib/auth/email-verification.ts` `isEmailVerificationEnabled()` is the single source of truth (server-only; default **enabled** — disabled only with an explicit falsy `false`/`0`/`off`, case-insensitive; not `NEXT_PUBLIC_*`). When disabled: `register` route creates the account with `emailVerified` set up front, skips token + email, and returns `verificationRequired:false`; `RegisterForm` reads that field and routes to `/sign-in` (vs `/check-email`); the `auth.ts` Credentials gate only throws `EmailNotVerifiedError` when enabled (so previously-unverified accounts can sign in too). Enabled mode unchanged; GitHub OAuth unaffected; verify/check-email/resend routes left in place (harmless when off). Deploy note: `.env` has it `false`; `.env.production` does NOT set it, so prod defaults to enabled — add `EMAIL_VERIFICATION_ENABLED=false` to the Vercel/prod env to disable there. Verified: build & lint pass; flag OFF → register `verificationRequired:false` + browser sign-in straight to `/dashboard`; flag ON → `verificationRequired:true`
