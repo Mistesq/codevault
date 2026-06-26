@@ -2,13 +2,19 @@
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Fix production auth bypass: `/dashboard` renders for unauthenticated visitors.
 
 ## Notes
+
+- Cause: dashboard had no server-side session check, relying only on the proxy —
+  which isn't matching on prod. Added `auth()` + redirect to
+  `dashboard/layout.tsx` (mirrors `profile/page.tsx`). Build & lint pass; local
+  prod server now 307s `/dashboard` → `/sign-in`.
+- Follow-up: verify the proxy matcher after the next deploy.
 
 <!-- Additional context, constraints, or details from spec -->
 

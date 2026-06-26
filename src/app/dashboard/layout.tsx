@@ -1,3 +1,6 @@
+import { redirect } from "next/navigation";
+
+import { auth } from "@/auth";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { SidebarProvider } from "@/components/dashboard/sidebar-context";
 import { TopBar } from "@/components/dashboard/TopBar";
@@ -16,6 +19,14 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Defense in depth: the proxy is an optimistic gate, not a guarantee, so every
+  // dashboard route verifies the session server-side before rendering anything.
+  // Without this, an unauthenticated visitor falls through to a demo-scoped page.
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/sign-in?callbackUrl=/dashboard");
+  }
+
   const [itemTypes, counts, favoriteCollections, recentCollections, user] =
     await Promise.all([
       getSystemItemTypes(),
