@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import authConfig from "@/auth.config";
+import { isEmailVerificationEnabled } from "@/lib/auth/email-verification";
 import { signInSchema } from "@/lib/validations/auth";
 
 // Thrown when credentials are valid but the email hasn't been verified yet. The
@@ -61,8 +62,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
         // Credentials are valid but the email isn't verified — block sign-in and
         // signal the UI to prompt for verification. (Only reachable with the
-        // correct password, so this doesn't enable user enumeration.)
-        if (!user.emailVerified) throw new EmailNotVerifiedError();
+        // correct password, so this doesn't enable user enumeration.) Skipped
+        // entirely when email verification is disabled.
+        if (isEmailVerificationEnabled() && !user.emailVerified) {
+          throw new EmailNotVerifiedError();
+        }
 
         // Never leak the password hash into the session/JWT.
         return {
