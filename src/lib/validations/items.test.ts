@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { updateItemSchema } from "@/lib/validations/items";
+import { createItemSchema, updateItemSchema } from "@/lib/validations/items";
 
 // Pure schema unit tests — no DB, no mocks. The server action relies on this
 // being the source of truth, so the normalization/validation rules matter.
@@ -52,6 +52,76 @@ describe("updateItemSchema", () => {
     const parsed = updateItemSchema.parse({
       ...base,
       tags: [" react ", "react", "", "  ", "hooks"],
+    });
+    expect(parsed.tags).toEqual(["react", "hooks"]);
+  });
+});
+
+describe("createItemSchema", () => {
+  const base = {
+    type: "snippet" as const,
+    title: "Title",
+    description: "",
+    content: "",
+    language: "",
+    url: "",
+    tags: [],
+  };
+
+  it("requires a non-empty, trimmed title", () => {
+    expect(createItemSchema.safeParse({ ...base, title: "  " }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects an unknown type", () => {
+    expect(
+      createItemSchema.safeParse({ ...base, type: "image" }).success,
+    ).toBe(false);
+  });
+
+  it("normalizes empty optional fields to null and keeps content whitespace", () => {
+    const parsed = createItemSchema.parse({ ...base, content: "  code  " });
+    expect(parsed.description).toBeNull();
+    expect(parsed.language).toBeNull();
+    expect(parsed.url).toBeNull();
+    expect(parsed.content).toBe("  code  ");
+  });
+
+  it("requires a URL when type is URL", () => {
+    const missing = createItemSchema.safeParse({
+      ...base,
+      type: "URL",
+      url: "",
+    });
+    expect(missing.success).toBe(false);
+    if (!missing.success) expect(missing.error.issues[0]?.message).toMatch(/url/i);
+  });
+
+  it("rejects an invalid URL when type is URL", () => {
+    expect(
+      createItemSchema.safeParse({ ...base, type: "URL", url: "not-a-url" })
+        .success,
+    ).toBe(false);
+    expect(
+      createItemSchema.safeParse({
+        ...base,
+        type: "URL",
+        url: "https://example.com",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("does not require a URL for non-URL types", () => {
+    expect(createItemSchema.safeParse({ ...base, type: "note" }).success).toBe(
+      true,
+    );
+  });
+
+  it("trims, drops empty, and dedupes tags", () => {
+    const parsed = createItemSchema.parse({
+      ...base,
+      tags: [" react ", "react", "", "hooks"],
     });
     expect(parsed.tags).toEqual(["react", "hooks"]);
   });

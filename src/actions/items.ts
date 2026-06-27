@@ -2,16 +2,50 @@
 
 import { auth } from "@/auth";
 import {
+  createItem as createItemQuery,
   deleteItem as deleteItemQuery,
   updateItem as updateItemQuery,
 } from "@/lib/db/items";
 import type { ItemDetail } from "@/lib/db/items";
-import { updateItemSchema } from "@/lib/validations/items";
+import { createItemSchema, updateItemSchema } from "@/lib/validations/items";
 
 // Coding standards' action pattern: { success, data, error }.
 type ActionResult<T> =
   | { success: true; data: T }
   | { success: false; error: string };
+
+/**
+ * Create a new item from the New Item dialog. Requires a signed-in session,
+ * validates the payload with Zod (source of truth), then delegates to the
+ * demo-user-scoped query. Returns the created ItemDetail.
+ */
+export async function createItem(
+  input: unknown,
+): Promise<ActionResult<ItemDetail>> {
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: "You must be signed in." };
+  }
+
+  const parsed = createItemSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid details.",
+    };
+  }
+
+  try {
+    const created = await createItemQuery(parsed.data);
+    if (!created) {
+      return { success: false, error: "Could not create item." };
+    }
+    return { success: true, data: created };
+  } catch (error) {
+    console.error("Create item failed:", error);
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+}
 
 /**
  * Update an item from the drawer's edit mode. Requires a signed-in session,

@@ -1,16 +1,16 @@
 "use client";
 
-import { Menu, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
+import { Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Brand } from "@/components/dashboard/Brand";
 import { useSidebar } from "@/components/dashboard/sidebar-context";
+import { NewItemDialog } from "@/components/items/NewItemDialog";
 
 // Top bar for the dashboard. The brand block on the left sits on the same row
-// as the search and tracks the sidebar width. Search and "New Item" are
-// display-only for now — interactivity arrives in later phases.
+// as the search and tracks the sidebar width. Search is display-only for now;
+// "New Item" opens the create-item dialog.
 export function TopBar() {
   const { collapsed, toggleCollapsed, setMobileOpen } = useSidebar();
 
@@ -63,10 +63,7 @@ export function TopBar() {
           </kbd>
         </div>
 
-        <Button className="shrink-0">
-          <Plus className="size-4" />
-          New Item
-        </Button>
+        <NewItemDialog />
       </div>
     </header>
   );

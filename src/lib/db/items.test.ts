@@ -4,28 +4,34 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // test — no database. We assert the where-clause is user-scoped and that rows
 // are mapped into the ItemDetail shape (ISO dates, tag names, collection
 // passthrough). `vi.hoisted` lets the mocks exist before the hoisted factories.
-const { item, itemTag, tag, $transaction } = vi.hoisted(() => {
-  const item = { findFirst: vi.fn(), update: vi.fn(), deleteMany: vi.fn() };
+const { item, itemType, itemTag, tag, $transaction } = vi.hoisted(() => {
+  const item = {
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    deleteMany: vi.fn(),
+  };
+  const itemType = { findFirst: vi.fn() };
   const itemTag = { deleteMany: vi.fn(), create: vi.fn() };
   const tag = { upsert: vi.fn() };
   // Run the transaction callback against the same mocked delegates.
   const $transaction = vi.fn((cb: (tx: unknown) => unknown) =>
     cb({ item, itemTag, tag }),
   );
-  return { item, itemTag, tag, $transaction };
+  return { item, itemType, itemTag, tag, $transaction };
 });
 const { getDemoUser } = vi.hoisted(() => ({
   getDemoUser: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { item, itemTag, tag, $transaction },
+  prisma: { item, itemType, itemTag, tag, $transaction },
 }));
 vi.mock("@/lib/db/user", () => ({
   getDemoUser,
 }));
 
-import { deleteItem, getItemDetail, updateItem } from "@/lib/db/items";
+import { createItem, deleteItem, getItemDetail, updateItem } from "@/lib/db/items";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -215,6 +221,92 @@ describe("updateItem", () => {
     // Returns the freshly re-read ItemDetail.
     expect(result?.title).toBe("New title");
     expect(result?.tags).toEqual(["react", "hooks"]);
+  });
+});
+
+describe("createItem", () => {
+  const data = {
+    type: "snippet",
+    title: "New snippet",
+    description: "desc",
+    content: "x",
+    url: null,
+    language: "tsx",
+    tags: ["react"],
+  };
+
+  it("returns null when there is no demo user (no writes)", async () => {
+    getDemoUser.mockResolvedValue(null);
+
+    const result = await createItem(data);
+
+    expect(result).toBeNull();
+    expect(itemType.findFirst).not.toHaveBeenCalled();
+    expect($transaction).not.toHaveBeenCalled();
+  });
+
+  it("returns null when the type doesn't resolve (no writes)", async () => {
+    getDemoUser.mockResolvedValue({ id: "user_1" });
+    itemType.findFirst.mockResolvedValue(null);
+
+    const result = await createItem({ ...data, type: "bogus" });
+
+    expect(result).toBeNull();
+    expect(itemType.findFirst.mock.calls[0][0].where).toEqual({
+      isSystem: true,
+      name: "bogus",
+    });
+    expect($transaction).not.toHaveBeenCalled();
+  });
+
+  it("creates the item (TEXT, user+type scoped), links tags, then re-reads", async () => {
+    getDemoUser.mockResolvedValue({ id: "user_1" });
+    itemType.findFirst.mockResolvedValue({ id: "type_snippet" });
+    item.create.mockResolvedValue({ id: "item_new" });
+    tag.upsert.mockResolvedValueOnce({ id: "tag_react" });
+    // getItemDetail re-read at the end.
+    item.findFirst.mockResolvedValue({
+      id: "item_new",
+      title: "New snippet",
+      description: "desc",
+      contentType: "TEXT",
+      content: "x",
+      fileName: null,
+      fileSize: null,
+      url: null,
+      isFavorite: false,
+      isPinned: false,
+      updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      language: "tsx",
+      type: { name: "snippet", icon: "Code", color: null },
+      collection: null,
+      tags: [{ tag: { name: "react" } }],
+    });
+
+    const result = await createItem(data);
+
+    expect(item.create).toHaveBeenCalledWith({
+      data: {
+        title: "New snippet",
+        description: "desc",
+        content: "x",
+        url: null,
+        language: "tsx",
+        contentType: "TEXT",
+        userId: "user_1",
+        typeId: "type_snippet",
+      },
+      select: { id: true },
+    });
+    expect(tag.upsert.mock.calls[0][0].where).toEqual({
+      userId_name: { userId: "user_1", name: "react" },
+    });
+    expect(itemTag.create).toHaveBeenCalledWith({
+      data: { itemId: "item_new", tagId: "tag_react" },
+    });
+    expect(result?.id).toBe("item_new");
+    expect(result?.tags).toEqual(["react"]);
   });
 });
 
