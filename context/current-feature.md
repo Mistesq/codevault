@@ -1,16 +1,34 @@
-# Current Feature
+# Current Feature: Profile Page
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Build out the protected `/profile` page (currently a stub) with three areas:
+  - **User info**: avatar (GitHub image or initials), name, email, account creation date.
+  - **Usage stats**: total items, total collections, and a per-type breakdown (counts for each of the 7 system types: Snippet, Prompt, Note, Command, URL/Link, File, Image — including zeros).
+  - **Account actions**: Change password (email/password users only) and Delete account (with a confirmation dialog).
+- Route stays auth-protected (keep the existing `auth()` guard + redirect).
+- Follow existing data-fetching/component patterns; `npm run build` and `npm run lint` pass; flow verified in the browser.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **User scoping — important.** Profile must reflect the **signed-in user** (`session.user.id`), NOT the demo user. The existing stats helpers in `src/lib/db/items.ts` (`getDashboardStats`, `getSystemItemTypes`, etc.) are all `getDemoUser()`-scoped, so they can't be reused as-is. Add new **session-user-scoped** helpers (keyed by the real `user.id`) — put them in `src/lib/db/user.ts` or a new `src/lib/db/profile.ts`:
+  - account info: `name`, `email`, `image`, `createdAt`, `isPro`, and whether the account has a `password` (drives the change-password gate).
+  - stats: item count, collection count, and a `groupBy(["typeId"])` per-type breakdown joined against the system `ItemType`s (mirror the `getSystemItemTypes` grouped-count pattern, but scoped to the real user; show all system types including zero counts, ordered via the existing `SYSTEM_TYPE_ORDER`).
+  - Note: a freshly-signed-up real user will legitimately have 0 items/collections (domain data is still demo-scoped per the codebase's stated direction) — that's expected, the page should render zeros gracefully.
+- **Avatar**: reuse the existing `UserAvatar` component (already does GitHub-image-or-initials). The profile stub already imports it.
+- **Account creation date**: `User.createdAt` exists in the schema; format it for display (e.g. "Member since …").
+- **Change password (email users only)**:
+  - Gate the action on the account having a `password` (OAuth-only/GitHub accounts have `password = null` → hide it). A user with both keeps it.
+  - This is an *authenticated* change (distinct from the forgot-password reset flow): require **current password** + **new password** (+ confirm), verify the current password with `bcrypt.compare`, then bcrypt cost-12 rehash. Add a `changePasswordSchema` to `src/lib/validations/auth.ts`. **Decision: implement as a Server Action** (per coding standards, for simple authenticated mutations) in `src/actions/` — return the `{ success, error }` pattern; surface inline errors / a toast.
+- **Delete account (with confirmation)**:
+  - Use a shadcn confirmation dialog (`AlertDialog` — likely needs adding via shadcn) so it can't be triggered accidentally. **Decision: require the user to type their email** to enable the destructive button.
+  - On confirm: delete the `User` (schema has `onDelete: Cascade` across items/collections/tags/accounts/sessions, so related data cleans up), then `signOut()` and redirect to `/sign-in` (or `/`). **Decision: implement as a Server Action** in `src/actions/`. Must re-check the session server-side and only ever delete the caller's own account.
+- **Components**: profile is a server component (like the stub) that fetches data and passes it to client sub-components for the interactive actions (`ChangePasswordForm`/dialog, `DeleteAccountDialog`) — follow the `SignInForm`/`RegisterForm` client-form conventions (Zod, inline errors, `Loader2` pending, dark-first). Put profile UI under `src/components/profile/` (new) or `src/components/auth/` consistent with existing layout.
+- **Out of scope**: editing name/email/avatar, migrating domain-data ownership off the demo user, 2FA. Keep changes minimal and match existing patterns.
 
 ## History
 

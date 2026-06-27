@@ -1,0 +1,100 @@
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import { typeOrderIndex } from "@/lib/db/items";
+
+// Profile data is scoped to the signed-in user (session.user.id), unlike the
+// dashboard helpers which are still scoped to the seeded demo user.
+
+export interface ProfileTypeCount {
+  name: string;
+  // lucide icon-name string, resolved in the UI via getTypeIcon().
+  icon: string | null;
+  color: string | null;
+  count: number;
+}
+
+export interface ProfileData {
+  name: string;
+  email: string;
+  image: string | null;
+  // ISO string so it crosses the server/client boundary cleanly.
+  createdAt: string;
+  isPro: boolean;
+  // Whether the account has a password set — gates the change-password action
+  // (GitHub OAuth-only accounts have no password).
+  hasPassword: boolean;
+  totalItems: number;
+  totalCollections: number;
+  // One entry per system item type (including zero counts), in sidebar order.
+  typeBreakdown: ProfileTypeCount[];
+}
+
+/**
+ * All data for the profile page, scoped to the signed-in user. Callers must
+ * guarantee an authenticated session (the page's own `auth()` guard); a missing
+ * session is a bug, so we throw rather than render a placeholder identity.
+ */
+export async function getProfileData(): Promise<ProfileData> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    throw new Error("getProfileData called without an authenticated session");
+  }
+
+  const [user, totalItems, totalCollections, systemTypes, grouped] =
+    await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          name: true,
+          email: true,
+          image: true,
+          createdAt: true,
+          isPro: true,
+          password: true,
+        },
+      }),
+      prisma.item.count({ where: { userId } }),
+      prisma.collection.count({ where: { userId } }),
+      prisma.itemType.findMany({
+        where: { isSystem: true },
+        select: { id: true, name: true, icon: true, color: true },
+      }),
+      prisma.item.groupBy({
+        by: ["typeId"],
+        where: { userId },
+        _count: { _all: true },
+      }),
+    ]);
+
+  if (!user) {
+    throw new Error("getProfileData: signed-in user not found in database");
+  }
+
+  const countByType = new Map(grouped.map((g) => [g.typeId, g._count._all]));
+
+  const typeBreakdown: ProfileTypeCount[] = systemTypes
+    .slice()
+    .sort((a, b) => {
+      const order = typeOrderIndex(a.name) - typeOrderIndex(b.name);
+      return order !== 0 ? order : a.name.localeCompare(b.name);
+    })
+    .map((type) => ({
+      name: type.name,
+      icon: type.icon,
+      color: type.color,
+      count: countByType.get(type.id) ?? 0,
+    }));
+
+  return {
+    name: user.name ?? "User",
+    email: user.email,
+    image: user.image,
+    createdAt: user.createdAt.toISOString(),
+    isPro: user.isPro,
+    hasPassword: user.password !== null,
+    totalItems,
+    totalCollections,
+    typeBreakdown,
+  };
+}

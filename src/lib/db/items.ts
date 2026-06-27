@@ -173,7 +173,8 @@ const SYSTEM_TYPE_ORDER = [
   "url",
 ];
 
-function typeOrderIndex(name: string): number {
+// Exported so other type-breakdown views (e.g. the profile page) share one order.
+export function typeOrderIndex(name: string): number {
   const i = SYSTEM_TYPE_ORDER.indexOf(name.toLowerCase());
   return i === -1 ? SYSTEM_TYPE_ORDER.length : i;
 }
