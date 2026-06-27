@@ -1,0 +1,83 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Unit-test the action by mocking its collaborators: the auth session and the
+// db query. The Zod schema runs for real (it's the source of truth).
+const { auth, updateItemQuery } = vi.hoisted(() => ({
+  auth: vi.fn(),
+  updateItemQuery: vi.fn(),
+}));
+
+vi.mock("@/auth", () => ({
+  auth: () => auth(),
+}));
+
+vi.mock("@/lib/db/items", () => ({
+  updateItem: (id: string, data: unknown) => updateItemQuery(id, data),
+}));
+
+import { updateItem } from "@/actions/items";
+
+const signedIn = { user: { id: "user_1" } };
+const validInput = {
+  title: "Title",
+  description: "",
+  content: "x",
+  language: "",
+  url: "",
+  tags: ["react"],
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("updateItem action", () => {
+  it("rejects when there is no session (no query)", async () => {
+    auth.mockResolvedValue(null);
+
+    const result = await updateItem("item_1", validInput);
+
+    expect(result).toEqual({ success: false, error: "You must be signed in." });
+    expect(updateItemQuery).not.toHaveBeenCalled();
+  });
+
+  it("returns the Zod error for invalid input (no query)", async () => {
+    auth.mockResolvedValue(signedIn);
+
+    const result = await updateItem("item_1", { ...validInput, title: "  " });
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toMatch(/title/i);
+    expect(updateItemQuery).not.toHaveBeenCalled();
+  });
+
+  it("passes normalized data to the query and returns the updated detail", async () => {
+    auth.mockResolvedValue(signedIn);
+    const detail = { id: "item_1", title: "Title" };
+    updateItemQuery.mockResolvedValue(detail);
+
+    const result = await updateItem("item_1", validInput);
+
+    expect(result).toEqual({ success: true, data: detail });
+    const [id, data] = updateItemQuery.mock.calls[0];
+    expect(id).toBe("item_1");
+    // Empty optional strings normalized to null by the schema before the query.
+    expect(data).toMatchObject({
+      title: "Title",
+      description: null,
+      content: "x",
+      language: null,
+      url: null,
+      tags: ["react"],
+    });
+  });
+
+  it("returns an error when the query reports the item missing", async () => {
+    auth.mockResolvedValue(signedIn);
+    updateItemQuery.mockResolvedValue(null);
+
+    const result = await updateItem("item_1", validInput);
+
+    expect(result).toEqual({ success: false, error: "Item not found." });
+  });
+});

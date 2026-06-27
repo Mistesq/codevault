@@ -21,6 +21,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ItemEditForm } from "@/components/items/ItemEditForm";
 import { formatFileSize, relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem, ItemDetail } from "@/lib/db/items";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
@@ -129,6 +130,7 @@ export function ItemDrawer({
   detail,
   loading,
   error,
+  onUpdated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -136,9 +138,26 @@ export function ItemDrawer({
   detail: ItemDetail | null;
   loading: boolean;
   error: boolean;
+  onUpdated: (detail: ItemDetail) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+
+  // Reset edit mode when a different item is opened — adjust state during render
+  // (React's recommended pattern) rather than in an effect.
+  const [lastItemId, setLastItemId] = useState(item?.id ?? null);
+  if ((item?.id ?? null) !== lastItemId) {
+    setLastItemId(item?.id ?? null);
+    setEditing(false);
+  }
+
+  // Also drop out of edit mode whenever the drawer closes (X / esc / overlay).
+  function handleOpenChange(next: boolean) {
+    if (!next) setEditing(false);
+    onOpenChange(next);
+  }
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="w-full gap-0 p-0 sm:max-w-lg">
         {item && (
           <>
@@ -152,7 +171,7 @@ export function ItemDrawer({
                 </span>
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">
-                    {typeLabel(item.type.name)}
+                    {editing ? `Edit ${typeLabel(item.type.name)}` : typeLabel(item.type.name)}
                   </p>
                   <SheetTitle className="truncate text-base font-semibold">
                     {item.title}
@@ -160,60 +179,76 @@ export function ItemDrawer({
                 </div>
               </div>
 
-              {/* Action bar — Copy is wired; favorite/pin/edit/delete land with
-                  item CRUD later, so they're display-only for now. */}
-              <div className="flex items-center gap-1">
-                <CopyButton text={detail ? copyableText(detail) : ""} />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Favorite"
-                >
-                  <Star
-                    className={cn(
-                      "size-4",
-                      item.isFavorite
-                        ? "fill-amber-400 text-amber-400"
-                        : "text-muted-foreground",
-                    )}
-                  />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Pin"
-                >
-                  <Pin
-                    className={cn(
-                      "size-4",
-                      item.isPinned
-                        ? "text-foreground"
-                        : "text-muted-foreground",
-                    )}
-                  />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Edit"
-                >
-                  <Pencil className="size-4 text-muted-foreground" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Delete"
-                  className="ml-auto"
-                >
-                  <Trash2 className="size-4 text-destructive" />
-                </Button>
-              </div>
+              {/* Action bar — replaced by the edit form's Save/Cancel when
+                  editing. Copy is wired; favorite/pin/delete land with the rest
+                  of item CRUD later, so they're display-only for now. */}
+              {!editing && (
+                <div className="flex items-center gap-1">
+                  <CopyButton text={detail ? copyableText(detail) : ""} />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Favorite"
+                  >
+                    <Star
+                      className={cn(
+                        "size-4",
+                        item.isFavorite
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-muted-foreground",
+                      )}
+                    />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Pin"
+                  >
+                    <Pin
+                      className={cn(
+                        "size-4",
+                        item.isPinned
+                          ? "text-foreground"
+                          : "text-muted-foreground",
+                      )}
+                    />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Edit"
+                    disabled={!detail}
+                    onClick={() => setEditing(true)}
+                  >
+                    <Pencil className="size-4 text-muted-foreground" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Delete"
+                    className="ml-auto"
+                  >
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
+                </div>
+              )}
             </SheetHeader>
 
+            {editing && detail ? (
+              <ItemEditForm
+                detail={detail}
+                onCancel={() => setEditing(false)}
+                onSaved={(updated) => {
+                  onUpdated(updated);
+                  setEditing(false);
+                }}
+              />
+            ) : (
+              <>
             <div className="flex-1 space-y-6 overflow-y-auto p-4">
               {item.description && (
                 <SheetDescription className="text-sm text-foreground">
@@ -288,11 +323,19 @@ export function ItemDrawer({
                 withLabel
                 className="flex-1"
               />
-              <Button type="button" variant="outline" size="default">
+              <Button
+                type="button"
+                variant="outline"
+                size="default"
+                disabled={!detail}
+                onClick={() => setEditing(true)}
+              >
                 <Pencil className="size-4" />
                 Edit
               </Button>
             </SheetFooter>
+              </>
+            )}
           </>
         )}
       </SheetContent>

@@ -14,6 +14,8 @@ import { ItemDrawer } from "@/components/items/ItemDrawer";
 interface ItemDrawerContextValue {
   /** Open the drawer for a card and fetch its full detail. */
   openItem: (item: DashboardItem) => void;
+  /** Apply a freshly-saved detail so the drawer reflects edits immediately. */
+  applyUpdatedDetail: (detail: ItemDetail) => void;
 }
 
 const ItemDrawerContext = createContext<ItemDrawerContextValue | null>(null);
@@ -77,8 +79,16 @@ export function ItemDrawerProvider({
     if (!next) requestId.current++;
   }, []);
 
+  // After a save, refresh both the detail (content/language/url/collection) and
+  // the card-level item (title/description/tags/favorite/pin/updatedAt) shown in
+  // the header — an ItemDetail is a superset of DashboardItem.
+  const applyUpdatedDetail = useCallback((next: ItemDetail) => {
+    setItem(next);
+    setDetail(next);
+  }, []);
+
   return (
-    <ItemDrawerContext.Provider value={{ openItem }}>
+    <ItemDrawerContext.Provider value={{ openItem, applyUpdatedDetail }}>
       {children}
       <ItemDrawer
         open={open}
@@ -87,6 +97,7 @@ export function ItemDrawerProvider({
         detail={detail}
         loading={loading}
         error={error}
+        onUpdated={applyUpdatedDetail}
       />
     </ItemDrawerContext.Provider>
   );

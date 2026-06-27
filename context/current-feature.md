@@ -1,16 +1,34 @@
-# Current Feature
+# Current Feature: Item Drawer — Edit Mode
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Clicking the Edit (pencil) button in the item drawer switches the same drawer from view mode to inline edit mode (fields become editable inputs).
+- In edit mode, the action bar is replaced with **Save** and **Cancel** buttons.
+  - **Cancel** discards changes and returns to view mode.
+  - **Save** validates + persists via a server action, returns to view mode, and refreshes the drawer with the updated data (no second fetch).
+- Toast notification on save success or error.
+- Editable fields (all types): **Title** (text, required), **Description** (textarea, optional), **Tags** (comma-separated input → tag array on save).
+- Type-specific editable fields (only shown for the relevant type):
+  - **Content** (textarea) — snippet, prompt, command, note
+  - **Language** (text) — snippet, command
+  - **URL** (text) — URL
+- Display-only in edit mode (non-editable): item type, collection, created/updated dates.
+- New server action `updateItem(itemId, data)` in `src/actions/items.ts` — `{ success, data, error }` pattern, Zod-validated, `auth()` session + ownership check, returns updated `ItemDetail`.
+- New `updateItem` query function in `src/lib/db/items.ts` — tag handling: disconnect all existing, connect-or-create new ones; returns updated `ItemDetail`.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Validation (Zod, server-side source of truth):** `title` non-empty trimmed string; `description` string|null optional; `content` string|null optional; `url` valid URL string|null optional; `language` string|null optional; `tags` array of trimmed non-empty strings. Return Zod errors in `{ success: false, error }` so the client can display them.
+- Keep it simple — no form library; use controlled inputs with local state.
+- Client-side UX guard: disable Save when title is empty (server-side Zod is still the source of truth).
+- The content textarea is a plain textarea, **not** a code editor (that comes later).
+- After save, call `router.refresh()` so the underlying card list reflects changes.
+- Builds on the existing Item Detail Drawer (`ItemDrawer.tsx`, `item-drawer-context.tsx`, `getItemDetail`, `GET /api/items/[id]`). The Edit/Delete buttons currently exist but are display-only — this wires Edit.
+- Tags are currently hidden in the drawer (seed assigns none) — edit mode must still let the user add them.
 
 ## History
 
