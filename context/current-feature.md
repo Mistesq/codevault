@@ -1,16 +1,25 @@
-# Current Feature
+# Current Feature: Items List — Three-Column Grid
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Make the `/items/[type]` listing show **three columns on larger screens**
+instead of two, while staying responsive across breakpoints.
+
+- The item grid steps up to 3 columns at a large breakpoint (`lg`/`xl`).
+- Keep the responsive ladder: 1 column on mobile, 2 on mid-size, 3 on large.
+- No layout regressions to the `ItemCard` (left type-color accent border, etc.)
+  or the empty state.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Single change point: the grid wrapper in `src/app/items/[type]/page.tsx`
+  (currently `grid grid-cols-1 gap-4 md:grid-cols-2`).
+- Pure Tailwind v4 utility change — no component/data/logic changes; nothing
+  testable for the unit suite. Verify visually in the browser at each breakpoint.
 
 ## History
 
