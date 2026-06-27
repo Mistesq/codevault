@@ -28,7 +28,7 @@ export function StatsCards({ stats }: { stats: DashboardStats }) {
       {cards.map(({ label, value, icon: Icon }) => (
         <div
           key={label}
-          className="flex items-center gap-3 rounded-xl border border-border bg-card p-4"
+          className="flex items-center gap-3 rounded-xl border-l-2 border-border bg-card p-4"
         >
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
             <Icon className="size-5" />

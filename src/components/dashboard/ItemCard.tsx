@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { ExternalLink, Pin, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -36,8 +37,16 @@ function ContentPreview({ item }: { item: DashboardItem }) {
 }
 
 export function ItemCard({ item }: { item: DashboardItem }) {
+  // Border accent is data-driven (item type color), so it's an inline style.
+  const style: CSSProperties | undefined = item.type.color
+    ? { borderColor: item.type.color }
+    : undefined;
+
   return (
-    <article className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-ring/40">
+    <article
+      style={style}
+      className="flex flex-col gap-3 rounded-xl border-l-2 border-border bg-card p-4 transition-colors hover:border-ring/40"
+    >
       <div className="flex items-start gap-3">
         {/* Inline color is data-driven (per item type) so it can't be a static class. */}
         <span

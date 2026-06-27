@@ -19,7 +19,7 @@ export function CollectionCard({
     <Link
       href={`/collections/${collection.id}`}
       style={style}
-      className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 transition-colors hover:border-ring/40"
+      className="flex flex-col gap-2 rounded-xl border-l-2 border-border bg-card p-4 transition-colors hover:border-ring/40"
     >
       <div className="flex items-center gap-2">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
