@@ -15,7 +15,7 @@ This is the common workflow that we will use for every single feature/fix:
 1. **Document** - Document the feature in @context/current-feature.md.
 2. **Branch** - Create new branch for feature, fix, etc
 3. **Implement** - Implement the feature/fix that I create in @context/current-feature.md
-4. **Test** - Verify it works in the browser. Implement unit testing later. Run `npm run build` and fix any errors
+4. **Test** - Verify it works in the browser. Add/maintain unit tests (`npm test`) for any server actions or utilities you touch — see [Testing](#testing). Run `npm run build` and fix any errors
 5. **Iterate** - Iterate and change things if needed
 6. **Commit** - Only after build passes and everything works
 7. **Merge** - Merge to main
@@ -48,6 +48,29 @@ We will create a new branch for every feature/fix. Name branch **feature/[featur
 - Don't refactor unrelated code unless asked
 - Don't add "nice to have" features
 - Preserve existing patterns in the codebase
+
+## Testing
+
+We use [Vitest](https://vitest.dev) for unit tests. Config lives in
+`vitest.config.mts` (Node environment, `@/*` alias, `server-only` stubbed).
+
+- **Scope: server actions and utilities only.** Do NOT write component/UI tests —
+  those aren't worth the maintenance here yet. Test the logic in `src/actions/**`
+  and `src/lib/**` (validation schemas, token helpers, rate-limit helpers, pure
+  utils, etc.).
+- Co-locate tests next to the code as `*.test.ts` (e.g. `src/lib/utils.test.ts`).
+- Keep tests true units — **no real database, network, or auth**. Mock
+  collaborators: `vi.mock("@/lib/prisma", …)`, `vi.mock("@/auth", …)`,
+  `vi.mock("bcryptjs", …)`. Define mock objects with `vi.hoisted()` so the
+  hoisted `vi.mock` factory can reference them.
+- Import test helpers explicitly from `vitest` (no globals).
+
+Commands:
+
+- `npm test` — run the suite once (CI-style).
+- `npm run test:watch` — watch mode while developing.
+
+Run `npm test` before committing alongside `npm run build`.
 
 ## Code Review
 
