@@ -1,0 +1,93 @@
+"use client";
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+} from "react";
+
+import type { DashboardItem, ItemDetail } from "@/lib/db/items";
+import { ItemDrawer } from "@/components/items/ItemDrawer";
+
+interface ItemDrawerContextValue {
+  /** Open the drawer for a card and fetch its full detail. */
+  openItem: (item: DashboardItem) => void;
+}
+
+const ItemDrawerContext = createContext<ItemDrawerContextValue | null>(null);
+
+export function useItemDrawer(): ItemDrawerContextValue {
+  const ctx = useContext(ItemDrawerContext);
+  if (!ctx) {
+    throw new Error("useItemDrawer must be used within an ItemDrawerProvider");
+  }
+  return ctx;
+}
+
+/**
+ * Bridges the server-rendered item grids to a single client-side drawer: holds
+ * the open state, the clicked card's data (shown instantly), and the detail
+ * fetched on click from /api/items/[id] (skeleton until it arrives). Lives in
+ * the app shell so it covers both the dashboard and the items list pages.
+ */
+export function ItemDrawerProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [item, setItem] = useState<DashboardItem | null>(null);
+  const [detail, setDetail] = useState<ItemDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  // Guards against an out-of-order response when a second card is clicked
+  // before the first fetch resolves — only the latest request may apply.
+  const requestId = useRef(0);
+
+  const openItem = useCallback((next: DashboardItem) => {
+    const id = ++requestId.current;
+    setItem(next);
+    setDetail(null);
+    setError(false);
+    setLoading(true);
+    setOpen(true);
+
+    fetch(`/api/items/${next.id}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+        return res.json() as Promise<ItemDetail>;
+      })
+      .then((data) => {
+        if (id !== requestId.current) return;
+        setDetail(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (id !== requestId.current) return;
+        setError(true);
+        setLoading(false);
+      });
+  }, []);
+
+  const handleOpenChange = useCallback((next: boolean) => {
+    setOpen(next);
+    // Invalidate any in-flight fetch so a late response can't reopen content.
+    if (!next) requestId.current++;
+  }, []);
+
+  return (
+    <ItemDrawerContext.Provider value={{ openItem }}>
+      {children}
+      <ItemDrawer
+        open={open}
+        onOpenChange={handleOpenChange}
+        item={item}
+        detail={detail}
+        loading={loading}
+        error={error}
+      />
+    </ItemDrawerContext.Provider>
+  );
+}

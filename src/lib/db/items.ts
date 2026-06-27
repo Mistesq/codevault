@@ -135,6 +135,48 @@ export async function getRecentItems(limit = 10): Promise<DashboardItem[]> {
   return rows.map(toDashboardItem);
 }
 
+/**
+ * Full item detail for the item drawer — the card's fields plus the extras that
+ * are only fetched on click (content lives on the card too today, but the drawer
+ * treats it as detail so the card query can drop it later). Dates are ISO so the
+ * shape crosses the API/server-client boundary cleanly.
+ */
+export interface ItemDetail extends DashboardItem {
+  language: string | null;
+  collection: { id: string; name: string } | null;
+  createdAt: string;
+}
+
+const itemDetailSelect = {
+  ...itemSelect,
+  language: true,
+  createdAt: true,
+  collection: { select: { id: true, name: true } },
+} as const;
+
+/**
+ * Full detail for a single item, scoped to the demo user (matching the cards).
+ * Returns null when the item doesn't exist or isn't the demo user's — the API
+ * route turns that into a 404.
+ */
+export async function getItemDetail(id: string): Promise<ItemDetail | null> {
+  const user = await getDemoUser();
+  if (!user) return null;
+
+  const row = await prisma.item.findFirst({
+    where: { id, userId: user.id },
+    select: itemDetailSelect,
+  });
+  if (!row) return null;
+
+  return {
+    ...toDashboardItem(row),
+    language: row.language,
+    createdAt: row.createdAt.toISOString(),
+    collection: row.collection,
+  };
+}
+
 export interface ItemTypeView {
   id: string;
   name: string;

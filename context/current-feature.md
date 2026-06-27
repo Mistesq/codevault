@@ -1,16 +1,27 @@
-# Current Feature
+# Current Feature: Item Drawer
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Right-side slide-in drawer (shadcn `Sheet`, opens from the right) that serves as the item detail view — no separate item page.
+- Clicking an `ItemCard` opens the drawer populated with that item's full data; works on both the dashboard and the `/items/[type]` list pages.
+- Action bar with Favorite (star, yellow when active), Pin, Copy, Edit (pencil), and Delete (trash, right-aligned) — layout per the screenshot.
+- Client wrapper component manages drawer open/selected state since the pages are server components.
+- Snappy: fetch full detail on click via API route, no page navigation.
+- Drawer shows a skeleton/loading state while fetching.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Scope for now:** just the drawer's detail display + action bar. Extras (code editor, AI Superpowers panel, item-type-specific UI) come later — leave them out.
+- **Data fetching split:**
+  - Card data (title, description, tags, etc.) is already fetched by the server component as before.
+  - Full item detail (content, collections, language, etc.) is fetched on click via a new API route `GET /api/items/[id]`.
+  - Query function lives in `lib/db/items.ts`; the API route calls it with an auth check.
+- Reference design: `context/screenshots/dashboard-ui-drawer.png` (drawer header shows type icon + type label + title; CONTENT block with Copy; TAGS; "Last updated" footer; bottom Copy-to-clipboard + Edit bar — AI Superpowers section is out of scope for now).
+- Spec file: `context/features/item-drawer-spec.md`.
 
 ## History
 
