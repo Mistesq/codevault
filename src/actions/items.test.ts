@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Unit-test the action by mocking its collaborators: the auth session and the
 // db query. The Zod schema runs for real (it's the source of truth).
-const { auth, updateItemQuery } = vi.hoisted(() => ({
+const { auth, updateItemQuery, deleteItemQuery } = vi.hoisted(() => ({
   auth: vi.fn(),
   updateItemQuery: vi.fn(),
+  deleteItemQuery: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({
@@ -13,9 +14,10 @@ vi.mock("@/auth", () => ({
 
 vi.mock("@/lib/db/items", () => ({
   updateItem: (id: string, data: unknown) => updateItemQuery(id, data),
+  deleteItem: (id: string) => deleteItemQuery(id),
 }));
 
-import { updateItem } from "@/actions/items";
+import { deleteItem, updateItem } from "@/actions/items";
 
 const signedIn = { user: { id: "user_1" } };
 const validInput = {
@@ -77,6 +79,36 @@ describe("updateItem action", () => {
     updateItemQuery.mockResolvedValue(null);
 
     const result = await updateItem("item_1", validInput);
+
+    expect(result).toEqual({ success: false, error: "Item not found." });
+  });
+});
+
+describe("deleteItem action", () => {
+  it("rejects when there is no session (no query)", async () => {
+    auth.mockResolvedValue(null);
+
+    const result = await deleteItem("item_1");
+
+    expect(result).toEqual({ success: false, error: "You must be signed in." });
+    expect(deleteItemQuery).not.toHaveBeenCalled();
+  });
+
+  it("deletes and returns success when the item exists", async () => {
+    auth.mockResolvedValue(signedIn);
+    deleteItemQuery.mockResolvedValue(true);
+
+    const result = await deleteItem("item_1");
+
+    expect(result).toEqual({ success: true, data: null });
+    expect(deleteItemQuery).toHaveBeenCalledWith("item_1");
+  });
+
+  it("returns an error when the query reports the item missing", async () => {
+    auth.mockResolvedValue(signedIn);
+    deleteItemQuery.mockResolvedValue(false);
+
+    const result = await deleteItem("item_1");
 
     expect(result).toEqual({ success: false, error: "Item not found." });
   });

@@ -1,16 +1,26 @@
-# Current Feature
+# Current Feature: Delete Item
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Wire the (currently display-only) Trash icon in the `ItemDrawer` action bar so it can delete the item.
+- Clicking Delete opens a **shadcn confirmation** (`AlertDialog`) asking the user to confirm the destructive action — no accidental one-click deletes.
+- On confirm, a `deleteItem` Server Action removes the item (demo-user-scoped ownership check, same pattern as `updateItem`).
+- On success: close the drawer, show a **success toast** (`sonner`), and refresh the card grid so the deleted item disappears (`router.refresh()`).
+- On failure: show an error toast and keep the drawer open.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Server Action** — add `deleteItem(itemId)` to `src/actions/items.ts` alongside `updateItem`: `auth()` session gate → delegate to a demo-user-scoped `deleteItem` query in `src/lib/db/items.ts` → return the `{ success, data?, error }` pattern.
+- **DB query** — add `deleteItem(id)` to `src/lib/db/items.ts`: resolve `getDemoUser()`, `prisma.item.deleteMany({ where: { id, userId } })` (ownership-scoped; `ItemTag` cascades on delete per schema). Return a boolean / not-found signal so the action can surface "Item not found."
+- **Confirmation UI** — reuse the existing shadcn `alert-dialog` component (already added for the profile delete-account flow). Trigger from the Trash button in `ItemDrawer.tsx`. Copy: confirm the item title, warn it can't be undone.
+- **Toast** — `sonner` `Toaster` is already mounted in the root layout; call `toast.success(...)` on delete.
+- **Drawer/state** — after a successful delete, close the drawer via `onOpenChange(false)` and `router.refresh()` so the dashboard/`/items/[type]` grids re-fetch. The drawer's `applyUpdatedDetail` path is for edits; deletion just needs close + refresh (consider a small `onDeleted` callback through `ItemDrawerProvider`, mirroring `onUpdated`).
+- **Tests** — add unit tests for the `deleteItem` query (ownership scoping, not-found) and the `deleteItem` action (auth gate, success, not-found), mocking `@/auth`, `@/lib/prisma`, `getDemoUser` via `vi.hoisted()` — same as the `updateItem` tests.
+- **Out of scope** — favorite/pin mutations (still display-only), bulk delete, soft-delete/trash-restore (the project's open question — this is a hard delete), deleting from the card grid directly (delete is drawer-only for now).
 
 ## History
 

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // are mapped into the ItemDetail shape (ISO dates, tag names, collection
 // passthrough). `vi.hoisted` lets the mocks exist before the hoisted factories.
 const { item, itemTag, tag, $transaction } = vi.hoisted(() => {
-  const item = { findFirst: vi.fn(), update: vi.fn() };
+  const item = { findFirst: vi.fn(), update: vi.fn(), deleteMany: vi.fn() };
   const itemTag = { deleteMany: vi.fn(), create: vi.fn() };
   const tag = { upsert: vi.fn() };
   // Run the transaction callback against the same mocked delegates.
@@ -25,7 +25,7 @@ vi.mock("@/lib/db/user", () => ({
   getDemoUser,
 }));
 
-import { getItemDetail, updateItem } from "@/lib/db/items";
+import { deleteItem, getItemDetail, updateItem } from "@/lib/db/items";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -215,5 +215,37 @@ describe("updateItem", () => {
     // Returns the freshly re-read ItemDetail.
     expect(result?.title).toBe("New title");
     expect(result?.tags).toEqual(["react", "hooks"]);
+  });
+});
+
+describe("deleteItem", () => {
+  it("returns false when there is no demo user (no delete)", async () => {
+    getDemoUser.mockResolvedValue(null);
+
+    const result = await deleteItem("item_1");
+
+    expect(result).toBe(false);
+    expect(item.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("scopes the delete to the demo user and returns true when a row is removed", async () => {
+    getDemoUser.mockResolvedValue({ id: "user_1" });
+    item.deleteMany.mockResolvedValue({ count: 1 });
+
+    const result = await deleteItem("item_1");
+
+    expect(result).toBe(true);
+    expect(item.deleteMany).toHaveBeenCalledWith({
+      where: { id: "item_1", userId: "user_1" },
+    });
+  });
+
+  it("returns false when no row matched (unknown or foreign id)", async () => {
+    getDemoUser.mockResolvedValue({ id: "user_1" });
+    item.deleteMany.mockResolvedValue({ count: 0 });
+
+    const result = await deleteItem("item_x");
+
+    expect(result).toBe(false);
   });
 });
