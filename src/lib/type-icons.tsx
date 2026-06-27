@@ -31,6 +31,12 @@ export function getTypeIcon(name: string | null | undefined): IconComponent {
   return FileIcon;
 }
 
+// Capitalize the first letter of a (lowercase) item-type name for display:
+// "snippet" -> "Snippet". Already-cased names like "URL" are left intact.
+export function typeLabel(name: string): string {
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 // Renders the lucide icon for an item type. Resolves via a map lookup (not a
 // call) so it's a stable, statically-referenced component, not one created
 // during render.

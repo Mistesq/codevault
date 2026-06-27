@@ -135,6 +135,48 @@ export async function getRecentItems(limit = 10): Promise<DashboardItem[]> {
   return rows.map(toDashboardItem);
 }
 
+export interface ItemTypeView {
+  id: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+}
+
+export interface ItemsByTypeResult {
+  type: ItemTypeView;
+  items: DashboardItem[];
+}
+
+/**
+ * Resolve a plural type slug (e.g. "snippets", "urls") to its system item type
+ * and the demo user's items of that type, most recently updated first. Returns
+ * null when the slug matches no system type (so the route can 404).
+ */
+export async function getItemsByTypeSlug(
+  slug: string,
+): Promise<ItemsByTypeResult | null> {
+  const normalized = slug.toLowerCase();
+
+  const types = await prisma.itemType.findMany({
+    where: { isSystem: true },
+    select: { id: true, name: true, icon: true, color: true },
+  });
+  // Mirrors the sidebar's typeSlug(): lowercase name + trailing "s".
+  const type = types.find((t) => `${t.name.toLowerCase()}s` === normalized);
+  if (!type) return null;
+
+  const user = await getDemoUser();
+  if (!user) return { type, items: [] };
+
+  const rows = await prisma.item.findMany({
+    where: { userId: user.id, typeId: type.id },
+    orderBy: { updatedAt: "desc" },
+    select: itemSelect,
+  });
+
+  return { type, items: rows.map(toDashboardItem) };
+}
+
 /**
  * Aggregate counts for the dashboard stats cards (items, collections, and
  * favorites of each), scoped to the demo user.

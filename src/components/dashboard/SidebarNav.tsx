@@ -19,7 +19,7 @@ import { UserMenu } from "@/components/auth/UserMenu";
 import type { DashboardCollection, SidebarCollection } from "@/lib/db/collections";
 import type { SidebarItemCounts, SidebarItemType } from "@/lib/db/items";
 import type { CurrentUser } from "@/lib/db/user";
-import { getTypeIcon, type IconComponent } from "@/lib/type-icons";
+import { getTypeIcon, typeLabel, type IconComponent } from "@/lib/type-icons";
 import { useSidebar } from "./sidebar-context";
 
 export interface SidebarData {
@@ -33,11 +33,6 @@ export interface SidebarData {
 // Plural, lowercase slug for type routes, e.g. "snippet" -> "/items/snippets".
 function typeSlug(name: string) {
   return `${name.toLowerCase()}s`;
-}
-
-// Capitalize the first letter for display ("snippet" -> "Snippet", "URL" stays).
-function typeLabel(name: string) {
-  return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 // File and Image item types are Pro-only.
