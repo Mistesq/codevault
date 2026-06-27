@@ -1,25 +1,16 @@
-# Current Feature: Items List — Three-Column Grid
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Make the `/items/[type]` listing show **three columns on larger screens**
-instead of two, while staying responsive across breakpoints.
-
-- The item grid steps up to 3 columns at a large breakpoint (`lg`/`xl`).
-- Keep the responsive ladder: 1 column on mobile, 2 on mid-size, 3 on large.
-- No layout regressions to the `ItemCard` (left type-color accent border, etc.)
-  or the empty state.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Single change point: the grid wrapper in `src/app/items/[type]/page.tsx`
-  (currently `grid grid-cols-1 gap-4 md:grid-cols-2`).
-- Pure Tailwind v4 utility change — no component/data/logic changes; nothing
-  testable for the unit suite. Verify visually in the browser at each breakpoint.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -48,3 +39,4 @@ instead of two, while staying responsive across breakpoints.
 - Rate Limiting for Auth — added Upstash-Redis-backed rate limiting to auth endpoints to curb brute force, credential stuffing, and email-send abuse. New server-only `src/lib/rate-limit.ts`: lazy `Redis` client (from `UPSTASH_REDIS_REST_URL`/`_TOKEN`, already present in `.env`/`.env.production`), per-config cached `Ratelimit` sliding-window instances, a `RATE_LIMITS` config map, `checkRateLimit(config, identifier)` → `{ success, remaining, reset }`, `getClientIp(headers)` (leftmost `x-forwarded-for`, falls back to `x-real-ip` then `127.0.0.1`), and 429 helpers (`tooManyRequestsResponse` with friendly "try again in X minutes" message + `Retry-After` seconds). **Fails open** (allows the request) if Upstash is unconfigured or any check throws. Protected: register (3/1h by IP), request-password-reset (3/1h by IP — the spec's `/forgot-password` maps to this real route), reset-password (5/15m by IP) — all guarded before body parse; resend-verification (3/15m by IP+email — after email parse); and login (5/15m by IP+email) inside the NextAuth `authorize` (NextAuth owns `/api/auth/callback/credentials`, so it throws `RateLimitError extends CredentialsSignin` with code `rate_limited` before any bcrypt work). Frontend: `SignInForm` maps the `rate_limited` code to an inline message and surfaces resend 429s via toast; `ForgotPasswordForm` surfaces a 429 instead of the generic "check your email"; register/reset forms already render the returned `error` inline. Added `@upstash/ratelimit` + `@upstash/redis`. `server-only` keeps it out of the edge proxy bundle (proxy uses `auth.config` only). Decision: kept each form's existing error pattern (inline for submits, toast for resend) rather than the spec's blanket "toast". Follow-ups: leftmost `x-forwarded-for` is spoofable on Vercel (email-keyed limits + fail-open blunt it); login counts successful sign-ins toward the limit; consider rate-limit middleware later. Verified live against real Upstash: reset-password 5×400 then 429 w/ `Retry-After: 746`; resend email-A blocked after 3 while same-IP email-B passed (IP+email bucketing); login callback attempts 1–5 `code=credentials`, 6th `code=rate_limited`; build & lint pass
 - Items List View — dynamic, type-filtered listing at `/items/[type]` (the page the sidebar's type links already targeted, e.g. `/items/snippets`, `/items/urls`). New `getItemsByTypeSlug(slug)` in `src/lib/db/items.ts` resolves a plural lowercase slug to its system `ItemType` (mirrors the sidebar's `typeSlug`: lowercase name + trailing "s") and returns that type plus the demo user's items of it (newest first), reusing the shared `itemSelect`/`toDashboardItem`; returns `null` for an unknown slug so the route `notFound()`s. New `src/app/items/layout.tsx` is a thin `AppShell` wrapper (top bar + sidebar + auth guard, `callbackUrl="/items"`) like `profile/layout.tsx`; new `src/app/items/[type]/page.tsx` (`force-dynamic`) awaits the `params` Promise, 404s on unknown types, and renders a header (type icon in the type color + pluralized heading + item count) above a responsive `ItemCard` grid (`grid-cols-1 md:grid-cols-2` — two columns at md+, left border already type-colored) with a dashed "No {type} yet." empty state. Refactor: extracted the capitalize-first-letter `typeLabel()` into `src/lib/type-icons.tsx` as the single source of truth (page heading = `` `${typeLabel(name)}s` ``, e.g. "Snippets"/"URLs"); `SidebarNav` now imports it instead of its own local copy. Out of scope: search/filtering/sorting within the list, pagination, and the non-type routes the sidebar also links (`/items`, `/favorites`, `/pinned`, `/recent`) — still 404. Verified in the browser as demo: `/items/snippets` (4), `/items/urls` (6, correct "URLs" casing), `/items/notes` (0 → empty state), `/items/bogus` → 404; build & lint pass
 - Vitest Unit Testing Setup — added Vitest for unit-testing **server actions and utilities only** (no component/UI tests). `vitest.config.mts`: Node environment (no jsdom/RTL), native `resolve.tsconfigPaths` for the `@/*` alias, and `server-only` aliased to a no-op stub (`test/stubs/server-only.ts`) since that package throws outside an RSC graph. Scripts: `npm test` (`vitest run`) and `npm run test:watch`. Initial proving suite (46 tests): `cn` (`utils`), the four Zod auth schemas, `isEmailVerificationEnabled` env flag, rate-limit helpers (`getClientIp`/`retryAfterSeconds`/`retryAfterMessage`), the Prisma-mocked password-reset token helper (hashing/single-use/expiry/namespace guard), and the `profile` server actions (`changePassword`/`deleteAccount`) with `@/auth`, `@/lib/prisma`, and `bcryptjs` mocked via `vi.hoisted()`. Docs: `context/ai-interaction.md` workflow step 4 now requires unit tests + a new Testing section; `CLAUDE.md` lists the test commands. Verified: `npm test` (46 pass), `npm run lint` clean, `npm run build` passes (test files type-check fine)
+- Items List — Three-Column Grid — stepped the `/items/[type]` listing grid up to **three columns on large screens** while keeping the responsive ladder. Single-line Tailwind v4 change on the grid wrapper in `src/app/items/[type]/page.tsx`: `grid-cols-1 md:grid-cols-2` → `grid-cols-1 md:grid-cols-2 lg:grid-cols-3` (1 col mobile, 2 at md, 3 at lg). No component/data/logic changes; `ItemCard` (type-color accent border) and the empty state untouched. Verified in the browser as demo on `/items/snippets` across breakpoints (480px → 1 col, 820px → 2 cols, 1280px → 3 cols); `npm run lint` clean, `npm run build` passes, `npm test` 46/46 (nothing new to test — pure CSS)
