@@ -4,21 +4,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // test — no database. We assert the where-clause is user-scoped and that rows
 // are mapped into the ItemDetail shape (ISO dates, tag names, collection
 // passthrough). `vi.hoisted` lets the mocks exist before the hoisted factories.
-const { item } = vi.hoisted(() => ({
-  item: { findFirst: vi.fn() },
-}));
+const { item, itemTag, tag, $transaction } = vi.hoisted(() => {
+  const item = { findFirst: vi.fn(), update: vi.fn() };
+  const itemTag = { deleteMany: vi.fn(), create: vi.fn() };
+  const tag = { upsert: vi.fn() };
+  // Run the transaction callback against the same mocked delegates.
+  const $transaction = vi.fn((cb: (tx: unknown) => unknown) =>
+    cb({ item, itemTag, tag }),
+  );
+  return { item, itemTag, tag, $transaction };
+});
 const { getDemoUser } = vi.hoisted(() => ({
   getDemoUser: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { item },
+  prisma: { item, itemTag, tag, $transaction },
 }));
 vi.mock("@/lib/db/user", () => ({
   getDemoUser,
 }));
 
-import { getItemDetail } from "@/lib/db/items";
+import { getItemDetail, updateItem } from "@/lib/db/items";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -115,5 +122,98 @@ describe("getItemDetail", () => {
 
     expect(result?.collection).toBeNull();
     expect(result?.tags).toEqual([]);
+  });
+});
+
+describe("updateItem", () => {
+  const data = {
+    title: "New title",
+    description: "desc",
+    content: "x",
+    url: null,
+    language: "tsx",
+    tags: ["react", "hooks"],
+  };
+
+  it("returns null when there is no demo user (no writes)", async () => {
+    getDemoUser.mockResolvedValue(null);
+
+    const result = await updateItem("item_1", data);
+
+    expect(result).toBeNull();
+    expect(item.findFirst).not.toHaveBeenCalled();
+    expect($transaction).not.toHaveBeenCalled();
+  });
+
+  it("returns null without writing when the item isn't the demo user's", async () => {
+    getDemoUser.mockResolvedValue({ id: "user_1" });
+    item.findFirst.mockResolvedValue(null);
+
+    const result = await updateItem("item_x", data);
+
+    expect(result).toBeNull();
+    // Ownership lookup scoped to the demo user; no transaction attempted.
+    expect(item.findFirst.mock.calls[0][0].where).toEqual({
+      id: "item_x",
+      userId: "user_1",
+    });
+    expect($transaction).not.toHaveBeenCalled();
+  });
+
+  it("updates fields, replaces tags (disconnect + connect-or-create), then re-reads", async () => {
+    getDemoUser.mockResolvedValue({ id: "user_1" });
+    // First findFirst = ownership check; second = getItemDetail re-read.
+    item.findFirst
+      .mockResolvedValueOnce({ id: "item_1" })
+      .mockResolvedValueOnce({
+        id: "item_1",
+        title: "New title",
+        description: "desc",
+        contentType: "TEXT",
+        content: "x",
+        fileName: null,
+        fileSize: null,
+        url: null,
+        isFavorite: false,
+        isPinned: false,
+        updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        language: "tsx",
+        type: { name: "snippet", icon: "Code", color: null },
+        collection: null,
+        tags: [{ tag: { name: "react" } }, { tag: { name: "hooks" } }],
+      });
+    tag.upsert
+      .mockResolvedValueOnce({ id: "tag_react" })
+      .mockResolvedValueOnce({ id: "tag_hooks" });
+
+    const result = await updateItem("item_1", data);
+
+    // Item fields written (no tags on the item update itself).
+    expect(item.update).toHaveBeenCalledWith({
+      where: { id: "item_1" },
+      data: {
+        title: "New title",
+        description: "desc",
+        content: "x",
+        url: null,
+        language: "tsx",
+      },
+    });
+    // All existing links cleared first.
+    expect(itemTag.deleteMany).toHaveBeenCalledWith({
+      where: { itemId: "item_1" },
+    });
+    // Each tag upserted scoped to the user, then linked.
+    expect(tag.upsert).toHaveBeenCalledTimes(2);
+    expect(tag.upsert.mock.calls[0][0].where).toEqual({
+      userId_name: { userId: "user_1", name: "react" },
+    });
+    expect(itemTag.create).toHaveBeenCalledWith({
+      data: { itemId: "item_1", tagId: "tag_react" },
+    });
+    // Returns the freshly re-read ItemDetail.
+    expect(result?.title).toBe("New title");
+    expect(result?.tags).toEqual(["react", "hooks"]);
   });
 });

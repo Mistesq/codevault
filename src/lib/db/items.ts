@@ -177,6 +177,65 @@ export async function getItemDetail(id: string): Promise<ItemDetail | null> {
   };
 }
 
+/** Fields the drawer's edit mode can change (already Zod-validated upstream). */
+export interface UpdateItemData {
+  title: string;
+  description: string | null;
+  content: string | null;
+  url: string | null;
+  language: string | null;
+  tags: string[];
+}
+
+/**
+ * Update an item's editable fields and its tag set, scoped to the demo user
+ * (matching getItemDetail — domain data is still demo-scoped). Ownership is the
+ * guard: an id that isn't the demo user's returns null, which the action turns
+ * into an error. Tag handling per spec: disconnect all existing ItemTags, then
+ * connect-or-create each new tag (tags are unique per user). Returns the fresh
+ * ItemDetail so the drawer can refresh without a second fetch.
+ */
+export async function updateItem(
+  id: string,
+  data: UpdateItemData,
+): Promise<ItemDetail | null> {
+  const user = await getDemoUser();
+  if (!user) return null;
+
+  // Ownership check — only the demo user's own item may be edited.
+  const existing = await prisma.item.findFirst({
+    where: { id, userId: user.id },
+    select: { id: true },
+  });
+  if (!existing) return null;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.item.update({
+      where: { id },
+      data: {
+        title: data.title,
+        description: data.description,
+        content: data.content,
+        url: data.url,
+        language: data.language,
+      },
+    });
+
+    // Disconnect all existing tags, then connect-or-create the new set.
+    await tx.itemTag.deleteMany({ where: { itemId: id } });
+    for (const name of data.tags) {
+      const tag = await tx.tag.upsert({
+        where: { userId_name: { userId: user.id, name } },
+        create: { name, userId: user.id },
+        update: {},
+      });
+      await tx.itemTag.create({ data: { itemId: id, tagId: tag.id } });
+    }
+  });
+
+  return getItemDetail(id);
+}
+
 export interface ItemTypeView {
   id: string;
   name: string;
