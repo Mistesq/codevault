@@ -98,6 +98,7 @@ export function ItemDrawerProvider({
         loading={loading}
         error={error}
         onUpdated={applyUpdatedDetail}
+        onDeleted={() => handleOpenChange(false)}
       />
     </ItemDrawerContext.Provider>
   );

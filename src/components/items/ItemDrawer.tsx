@@ -1,17 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Check,
-  Copy,
-  ExternalLink,
-  Pencil,
-  Pin,
-  Star,
-  Trash2,
-} from "lucide-react";
+import { Check, Copy, ExternalLink, Pencil, Pin, Star } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DeleteItemDialog } from "@/components/items/DeleteItemDialog";
 import {
   Sheet,
   SheetContent,
@@ -131,6 +124,7 @@ export function ItemDrawer({
   loading,
   error,
   onUpdated,
+  onDeleted,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -139,6 +133,7 @@ export function ItemDrawer({
   loading: boolean;
   error: boolean;
   onUpdated: (detail: ItemDetail) => void;
+  onDeleted: () => void;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -225,15 +220,11 @@ export function ItemDrawer({
                   >
                     <Pencil className="size-4 text-muted-foreground" />
                   </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Delete"
-                    className="ml-auto"
-                  >
-                    <Trash2 className="size-4 text-destructive" />
-                  </Button>
+                  <DeleteItemDialog
+                    itemId={item.id}
+                    title={item.title}
+                    onDeleted={onDeleted}
+                  />
                 </div>
               )}
             </SheetHeader>

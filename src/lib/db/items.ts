@@ -236,6 +236,22 @@ export async function updateItem(
   return getItemDetail(id);
 }
 
+/**
+ * Permanently delete an item, scoped to the demo user (ownership is the guard,
+ * matching updateItem). `deleteMany` with a user-scoped where never throws on a
+ * missing/foreign id — it reports `count: 0`, which we surface as false so the
+ * action can return "Item not found." ItemTag rows cascade on delete per schema.
+ */
+export async function deleteItem(id: string): Promise<boolean> {
+  const user = await getDemoUser();
+  if (!user) return false;
+
+  const { count } = await prisma.item.deleteMany({
+    where: { id, userId: user.id },
+  });
+  return count > 0;
+}
+
 export interface ItemTypeView {
   id: string;
   name: string;
