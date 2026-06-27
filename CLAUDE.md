@@ -19,6 +19,8 @@ Read the following to get the full context of the project:
 - **Build**: `npm run build`
 - **Production server**: `npm run start`
 - **Lint**: `npm run lint`
+- **Test (once)**: `npm test` (Vitest — server actions & utilities only)
+- **Test (watch)**: `npm run test:watch`
 
 ## Neon MCP — Database Access Rules
 
