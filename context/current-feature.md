@@ -1,33 +1,16 @@
-# Current Feature — Item Create
+# Current Feature
 
 ## Status
 
-Complete
+Not Started
 
 ## Goals
 
-- Add new items via a modal dialog opened from the "New Item" button in the top bar.
-- Dialog built on shadcn `Dialog`.
-- Type selector covering: snippet, prompt, command, note, link/URL.
-- Conditional fields based on selected type:
-  - All types: `title` (required), `description`, `tags`
-  - snippet/command: `content`, `language`
-  - prompt/note: `content`
-  - URL: `url` (required)
-- New server action `createItem` with Zod validation.
-- New query function `createItem` in `lib/db/items.ts`.
-- Toast on success, then close modal and refresh.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Spec: `context/features/item-create-spec.md`.
-- Reuse existing patterns from the Edit Mode / Delete Item work:
-  - Zod schema lives in `src/lib/validations/items.ts` (extend with a create schema; mirror `updateItemSchema` field normalization — empty optional text → null, don't trim `content`, trim/dedupe tags).
-  - Query in `src/lib/db/items.ts` (demo-user scoped; tag upsert on `userId_name` + `itemTag.create`; re-read/return shape consistent with existing helpers).
-  - Action in `src/actions/items.ts` (`auth()` gate → Zod parse → query, `{ success, data, error }`).
-  - UI: top bar "New Item" button currently display-only — wire it to open the dialog.
-- Type selector values map to the system `ItemType`s; resolve the chosen type to its `typeId` server-side.
-- Open questions to resolve during implementation: how `contentType` (TEXT/FILE) is set (File/Image types are out of this spec's selector), and which collection (if any) a new item belongs to — spec doesn't mention collection, so likely none.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
