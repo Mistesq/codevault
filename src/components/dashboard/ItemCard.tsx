@@ -1,9 +1,12 @@
-import type { CSSProperties } from "react";
+"use client";
+
+import type { CSSProperties, KeyboardEvent } from "react";
 import { ExternalLink, Pin, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { formatFileSize, relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem } from "@/lib/db/items";
+import { useItemDrawer } from "@/components/items/item-drawer-context";
 import { TypeIcon } from "@/lib/type-icons";
 
 function ContentPreview({ item }: { item: DashboardItem }) {
@@ -37,15 +40,28 @@ function ContentPreview({ item }: { item: DashboardItem }) {
 }
 
 export function ItemCard({ item }: { item: DashboardItem }) {
+  const { openItem } = useItemDrawer();
+
   // Border accent is data-driven (item type color), so it's an inline style.
   const style: CSSProperties | undefined = item.type.color
     ? { borderColor: item.type.color }
     : undefined;
 
+  function handleKeyDown(e: KeyboardEvent<HTMLElement>) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openItem(item);
+    }
+  }
+
   return (
     <article
       style={style}
-      className="flex flex-col gap-3 rounded-xl border-l-2 border-border bg-card p-4 transition-colors hover:border-ring/40"
+      role="button"
+      tabIndex={0}
+      onClick={() => openItem(item)}
+      onKeyDown={handleKeyDown}
+      className="flex cursor-pointer flex-col gap-3 rounded-xl border-l-2 border-border bg-card p-4 transition-colors hover:border-ring/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="flex items-start gap-3">
         {/* Inline color is data-driven (per item type) so it can't be a static class. */}

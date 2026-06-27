@@ -1,0 +1,301 @@
+"use client";
+
+import { useState } from "react";
+import {
+  Check,
+  Copy,
+  ExternalLink,
+  Pencil,
+  Pin,
+  Star,
+  Trash2,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatFileSize, relativeTime } from "@/lib/dashboard-data";
+import type { DashboardItem, ItemDetail } from "@/lib/db/items";
+import { TypeIcon, typeLabel } from "@/lib/type-icons";
+import { cn } from "@/lib/utils";
+
+/** The text the Copy actions place on the clipboard for a given item. */
+function copyableText(detail: ItemDetail): string {
+  if (detail.contentType === "FILE") return detail.fileName ?? "";
+  if (detail.url) return detail.url;
+  return detail.content ?? "";
+}
+
+/** Small button that copies text and briefly flips to a check. */
+function CopyButton({
+  text,
+  variant = "ghost",
+  size = "icon-sm",
+  label = "Copy",
+  withLabel = false,
+  className,
+}: {
+  text: string;
+  variant?: "ghost" | "outline" | "default";
+  size?: "icon-sm" | "sm" | "default";
+  label?: string;
+  withLabel?: boolean;
+  className?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard can reject (e.g. insecure context); silently ignore.
+    }
+  }
+
+  const Icon = copied ? Check : Copy;
+
+  return (
+    <Button
+      type="button"
+      variant={variant}
+      size={size}
+      onClick={handleCopy}
+      aria-label={label}
+      className={className}
+    >
+      <Icon className={cn("size-4", copied && "text-emerald-500")} />
+      {withLabel && <span>{copied ? "Copied" : label}</span>}
+    </Button>
+  );
+}
+
+/** Rendered content body for a loaded item (text / url / file). */
+function ContentBody({ detail }: { detail: ItemDetail }) {
+  if (detail.contentType === "FILE" && detail.fileName) {
+    return (
+      <p className="font-mono text-sm text-muted-foreground">
+        {detail.fileName}
+        {detail.fileSize != null && ` · ${formatFileSize(detail.fileSize)}`}
+      </p>
+    );
+  }
+
+  if (detail.url) {
+    return (
+      <a
+        href={detail.url}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center gap-1.5 break-all font-mono text-sm text-primary hover:underline"
+      >
+        <ExternalLink className="size-3.5 shrink-0" />
+        {detail.url}
+      </a>
+    );
+  }
+
+  if (detail.content) {
+    return (
+      <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-sm text-muted-foreground">
+        {detail.content}
+      </pre>
+    );
+  }
+
+  return <p className="text-sm text-muted-foreground">No content.</p>;
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      {children}
+    </p>
+  );
+}
+
+export function ItemDrawer({
+  open,
+  onOpenChange,
+  item,
+  detail,
+  loading,
+  error,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  item: DashboardItem | null;
+  detail: ItemDetail | null;
+  loading: boolean;
+  error: boolean;
+}) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full gap-0 p-0 sm:max-w-lg">
+        {item && (
+          <>
+            <SheetHeader className="gap-3 border-b border-border p-4 pr-12">
+              <div className="flex items-start gap-3">
+                <span
+                  className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted"
+                  style={item.type.color ? { color: item.type.color } : undefined}
+                >
+                  <TypeIcon name={item.type.icon} className="size-5" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">
+                    {typeLabel(item.type.name)}
+                  </p>
+                  <SheetTitle className="truncate text-base font-semibold">
+                    {item.title}
+                  </SheetTitle>
+                </div>
+              </div>
+
+              {/* Action bar — Copy is wired; favorite/pin/edit/delete land with
+                  item CRUD later, so they're display-only for now. */}
+              <div className="flex items-center gap-1">
+                <CopyButton text={detail ? copyableText(detail) : ""} />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Favorite"
+                >
+                  <Star
+                    className={cn(
+                      "size-4",
+                      item.isFavorite
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-muted-foreground",
+                    )}
+                  />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Pin"
+                >
+                  <Pin
+                    className={cn(
+                      "size-4",
+                      item.isPinned
+                        ? "text-foreground"
+                        : "text-muted-foreground",
+                    )}
+                  />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Edit"
+                >
+                  <Pencil className="size-4 text-muted-foreground" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Delete"
+                  className="ml-auto"
+                >
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              </div>
+            </SheetHeader>
+
+            <div className="flex-1 space-y-6 overflow-y-auto p-4">
+              {item.description && (
+                <SheetDescription className="text-sm text-foreground">
+                  {item.description}
+                </SheetDescription>
+              )}
+
+              <section className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <SectionLabel>Content</SectionLabel>
+                  {detail && (
+                    <CopyButton
+                      text={copyableText(detail)}
+                      size="sm"
+                      withLabel
+                    />
+                  )}
+                </div>
+                <div className="rounded-lg border border-border bg-muted/40 p-3">
+                  {loading && !detail ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-2/3" />
+                    </div>
+                  ) : error ? (
+                    <p className="text-sm text-destructive">
+                      Couldn&apos;t load this item. Please try again.
+                    </p>
+                  ) : detail ? (
+                    <ContentBody detail={detail} />
+                  ) : null}
+                </div>
+              </section>
+
+              {item.tags.length > 0 && (
+                <section className="space-y-2">
+                  <SectionLabel>Tags</SectionLabel>
+                  <div className="flex flex-wrap gap-1.5">
+                    {item.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {detail?.collection && (
+                <section className="space-y-2">
+                  <SectionLabel>Collection</SectionLabel>
+                  <p className="text-sm text-foreground">
+                    {detail.collection.name}
+                  </p>
+                </section>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Last updated {relativeTime(item.updatedAt)}
+              </p>
+            </div>
+
+            <SheetFooter className="flex-row gap-2 border-t border-border p-4">
+              <CopyButton
+                text={detail ? copyableText(detail) : ""}
+                variant="default"
+                size="default"
+                label="Copy to clipboard"
+                withLabel
+                className="flex-1"
+              />
+              <Button type="button" variant="outline" size="default">
+                <Pencil className="size-4" />
+                Edit
+              </Button>
+            </SheetFooter>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
