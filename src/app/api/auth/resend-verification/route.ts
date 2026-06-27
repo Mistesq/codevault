@@ -3,6 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { createVerificationToken } from "@/lib/auth/verification-token";
 import { sendVerificationEmail } from "@/lib/email/verification";
 import { emailSchema } from "@/lib/validations/auth";
+import {
+  RATE_LIMITS,
+  checkRateLimit,
+  getClientIp,
+  tooManyRequestsResponse,
+} from "@/lib/rate-limit";
 
 // Generic response used for every outcome so the endpoint never reveals whether
 // an account exists or is already verified (no user enumeration).
@@ -28,6 +34,11 @@ export async function POST(request: Request) {
   }
 
   const { email } = parsed.data;
+
+  // Rate limit by IP + email to throttle verification-email spam.
+  const ip = getClientIp(request.headers);
+  const limit = await checkRateLimit(RATE_LIMITS.resendVerification, `${ip}:${email}`);
+  if (!limit.success) return tooManyRequestsResponse(limit.reset);
 
   try {
     const user = await prisma.user.findUnique({
