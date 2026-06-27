@@ -177,6 +177,69 @@ export async function getItemDetail(id: string): Promise<ItemDetail | null> {
   };
 }
 
+/** Fields for creating an item from the New Item dialog (Zod-validated upstream). */
+export interface CreateItemData {
+  // System ItemType.name, e.g. "snippet" or "URL".
+  type: string;
+  title: string;
+  description: string | null;
+  content: string | null;
+  url: string | null;
+  language: string | null;
+  tags: string[];
+}
+
+/**
+ * Create a new item for the demo user (matching the rest of the domain data,
+ * still demo-scoped). Resolves the chosen type name to its system ItemType and
+ * returns null when it doesn't exist (so the action can error). Items are TEXT
+ * content type — file/image uploads are out of scope here. Tags are
+ * connect-or-created (unique per user) in the same transaction. Returns the
+ * fresh ItemDetail so the caller doesn't need a second fetch.
+ */
+export async function createItem(
+  data: CreateItemData,
+): Promise<ItemDetail | null> {
+  const user = await getDemoUser();
+  if (!user) return null;
+
+  const type = await prisma.itemType.findFirst({
+    where: { isSystem: true, name: data.type },
+    select: { id: true },
+  });
+  if (!type) return null;
+
+  const created = await prisma.$transaction(async (tx) => {
+    const item = await tx.item.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        content: data.content,
+        url: data.url,
+        language: data.language,
+        contentType: "TEXT",
+        userId: user.id,
+        typeId: type.id,
+      },
+      select: { id: true },
+    });
+
+    // Connect-or-create each tag, then link it to the new item.
+    for (const name of data.tags) {
+      const tag = await tx.tag.upsert({
+        where: { userId_name: { userId: user.id, name } },
+        create: { name, userId: user.id },
+        update: {},
+      });
+      await tx.itemTag.create({ data: { itemId: item.id, tagId: tag.id } });
+    }
+
+    return item;
+  });
+
+  return getItemDetail(created.id);
+}
+
 /** Fields the drawer's edit mode can change (already Zod-validated upstream). */
 export interface UpdateItemData {
   title: string;

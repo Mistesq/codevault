@@ -2,22 +2,26 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Unit-test the action by mocking its collaborators: the auth session and the
 // db query. The Zod schema runs for real (it's the source of truth).
-const { auth, updateItemQuery, deleteItemQuery } = vi.hoisted(() => ({
-  auth: vi.fn(),
-  updateItemQuery: vi.fn(),
-  deleteItemQuery: vi.fn(),
-}));
+const { auth, createItemQuery, updateItemQuery, deleteItemQuery } = vi.hoisted(
+  () => ({
+    auth: vi.fn(),
+    createItemQuery: vi.fn(),
+    updateItemQuery: vi.fn(),
+    deleteItemQuery: vi.fn(),
+  }),
+);
 
 vi.mock("@/auth", () => ({
   auth: () => auth(),
 }));
 
 vi.mock("@/lib/db/items", () => ({
+  createItem: (data: unknown) => createItemQuery(data),
   updateItem: (id: string, data: unknown) => updateItemQuery(id, data),
   deleteItem: (id: string) => deleteItemQuery(id),
 }));
 
-import { deleteItem, updateItem } from "@/actions/items";
+import { createItem, deleteItem, updateItem } from "@/actions/items";
 
 const signedIn = { user: { id: "user_1" } };
 const validInput = {
@@ -31,6 +35,66 @@ const validInput = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe("createItem action", () => {
+  const createInput = {
+    type: "snippet",
+    title: "Title",
+    description: "",
+    content: "x",
+    language: "",
+    url: "",
+    tags: ["react"],
+  };
+
+  it("rejects when there is no session (no query)", async () => {
+    auth.mockResolvedValue(null);
+
+    const result = await createItem(createInput);
+
+    expect(result).toEqual({ success: false, error: "You must be signed in." });
+    expect(createItemQuery).not.toHaveBeenCalled();
+  });
+
+  it("returns the Zod error for invalid input (no query)", async () => {
+    auth.mockResolvedValue(signedIn);
+
+    const result = await createItem({ ...createInput, title: "  " });
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toMatch(/title/i);
+    expect(createItemQuery).not.toHaveBeenCalled();
+  });
+
+  it("passes normalized data to the query and returns the created detail", async () => {
+    auth.mockResolvedValue(signedIn);
+    const detail = { id: "item_new", title: "Title" };
+    createItemQuery.mockResolvedValue(detail);
+
+    const result = await createItem(createInput);
+
+    expect(result).toEqual({ success: true, data: detail });
+    const [data] = createItemQuery.mock.calls[0];
+    expect(data).toMatchObject({
+      type: "snippet",
+      title: "Title",
+      description: null,
+      content: "x",
+      language: null,
+      url: null,
+      tags: ["react"],
+    });
+  });
+
+  it("returns an error when the query can't create the item", async () => {
+    auth.mockResolvedValue(signedIn);
+    createItemQuery.mockResolvedValue(null);
+
+    const result = await createItem(createInput);
+
+    expect(result).toEqual({ success: false, error: "Could not create item." });
+  });
 });
 
 describe("updateItem action", () => {
