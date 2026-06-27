@@ -53,11 +53,20 @@ export function SignInForm() {
     }
     setResending(true);
     try {
-      await fetch("/api/auth/resend-verification", {
+      const res = await fetch("/api/auth/resend-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
+
+      if (res.status === 429) {
+        const data = (await res.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        toast.error(data?.error ?? "Too many attempts. Please try again later.");
+        return;
+      }
+
       // The endpoint always responds generically (no enumeration), so we always
       // confirm optimistically.
       toast.success("Verification email sent — check your inbox.");
@@ -91,6 +100,8 @@ export function SignInForm() {
       if (result.code === "email_not_verified") {
         setError("Please verify your email before signing in.");
         setShowResend(true);
+      } else if (result.code === "rate_limited") {
+        setError("Too many sign-in attempts. Please try again in a few minutes.");
       } else {
         setError("Invalid email or password.");
       }

@@ -6,12 +6,20 @@ import { prisma } from "@/lib/prisma";
 import authConfig from "@/auth.config";
 import { isEmailVerificationEnabled } from "@/lib/auth/email-verification";
 import { signInSchema } from "@/lib/validations/auth";
+import { RATE_LIMITS, checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 // Thrown when credentials are valid but the email hasn't been verified yet. The
 // `code` is surfaced to the client (via signIn's returned `code`) so the sign-in
 // UI can show a "verify your email" message and offer to resend the link.
 class EmailNotVerifiedError extends CredentialsSignin {
   code = "email_not_verified";
+}
+
+// Thrown when too many sign-in attempts come from the same IP + email. NextAuth
+// owns the /api/auth/callback/credentials route, so we can't return a real 429
+// here — instead surface a `code` the sign-in UI maps to a friendly message.
+class RateLimitError extends CredentialsSignin {
+  code = "rate_limited";
 }
 
 // Full auth instance: Prisma adapter for account/user persistence plus the JWT
@@ -36,11 +44,17 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         email: {},
         password: {},
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
         const parsed = signInSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
         const { email, password } = parsed.data;
+
+        // Throttle brute-force / credential-stuffing by IP + email before doing
+        // any password work. Fails open if Upstash is unavailable.
+        const ip = getClientIp(request.headers);
+        const limit = await checkRateLimit(RATE_LIMITS.login, `${ip}:${email}`);
+        if (!limit.success) throw new RateLimitError();
 
         const user = await prisma.user.findUnique({
           where: { email },

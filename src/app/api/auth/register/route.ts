@@ -5,9 +5,20 @@ import { isEmailVerificationEnabled } from "@/lib/auth/email-verification";
 import { createVerificationToken } from "@/lib/auth/verification-token";
 import { sendVerificationEmail } from "@/lib/email/verification";
 import { registerSchema } from "@/lib/validations/auth";
+import {
+  RATE_LIMITS,
+  checkRateLimit,
+  getClientIp,
+  tooManyRequestsResponse,
+} from "@/lib/rate-limit";
 
 // POST /api/auth/register — create a new email/password account.
 export async function POST(request: Request) {
+  // Rate limit by IP to curb automated account-creation abuse.
+  const ip = getClientIp(request.headers);
+  const limit = await checkRateLimit(RATE_LIMITS.register, ip);
+  if (!limit.success) return tooManyRequestsResponse(limit.reset);
+
   let body: unknown;
   try {
     body = await request.json();

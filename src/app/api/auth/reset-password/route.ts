@@ -3,10 +3,21 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { consumePasswordResetToken } from "@/lib/auth/password-reset-token";
 import { resetPasswordSchema } from "@/lib/validations/auth";
+import {
+  RATE_LIMITS,
+  checkRateLimit,
+  getClientIp,
+  tooManyRequestsResponse,
+} from "@/lib/rate-limit";
 
 // POST /api/auth/reset-password — complete the forgot-password flow by consuming
 // a reset token and setting a new password.
 export async function POST(request: Request) {
+  // Rate limit by IP to stop brute-forcing reset tokens.
+  const ip = getClientIp(request.headers);
+  const limit = await checkRateLimit(RATE_LIMITS.passwordReset, ip);
+  if (!limit.success) return tooManyRequestsResponse(limit.reset);
+
   let body: unknown;
   try {
     body = await request.json();

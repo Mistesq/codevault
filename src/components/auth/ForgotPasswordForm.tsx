@@ -29,14 +29,23 @@ export function ForgotPasswordForm() {
 
     setPending(true);
     try {
-      // The endpoint always responds generically (no enumeration), so any 2xx
-      // means we show the same confirmation regardless of whether the account
-      // exists.
-      await fetch("/api/auth/request-password-reset", {
+      // The endpoint responds generically (no enumeration), so any 2xx means we
+      // show the same confirmation regardless of whether the account exists. A
+      // 429 (rate limited) is the one case we surface to the user.
+      const res = await fetch("/api/auth/request-password-reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
+
+      if (res.status === 429) {
+        const data = (await res.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        setError(data?.error ?? "Too many attempts. Please try again later.");
+        return;
+      }
+
       setSent(true);
     } catch {
       setError("Something went wrong. Please try again.");

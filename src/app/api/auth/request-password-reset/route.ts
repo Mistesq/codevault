@@ -3,6 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { createPasswordResetToken } from "@/lib/auth/password-reset-token";
 import { sendPasswordResetEmail } from "@/lib/email/password-reset";
 import { emailSchema } from "@/lib/validations/auth";
+import {
+  RATE_LIMITS,
+  checkRateLimit,
+  getClientIp,
+  tooManyRequestsResponse,
+} from "@/lib/rate-limit";
 
 // Generic response used for every outcome so the endpoint never reveals whether
 // an account exists (no user enumeration).
@@ -12,6 +18,11 @@ const GENERIC = {
 
 // POST /api/auth/request-password-reset — start the forgot-password flow.
 export async function POST(request: Request) {
+  // Rate limit by IP to prevent abusing the reset email as a spam vector.
+  const ip = getClientIp(request.headers);
+  const limit = await checkRateLimit(RATE_LIMITS.passwordResetRequest, ip);
+  if (!limit.success) return tooManyRequestsResponse(limit.reset);
+
   let body: unknown;
   try {
     body = await request.json();
