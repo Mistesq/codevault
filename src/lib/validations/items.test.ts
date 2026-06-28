@@ -76,7 +76,7 @@ describe("createItemSchema", () => {
 
   it("rejects an unknown type", () => {
     expect(
-      createItemSchema.safeParse({ ...base, type: "image" }).success,
+      createItemSchema.safeParse({ ...base, type: "bogus" }).success,
     ).toBe(false);
   });
 
@@ -124,5 +124,35 @@ describe("createItemSchema", () => {
       tags: [" react ", "react", "", "hooks"],
     });
     expect(parsed.tags).toEqual(["react", "hooks"]);
+  });
+
+  it("requires file metadata for file/image types", () => {
+    // Missing upload metadata → rejected with a "upload a file" message.
+    const missing = createItemSchema.safeParse({ ...base, type: "image" });
+    expect(missing.success).toBe(false);
+    if (!missing.success) {
+      expect(missing.error.issues[0]?.message).toMatch(/upload a file/i);
+    }
+
+    // With metadata present → accepted.
+    const ok = createItemSchema.safeParse({
+      ...base,
+      type: "image",
+      fileUrl: "https://pub-test.r2.dev/uploads/u/image/a.png",
+      fileName: "a.png",
+      fileSize: 2048,
+    });
+    expect(ok.success).toBe(true);
+  });
+
+  it("rejects a non-positive or non-integer fileSize", () => {
+    const bad = createItemSchema.safeParse({
+      ...base,
+      type: "file",
+      fileUrl: "https://pub-test.r2.dev/uploads/u/file/a.pdf",
+      fileName: "a.pdf",
+      fileSize: 0,
+    });
+    expect(bad.success).toBe(false);
   });
 });

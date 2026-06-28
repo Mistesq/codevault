@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getDemoUser } from "@/lib/db/user";
+import { deleteFromR2, keyFromPublicUrl } from "@/lib/r2";
 
 export interface DashboardItemType {
   name: string;
@@ -14,6 +15,7 @@ export interface DashboardItem {
   description: string | null;
   contentType: "TEXT" | "FILE";
   content: string | null;
+  fileUrl: string | null;
   fileName: string | null;
   fileSize: number | null;
   url: string | null;
@@ -57,6 +59,7 @@ const itemSelect = {
   description: true,
   contentType: true,
   content: true,
+  fileUrl: true,
   fileName: true,
   fileSize: true,
   url: true,
@@ -73,6 +76,7 @@ type ItemRow = {
   description: string | null;
   contentType: "TEXT" | "FILE";
   content: string | null;
+  fileUrl: string | null;
   fileName: string | null;
   fileSize: number | null;
   url: string | null;
@@ -90,6 +94,7 @@ function toDashboardItem(row: ItemRow): DashboardItem {
     description: row.description,
     contentType: row.contentType,
     content: row.content,
+    fileUrl: row.fileUrl,
     fileName: row.fileName,
     fileSize: row.fileSize,
     url: row.url,
@@ -179,23 +184,31 @@ export async function getItemDetail(id: string): Promise<ItemDetail | null> {
 
 /** Fields for creating an item from the New Item dialog (Zod-validated upstream). */
 export interface CreateItemData {
-  // System ItemType.name, e.g. "snippet" or "URL".
+  // System ItemType.name, e.g. "snippet", "URL", "file", "image".
   type: string;
   title: string;
   description: string | null;
   content: string | null;
   url: string | null;
   language: string | null;
+  // Set for the file/image types (uploaded to R2 beforehand); null otherwise.
+  fileUrl: string | null;
+  fileName: string | null;
+  fileSize: number | null;
   tags: string[];
 }
+
+// System type names whose items store an uploaded file (contentType FILE).
+const FILE_TYPE_NAMES = new Set(["file", "image"]);
 
 /**
  * Create a new item for the demo user (matching the rest of the domain data,
  * still demo-scoped). Resolves the chosen type name to its system ItemType and
- * returns null when it doesn't exist (so the action can error). Items are TEXT
- * content type — file/image uploads are out of scope here. Tags are
- * connect-or-created (unique per user) in the same transaction. Returns the
- * fresh ItemDetail so the caller doesn't need a second fetch.
+ * returns null when it doesn't exist (so the action can error). File/image
+ * types are stored as contentType FILE with the R2 file metadata; everything
+ * else is TEXT. Tags are connect-or-created (unique per user) in the same
+ * transaction. Returns the fresh ItemDetail so the caller doesn't need a second
+ * fetch.
  */
 export async function createItem(
   data: CreateItemData,
@@ -209,15 +222,20 @@ export async function createItem(
   });
   if (!type) return null;
 
+  const isFile = FILE_TYPE_NAMES.has(data.type);
+
   const created = await prisma.$transaction(async (tx) => {
     const item = await tx.item.create({
       data: {
         title: data.title,
         description: data.description,
-        content: data.content,
-        url: data.url,
-        language: data.language,
-        contentType: "TEXT",
+        content: isFile ? null : data.content,
+        url: isFile ? null : data.url,
+        language: isFile ? null : data.language,
+        fileUrl: isFile ? data.fileUrl : null,
+        fileName: isFile ? data.fileName : null,
+        fileSize: isFile ? data.fileSize : null,
+        contentType: isFile ? "FILE" : "TEXT",
         userId: user.id,
         typeId: type.id,
       },
@@ -304,15 +322,30 @@ export async function updateItem(
  * matching updateItem). `deleteMany` with a user-scoped where never throws on a
  * missing/foreign id — it reports `count: 0`, which we surface as false so the
  * action can return "Item not found." ItemTag rows cascade on delete per schema.
+ * For file/image items, the backing R2 object is removed after the row is gone
+ * (best-effort — a failed R2 delete is logged but doesn't fail the operation).
  */
 export async function deleteItem(id: string): Promise<boolean> {
   const user = await getDemoUser();
   if (!user) return false;
 
+  // Read the file URL first so we can clean up R2 after the row is deleted.
+  const existing = await prisma.item.findFirst({
+    where: { id, userId: user.id },
+    select: { fileUrl: true },
+  });
+
   const { count } = await prisma.item.deleteMany({
     where: { id, userId: user.id },
   });
-  return count > 0;
+  if (count === 0) return false;
+
+  if (existing?.fileUrl) {
+    const key = keyFromPublicUrl(existing.fileUrl);
+    if (key) await deleteFromR2(key);
+  }
+
+  return true;
 }
 
 export interface ItemTypeView {

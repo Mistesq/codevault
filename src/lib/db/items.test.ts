@@ -23,12 +23,24 @@ const { item, itemType, itemTag, tag, $transaction } = vi.hoisted(() => {
 const { getDemoUser } = vi.hoisted(() => ({
   getDemoUser: vi.fn(),
 }));
+const { deleteFromR2, keyFromPublicUrl } = vi.hoisted(() => ({
+  deleteFromR2: vi.fn(),
+  // Mirror the real helper: strip a known public-bucket prefix, else null.
+  keyFromPublicUrl: vi.fn((url: string) => {
+    const prefix = "https://pub-test.r2.dev/";
+    return url.startsWith(prefix) ? url.slice(prefix.length) : null;
+  }),
+}));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: { item, itemType, itemTag, tag, $transaction },
 }));
 vi.mock("@/lib/db/user", () => ({
   getDemoUser,
+}));
+vi.mock("@/lib/r2", () => ({
+  deleteFromR2,
+  keyFromPublicUrl,
 }));
 
 import { createItem, deleteItem, getItemDetail, updateItem } from "@/lib/db/items";
@@ -293,6 +305,9 @@ describe("createItem", () => {
         content: "x",
         url: null,
         language: "tsx",
+        fileUrl: null,
+        fileName: null,
+        fileSize: null,
         contentType: "TEXT",
         userId: "user_1",
         typeId: "type_snippet",
@@ -308,6 +323,64 @@ describe("createItem", () => {
     expect(result?.id).toBe("item_new");
     expect(result?.tags).toEqual(["react"]);
   });
+
+  it("creates a FILE item with the R2 metadata (no text fields)", async () => {
+    getDemoUser.mockResolvedValue({ id: "user_1" });
+    itemType.findFirst.mockResolvedValue({ id: "type_image" });
+    item.create.mockResolvedValue({ id: "item_img" });
+    item.findFirst.mockResolvedValue({
+      id: "item_img",
+      title: "Logo",
+      description: null,
+      contentType: "FILE",
+      content: null,
+      fileUrl: "https://pub-test.r2.dev/uploads/user_1/image/abc.png",
+      fileName: "logo.png",
+      fileSize: 2048,
+      url: null,
+      isFavorite: false,
+      isPinned: false,
+      updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      language: null,
+      type: { name: "image", icon: "Image", color: null },
+      collection: null,
+      tags: [],
+    });
+
+    const result = await createItem({
+      type: "image",
+      title: "Logo",
+      description: null,
+      content: "ignored",
+      url: "ignored",
+      language: "ignored",
+      fileUrl: "https://pub-test.r2.dev/uploads/user_1/image/abc.png",
+      fileName: "logo.png",
+      fileSize: 2048,
+      tags: [],
+    });
+
+    // Text fields are nulled; file metadata + FILE content type are stored.
+    expect(item.create).toHaveBeenCalledWith({
+      data: {
+        title: "Logo",
+        description: null,
+        content: null,
+        url: null,
+        language: null,
+        fileUrl: "https://pub-test.r2.dev/uploads/user_1/image/abc.png",
+        fileName: "logo.png",
+        fileSize: 2048,
+        contentType: "FILE",
+        userId: "user_1",
+        typeId: "type_image",
+      },
+      select: { id: true },
+    });
+    expect(result?.contentType).toBe("FILE");
+    expect(result?.fileName).toBe("logo.png");
+  });
 });
 
 describe("deleteItem", () => {
@@ -322,6 +395,7 @@ describe("deleteItem", () => {
 
   it("scopes the delete to the demo user and returns true when a row is removed", async () => {
     getDemoUser.mockResolvedValue({ id: "user_1" });
+    item.findFirst.mockResolvedValue({ fileUrl: null });
     item.deleteMany.mockResolvedValue({ count: 1 });
 
     const result = await deleteItem("item_1");
@@ -330,6 +404,37 @@ describe("deleteItem", () => {
     expect(item.deleteMany).toHaveBeenCalledWith({
       where: { id: "item_1", userId: "user_1" },
     });
+    // No backing file → no R2 cleanup.
+    expect(deleteFromR2).not.toHaveBeenCalled();
+  });
+
+  it("deletes the backing R2 object for a file item after the row is gone", async () => {
+    getDemoUser.mockResolvedValue({ id: "user_1" });
+    item.findFirst.mockResolvedValue({
+      fileUrl: "https://pub-test.r2.dev/uploads/user_1/file/doc.pdf",
+    });
+    item.deleteMany.mockResolvedValue({ count: 1 });
+
+    const result = await deleteItem("item_file");
+
+    expect(result).toBe(true);
+    expect(keyFromPublicUrl).toHaveBeenCalledWith(
+      "https://pub-test.r2.dev/uploads/user_1/file/doc.pdf",
+    );
+    expect(deleteFromR2).toHaveBeenCalledWith("uploads/user_1/file/doc.pdf");
+  });
+
+  it("does not touch R2 when the row didn't match", async () => {
+    getDemoUser.mockResolvedValue({ id: "user_1" });
+    item.findFirst.mockResolvedValue({
+      fileUrl: "https://pub-test.r2.dev/uploads/user_1/file/doc.pdf",
+    });
+    item.deleteMany.mockResolvedValue({ count: 0 });
+
+    const result = await deleteItem("item_x");
+
+    expect(result).toBe(false);
+    expect(deleteFromR2).not.toHaveBeenCalled();
   });
 
   it("returns false when no row matched (unknown or foreign id)", async () => {
