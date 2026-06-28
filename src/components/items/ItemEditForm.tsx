@@ -9,11 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CodeEditor } from "@/components/items/CodeEditor";
 import { updateItem } from "@/actions/items";
 import type { ItemDetail } from "@/lib/db/items";
 
 // Which type-specific fields each system item type exposes in edit mode.
 const CONTENT_TYPES = new Set(["snippet", "prompt", "command", "note"]);
+// Code types get the Monaco-based CodeEditor; the rest keep the plain Textarea.
+const CODE_CONTENT_TYPES = new Set(["snippet", "command"]);
 const LANGUAGE_TYPES = new Set(["snippet", "command"]);
 const URL_TYPES = new Set(["url"]);
 
@@ -43,6 +46,7 @@ export function ItemEditForm({
   const router = useRouter();
   const typeName = detail.type.name.toLowerCase();
   const showContent = CONTENT_TYPES.has(typeName);
+  const isCodeContent = CODE_CONTENT_TYPES.has(typeName);
   const showLanguage = LANGUAGE_TYPES.has(typeName);
   const showUrl = URL_TYPES.has(typeName);
 
@@ -120,13 +124,21 @@ export function ItemEditForm({
         {showContent && (
           <div className="space-y-1.5">
             <Label htmlFor="item-content">Content</Label>
-            <Textarea
-              id="item-content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={8}
-              className="font-mono text-sm"
-            />
+            {isCodeContent ? (
+              <CodeEditor
+                value={content}
+                onChange={setContent}
+                language={language}
+              />
+            ) : (
+              <Textarea
+                id="item-content"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                rows={8}
+                className="font-mono text-sm"
+              />
+            )}
           </div>
         )}
 

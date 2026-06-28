@@ -14,11 +14,16 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CodeEditor } from "@/components/items/CodeEditor";
 import { ItemEditForm } from "@/components/items/ItemEditForm";
 import { formatFileSize, relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem, ItemDetail } from "@/lib/db/items";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import { cn } from "@/lib/utils";
+
+// Code item types render their content in the read-only CodeEditor; other text
+// types keep the plain <pre> block.
+const CODE_CONTENT_TYPES = new Set(["snippet", "command"]);
 
 /** The text the Copy actions place on the clipboard for a given item. */
 function copyableText(detail: ItemDetail): string {
@@ -247,33 +252,53 @@ export function ItemDrawer({
                 </SheetDescription>
               )}
 
-              <section className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <SectionLabel>Content</SectionLabel>
-                  {detail && (
-                    <CopyButton
-                      text={copyableText(detail)}
-                      size="sm"
-                      withLabel
-                    />
-                  )}
-                </div>
-                <div className="rounded-lg border border-border bg-muted/40 p-3">
-                  {loading && !detail ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-2/3" />
+              {(() => {
+                // Code types display their content in the read-only CodeEditor,
+                // whose own header carries the copy button — so the section-level
+                // copy is hidden in that case to avoid two copy controls.
+                const showCodeEditor =
+                  !!detail &&
+                  CODE_CONTENT_TYPES.has(detail.type.name.toLowerCase()) &&
+                  !!detail.content;
+
+                return (
+                  <section className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <SectionLabel>Content</SectionLabel>
+                      {detail && !showCodeEditor && (
+                        <CopyButton
+                          text={copyableText(detail)}
+                          size="sm"
+                          withLabel
+                        />
+                      )}
                     </div>
-                  ) : error ? (
-                    <p className="text-sm text-destructive">
-                      Couldn&apos;t load this item. Please try again.
-                    </p>
-                  ) : detail ? (
-                    <ContentBody detail={detail} />
-                  ) : null}
-                </div>
-              </section>
+                    {loading && !detail ? (
+                      <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-2/3" />
+                      </div>
+                    ) : error ? (
+                      <div className="rounded-lg border border-border bg-muted/40 p-3">
+                        <p className="text-sm text-destructive">
+                          Couldn&apos;t load this item. Please try again.
+                        </p>
+                      </div>
+                    ) : showCodeEditor && detail ? (
+                      <CodeEditor
+                        value={detail.content ?? ""}
+                        language={detail.language}
+                        readOnly
+                      />
+                    ) : detail ? (
+                      <div className="rounded-lg border border-border bg-muted/40 p-3">
+                        <ContentBody detail={detail} />
+                      </div>
+                    ) : null}
+                  </section>
+                );
+              })()}
 
               {item.tags.length > 0 && (
                 <section className="space-y-2">
