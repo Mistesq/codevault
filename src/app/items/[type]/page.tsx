@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { ItemCard } from "@/components/dashboard/ItemCard";
+import { FileRow } from "@/components/items/FileRow";
 import { ImageCard } from "@/components/items/ImageCard";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { getItemsByTypeSlug } from "@/lib/db/items";
@@ -36,6 +37,8 @@ export default async function ItemsByTypePage({
   const createType = toCreateType(type.name);
   // Image items get a thumbnail gallery instead of the standard item cards.
   const isImageType = type.name.toLowerCase() === "image";
+  // File items get a single-column list (Google Drive / Dropbox style).
+  const isFileType = type.name.toLowerCase() === "file";
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -63,15 +66,23 @@ export default async function ItemsByTypePage({
       </header>
 
       {items.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) =>
-            isImageType ? (
-              <ImageCard key={item.id} item={item} />
-            ) : (
-              <ItemCard key={item.id} item={item} />
-            ),
-          )}
-        </div>
+        isFileType ? (
+          <div className="flex flex-col gap-2">
+            {items.map((item) => (
+              <FileRow key={item.id} item={item} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {items.map((item) =>
+              isImageType ? (
+                <ImageCard key={item.id} item={item} />
+              ) : (
+                <ItemCard key={item.id} item={item} />
+              ),
+            )}
+          </div>
+        )
       ) : (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
           No {heading.toLowerCase()} yet.
