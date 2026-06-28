@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CodeEditor } from "@/components/items/CodeEditor";
+import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { updateItem } from "@/actions/items";
 import type { ItemDetail } from "@/lib/db/items";
 
@@ -131,13 +132,8 @@ export function ItemEditForm({
                 language={language}
               />
             ) : (
-              <Textarea
-                id="item-content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={8}
-                className="font-mono text-sm"
-              />
+              // Notes & prompts get the Markdown editor (Write/Preview).
+              <MarkdownEditor value={content} onChange={setContent} />
             )}
           </div>
         )}

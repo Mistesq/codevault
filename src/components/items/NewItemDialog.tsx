@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CodeEditor } from "@/components/items/CodeEditor";
+import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import { createItem } from "@/actions/items";
 import type { CreateItemType } from "@/lib/validations/items";
@@ -224,13 +225,8 @@ export function NewItemDialog({
                   language={language}
                 />
               ) : (
-                <Textarea
-                  id="new-item-content"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  rows={8}
-                  className="font-mono text-sm"
-                />
+                // Notes & prompts get the Markdown editor (Write/Preview).
+                <MarkdownEditor value={content} onChange={setContent} />
               )}
             </div>
           )}
