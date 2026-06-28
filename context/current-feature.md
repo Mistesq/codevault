@@ -1,76 +1,16 @@
-# Code Modularity Refactor
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Break up large blocks / duplicated code into focused functions, components, and
-utilities. **Pure refactor — no behavior change.** Each item is independently
-shippable; keep public shapes and rendered output identical.
-
-### High value
-
-- **Extract the tag connect-or-create loop** — the identical
-  `for (const name of data.tags) { tag.upsert → itemTag.create }` block appears
-  in both `createItem` (`src/lib/db/items.ts` ~246-253) and `updateItem`
-  (~307-314). Extract one `linkTags(tx, userId, itemId, tagNames)` helper and
-  call it from both. Already covered by the existing `createItem`/`updateItem`
-  unit tests; add a focused test for the helper.
-- **Share item-form fields between create & edit** — `NewItemDialog.tsx` (~323
-  lines) and `ItemEditForm.tsx` (~209) render Title/Description/
-  Content(code|markdown)/Language/URL/Tags with near-identical JSX, duplicate
-  the `CONTENT_TYPES`/`LANGUAGE_TYPES` set logic, and build the same payload
-  shape. Extract a shared `ItemContentField` (the CodeEditor/MarkdownEditor
-  switch) and a `buildItemPayload` helper. **Keep the two forms separate** (two
-  distinct submit flows: create vs update) — share only the fields/payload, not
-  the submit logic.
-
-### Medium value
-
-- **Break up `ItemDrawer.tsx` (~403 lines)** into focused pieces, preserving
-  markup:
-  - `CopyButton` (~47-89) → `src/components/items/CopyButton.tsx` (reusable).
-  - `DownloadButton` (~92-107) and `ContentBody` (~110-157) → their own files.
-  - The content-section IIFE (~298-353, the `(() => {…})()` computing
-    `showCodeEditor`/`showMarkdown`/`showEditorHeader`) → a
-    `DrawerContentSection` component.
-  - The action bar (favorite/pin/edit/delete, ~228-277) → `DrawerActionBar`.
-- **Derive `ItemRow` from Prisma** — `src/lib/db/items.ts` has three parallel
-  field lists (`DashboardItem` interface, the hand-written `ItemRow` type, and
-  `toDashboardItem`'s mapping). Replace `ItemRow` with
-  `Prisma.ItemGetPayload<{ select: typeof itemSelect }>` so it can't drift from
-  `itemSelect`. Confirm the generated-client import path first
-  (`src/generated/prisma`).
-
-### Lower value (do only if cheap)
-
-- **Split `items.ts` (~485 lines) by concern** — reads (pinned/recent/detail/
-  by-type), mutations (create/update/delete), and sidebar/stats aggregates,
-  behind a barrel re-export from `@/lib/db/items` so the many importers don't
-  change. Only worth it if it stays cohesive; skip if the re-export adds noise.
-- **`SidebarNav.tsx` collection sections** — the two near-identical
-  Favorite/Recent collection list blocks (~173-205) → a small `CollectionSection`
-  component. Minor.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Branch: `refactor/code-modularity`.
-- **No behavior change.** Verify rendered output and query results are identical;
-  this is structure-only.
-- Order of work: do the low-risk server-side items first (tag-loop extract,
-  `ItemRow` derive), then the `ItemDrawer` split, then the shared form fields
-  (highest payoff, highest risk — keep submit flows separate). The two "lower
-  value" items are optional; skip if they add more indirection than they remove.
-- Tests: server-side changes (`items.ts`) must keep `npm test` green and add a
-  unit test for the new `linkTags` helper. UI extractions (drawer pieces, form
-  fields, sidebar section) are out of the server-actions/utilities unit-test
-  scope per `context/ai-interaction.md`.
-- Per coding standards: components in
-  `src/components/[feature]/ComponentName.tsx`, utilities in `src/lib/`. Match
-  existing patterns; don't introduce a form library.
-- Run `npm run lint` + `npm run build` + `npm test` before committing.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -110,3 +50,4 @@ shippable; keep public shapes and rendered output identical.
 - Image Gallery View — image items now render as a thumbnail gallery on `/items/images` instead of the standard `ItemCard`. New client component `src/components/items/ImageCard.tsx`: a 16:9 (`aspect-video`) cover thumbnail (`object-cover`, may crop) inside an `overflow-hidden` card with a subtle hover zoom (`group-hover:scale-105` + `transition-transform duration-300` = 5% / 300ms), a title row below carrying the pin + favorite indicators, and a placeholder `ImageIcon` fallback when `fileUrl` is null. It reuses the already-fetched `DashboardItem.fileUrl` (R2 public URL, plain `<img>` like the drawer's preview, `loading="lazy"`) and opens the shared `ItemDrawer` on click — keyboard-accessible `role="button"` (Enter/Space + focus ring), mirroring `ItemCard`. Wiring: `src/app/items/[type]/page.tsx` computes `isImageType` (`type.name.toLowerCase() === "image"`) and renders `ImageCard` vs `ItemCard` inside the **existing** responsive grid (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3`, ends at 3 columns); header, empty state, and the per-type "New Image" button are untouched. Out of scope: lightbox/full-size viewer, masonry layout, multi-select, gallery on the dashboard (mixed-type recent items keep `ItemCard`). Note: the dev-branch seed has **0 image items**, so browser thumbnail verification wasn't run (the page shows the empty state until an image is uploaded); the gallery is a pure presentational swap reusing the proven `fileUrl`/drawer plumbing from the File & Image Upload feature. `npm run lint` clean, `npm run build` passes, `npm test` 106/106 (ImageCard/page are UI — out of the server-actions/utilities unit-test scope)
 - File List View — File items now render at `/items/files` as a single-column list (Google Drive / Dropbox style) instead of grid cards. New client component `src/components/items/FileRow.tsx`: a row with a file icon (by extension), file name (`fileName`, falling back to title), file size, upload date (`relativeTime(updatedAt)`), and a Download button, plus pin/favorite indicators. Icon-by-extension is a static `EXT_ICONS` map (images→`FileImage`, `json`→`FileJson`, `yaml`/`yml`/`xml`/`toml`/`ini`→`FileCode`, `csv`→`FileSpreadsheet`, `pdf`/`txt`/`md`→`FileText`, else `File`) read by a small `FileTypeIcon` component (map lookup, not a call-during-render — same shape as `TypeIcon` to satisfy the `react-hooks/static-components` rule). Reuses existing plumbing: `formatFileSize`/`relativeTime` from `dashboard-data`, `DashboardItem.fileName/fileSize/updatedAt`; row click opens the shared `ItemDrawer` (keyboard-accessible `role="button"` + Enter/Space, mirroring `ImageCard`/`ItemCard`); Download is a base-ui `Button` rendered as `<a href="/api/items/[id]/download" download nativeButton={false}>` (the same same-origin proxy as the drawer) with `onClick → stopPropagation()` so it doesn't open the drawer. Hover highlight (`hover:bg-accent/50`); responsive — stacks vertically on mobile, single row at `sm:` (`flex-col sm:flex-row`); the Download label is `sr-only` until `sm:`. Wiring: `src/app/items/[type]/page.tsx` computes `isFileType` (`type.name.toLowerCase() === "file"`) and renders a `flex flex-col` list of `FileRow`s vs the existing card grid (alongside the `isImageType` branch); header, empty state, and the per-type "New File" button are untouched. Out of scope: sorting/column headers, multi-select, bulk download, inline rename. Note: the dev-branch seed has **0 File items** (profile counts `4/3/5/0/0/0/6`), so `/items/files` shows the empty state and browser row-verification wasn't run — it's a pure presentational swap reusing the proven `fileName`/`fileSize`/download-proxy/drawer plumbing from the File & Image Upload feature. `npm run lint` clean, `npm run build` passes, `npm test` 106/106 (FileRow/page are UI — out of the server-actions/utilities unit-test scope)
 - Audit Quick Wins — a batch of low-risk fixes from the code-scanner audit, each isolated with no behavior change for normal use. **Security/correctness:** (1) `SignInForm` now runs the GitHub OAuth `callbackUrl` through the same `toInternalPath()` sanitizer the credentials path already used, so an off-origin `?callbackUrl` can't redirect the user away after OAuth (NextAuth's own callback validation already blunts this, but the two paths now match); (2) `consumeVerificationToken` (`src/lib/auth/verification-token.ts`) now filters `identifier: { not: { startsWith: "password-reset:" } }`, mirroring the prefix guard in `consumePasswordResetToken` — a password-reset token can no longer be consumed (and the email wrongly marked verified) via the verify-email path; (3) the file download route (`src/app/api/items/[id]/download/route.ts`) now emits both an ASCII-fallback `filename` and an RFC 5987 `filename*=UTF-8''…` in `Content-Disposition`, so non-ASCII filenames (Cyrillic/CJK/emoji) download with the right name instead of a malformed header. **Cleanup/dedup:** (4) extracted the duplicated `CODE_CONTENT_TYPES`/`MARKDOWN_CONTENT_TYPES` sets into a shared `src/lib/item-content-types.ts` consumed by `ItemDrawer`/`ItemEditForm`/`NewItemDialog`; (5) extracted the identical `SectionLabel` into `src/components/items/SectionLabel.tsx` (used by `ItemDrawer`/`ItemEditForm`); (6) dropped the redundant `toast.error` on the inline-error forms (`NewItemDialog`/`ItemEditForm`) — the inline message above the actions is kept. Intentionally **skipped** (out of scope / not no-risk): the `getDashboardCollections` load-all-items count (needs a `groupBy` rewrite + tests), the `changePassword` same-password reuse check (a behavior change), the "AppShell open redirect" finding (its `callbackUrl` is only ever a hardcoded literal — not exploitable), and the "item mutations use the demo user" finding (intentional, documented demo-scoping until per-user data migration lands). Verified: `npm run lint` clean, `npm run build` passes, `npm test` **111/111** (+5 new in `verification-token.test.ts`: namespace-guard where-clause, create hashing/invalidate, and the expired/invalid/success consume branches — Prisma mocked via `vi.hoisted()`). UI-only changes (toast/SectionLabel/content-type constants) are out of unit-test scope; browser smoke-checks (GitHub sign-in, verify link, file download naming) not re-run given the change shapes.
+- Code Modularity Refactor — broke up large blocks / duplicated code into focused functions, components, and utilities. **Pure structure refactor — no behavior change** (markup, query results, and public shapes preserved). **Server-side (`src/lib/db/items.ts`):** extracted the duplicated tag connect-or-create loop from `createItem`/`updateItem` into one exported `linkTags(tx, userId, itemId, tagNames)` helper; replaced the hand-maintained `ItemRow` type with `Prisma.ItemGetPayload<{ select: typeof itemSelect }>` (imported `Prisma` from `@/generated/prisma/client`) so the row shape can't drift from `itemSelect`. **Drawer breakup (`ItemDrawer.tsx` 403→185 lines):** extracted `CopyButton.tsx` (reusable), `DownloadButton.tsx`, `ItemContentBody.tsx` (the text/url/file content renderer), `DrawerActionBar.tsx` (favorite/pin/edit/delete bar), and `DrawerContentSection.tsx` (the former content-section IIFE computing `showCodeEditor`/`showMarkdown`); the parent now computes `copyText` once and passes it down. **Shared form pieces:** new `src/lib/item-form.ts` (`parseTags` + `buildItemFields` — the per-type null-shaping both forms did inline) and `src/components/items/ItemContentField.tsx` (the CodeEditor/MarkdownEditor switch), now used by both `NewItemDialog` and `ItemEditForm`; the two submit flows stay separate per spec. **Sidebar:** extracted a generic `CollectionSection` in `SidebarNav.tsx` for the near-identical Favorite/Recent collection blocks. **Skipped** the optional `items.ts`-split-by-concern (cohesive, many importers — a barrel re-export would add indirection for little gain). Verified: `npm run lint` clean, `npm run build` passes, `npm test` **117/117** (+6 new: `linkTags` ×2 and `item-form` `parseTags`/`buildItemFields` ×4 — the latter are pure utilities, in unit-test scope; the UI extractions are out of scope per `context/ai-interaction.md`). Browser smoke-check not re-run — pure structural moves with all gates green.
