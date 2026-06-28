@@ -15,15 +15,18 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CodeEditor } from "@/components/items/CodeEditor";
+import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { ItemEditForm } from "@/components/items/ItemEditForm";
 import { formatFileSize, relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem, ItemDetail } from "@/lib/db/items";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import { cn } from "@/lib/utils";
 
-// Code item types render their content in the read-only CodeEditor; other text
-// types keep the plain <pre> block.
+// Code item types render their content in the read-only CodeEditor; notes &
+// prompts render in the read-only Markdown preview; other types (url/file) keep
+// the plain block in ContentBody.
 const CODE_CONTENT_TYPES = new Set(["snippet", "command"]);
+const MARKDOWN_CONTENT_TYPES = new Set(["note", "prompt"]);
 
 /** The text the Copy actions place on the clipboard for a given item. */
 function copyableText(detail: ItemDetail): string {
@@ -253,19 +256,26 @@ export function ItemDrawer({
               )}
 
               {(() => {
-                // Code types display their content in the read-only CodeEditor,
-                // whose own header carries the copy button — so the section-level
-                // copy is hidden in that case to avoid two copy controls.
+                // Code types and notes/prompts display their content in an
+                // editor whose own header carries the copy button — so the
+                // section-level copy is hidden in those cases to avoid two
+                // copy controls.
+                const typeName = detail?.type.name.toLowerCase();
                 const showCodeEditor =
                   !!detail &&
-                  CODE_CONTENT_TYPES.has(detail.type.name.toLowerCase()) &&
+                  CODE_CONTENT_TYPES.has(typeName!) &&
                   !!detail.content;
+                const showMarkdown =
+                  !!detail &&
+                  MARKDOWN_CONTENT_TYPES.has(typeName!) &&
+                  !!detail.content;
+                const showEditorHeader = showCodeEditor || showMarkdown;
 
                 return (
                   <section className="space-y-2">
                     <div className="flex items-center justify-between">
                       <SectionLabel>Content</SectionLabel>
-                      {detail && !showCodeEditor && (
+                      {detail && !showEditorHeader && (
                         <CopyButton
                           text={copyableText(detail)}
                           size="sm"
@@ -291,6 +301,8 @@ export function ItemDrawer({
                         language={detail.language}
                         readOnly
                       />
+                    ) : showMarkdown && detail ? (
+                      <MarkdownEditor value={detail.content ?? ""} readOnly />
                     ) : detail ? (
                       <div className="rounded-lg border border-border bg-muted/40 p-3">
                         <ContentBody detail={detail} />
