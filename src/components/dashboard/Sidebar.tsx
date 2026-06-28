@@ -45,7 +45,7 @@ export function Sidebar({ data }: { data: SidebarData }) {
             type="button"
             onClick={() => setMobileOpen(false)}
             aria-label="Close sidebar"
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
           >
             <X className="size-4" />
           </button>

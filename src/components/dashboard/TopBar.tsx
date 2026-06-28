@@ -29,7 +29,7 @@ export function TopBar() {
           onClick={toggleCollapsed}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           {collapsed ? (
             <PanelLeftOpen className="size-4" />
@@ -45,7 +45,7 @@ export function TopBar() {
           type="button"
           onClick={() => setMobileOpen(true)}
           aria-label="Open sidebar"
-          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+          className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
         >
           <Menu className="size-5" />
         </button>

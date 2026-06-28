@@ -33,7 +33,7 @@ function CopyButton({ text }: { text: string }) {
       type="button"
       onClick={handleCopy}
       aria-label="Copy markdown"
-      className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-white/60 transition-colors hover:bg-white/10 hover:text-white/90"
+      className="flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-xs text-white/60 transition-colors hover:bg-white/10 hover:text-white/90"
     >
       <Icon className={cn("size-3.5", copied && "text-emerald-400")} />
       {copied ? "Copied" : "Copy"}
@@ -56,7 +56,7 @@ function TabButton({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+        "cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors",
         active
           ? "bg-white/10 text-white/90"
           : "text-white/50 hover:bg-white/5 hover:text-white/80",

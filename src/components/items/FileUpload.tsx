@@ -202,7 +202,7 @@ export function FileUpload({
         className={cn(
           "flex w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-6 text-center transition-colors",
           dragOver && "border-primary bg-primary/5",
-          !uploading && "hover:bg-accent/50",
+          !uploading && "cursor-pointer hover:bg-accent/50",
           uploading && "cursor-default",
         )}
       >

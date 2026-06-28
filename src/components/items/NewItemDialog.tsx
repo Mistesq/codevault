@@ -194,7 +194,7 @@ export function NewItemDialog({
                     }}
                     aria-pressed={selected}
                     className={cn(
-                      "flex flex-col items-center gap-1.5 rounded-md border p-2.5 text-xs font-medium transition-colors",
+                      "flex cursor-pointer flex-col items-center gap-1.5 rounded-md border p-2.5 text-xs font-medium transition-colors",
                       selected
                         ? "border-primary bg-primary/10 text-foreground"
                         : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
