@@ -1,13 +1,53 @@
 "use client";
 
-import type { CSSProperties, KeyboardEvent } from "react";
-import { ExternalLink, Pin, Star } from "lucide-react";
+import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
+import { useState } from "react";
+import { Check, Copy, ExternalLink, Pin, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { formatFileSize, relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem } from "@/lib/db/items";
 import { useItemDrawer } from "@/components/items/item-drawer-context";
 import { TypeIcon } from "@/lib/type-icons";
+
+/** The text the quick-copy button places on the clipboard for a card. */
+function copyableText(item: DashboardItem): string {
+  if (item.contentType === "FILE") return item.fileName ?? "";
+  if (item.url) return item.url;
+  return item.content ?? "";
+}
+
+/** Quick-copy icon shown on the card; stops the click from opening the drawer. */
+function QuickCopyButton({ item }: { item: DashboardItem }) {
+  const [copied, setCopied] = useState(false);
+  const text = copyableText(item);
+
+  if (!text) return null;
+
+  async function handleCopy(e: MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard can reject (e.g. insecure context); silently ignore.
+    }
+  }
+
+  const Icon = copied ? Check : Copy;
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      aria-label={copied ? "Copied" : "Copy"}
+      className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Icon className={cn("size-3.5", copied && "text-emerald-500")} />
+    </button>
+  );
+}
 
 function ContentPreview({ item }: { item: DashboardItem }) {
   if (item.contentType === "FILE" && item.fileName) {
@@ -86,14 +126,17 @@ export function ItemCard({ item }: { item: DashboardItem }) {
           )}
         </div>
 
-        <Star
-          className={cn(
-            "size-4 shrink-0",
-            item.isFavorite
-              ? "fill-amber-400 text-amber-400"
-              : "text-muted-foreground/40",
-          )}
-        />
+        <div className="flex shrink-0 items-center gap-1">
+          <QuickCopyButton item={item} />
+          <Star
+            className={cn(
+              "size-4 shrink-0",
+              item.isFavorite
+                ? "fill-amber-400 text-amber-400"
+                : "text-muted-foreground/40",
+            )}
+          />
+        </div>
       </div>
 
       <div className="rounded-lg bg-muted/40 p-3">
