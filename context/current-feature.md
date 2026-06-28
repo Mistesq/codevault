@@ -1,16 +1,76 @@
-# Current Feature
+# Code Modularity Refactor
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Break up large blocks / duplicated code into focused functions, components, and
+utilities. **Pure refactor — no behavior change.** Each item is independently
+shippable; keep public shapes and rendered output identical.
+
+### High value
+
+- **Extract the tag connect-or-create loop** — the identical
+  `for (const name of data.tags) { tag.upsert → itemTag.create }` block appears
+  in both `createItem` (`src/lib/db/items.ts` ~246-253) and `updateItem`
+  (~307-314). Extract one `linkTags(tx, userId, itemId, tagNames)` helper and
+  call it from both. Already covered by the existing `createItem`/`updateItem`
+  unit tests; add a focused test for the helper.
+- **Share item-form fields between create & edit** — `NewItemDialog.tsx` (~323
+  lines) and `ItemEditForm.tsx` (~209) render Title/Description/
+  Content(code|markdown)/Language/URL/Tags with near-identical JSX, duplicate
+  the `CONTENT_TYPES`/`LANGUAGE_TYPES` set logic, and build the same payload
+  shape. Extract a shared `ItemContentField` (the CodeEditor/MarkdownEditor
+  switch) and a `buildItemPayload` helper. **Keep the two forms separate** (two
+  distinct submit flows: create vs update) — share only the fields/payload, not
+  the submit logic.
+
+### Medium value
+
+- **Break up `ItemDrawer.tsx` (~403 lines)** into focused pieces, preserving
+  markup:
+  - `CopyButton` (~47-89) → `src/components/items/CopyButton.tsx` (reusable).
+  - `DownloadButton` (~92-107) and `ContentBody` (~110-157) → their own files.
+  - The content-section IIFE (~298-353, the `(() => {…})()` computing
+    `showCodeEditor`/`showMarkdown`/`showEditorHeader`) → a
+    `DrawerContentSection` component.
+  - The action bar (favorite/pin/edit/delete, ~228-277) → `DrawerActionBar`.
+- **Derive `ItemRow` from Prisma** — `src/lib/db/items.ts` has three parallel
+  field lists (`DashboardItem` interface, the hand-written `ItemRow` type, and
+  `toDashboardItem`'s mapping). Replace `ItemRow` with
+  `Prisma.ItemGetPayload<{ select: typeof itemSelect }>` so it can't drift from
+  `itemSelect`. Confirm the generated-client import path first
+  (`src/generated/prisma`).
+
+### Lower value (do only if cheap)
+
+- **Split `items.ts` (~485 lines) by concern** — reads (pinned/recent/detail/
+  by-type), mutations (create/update/delete), and sidebar/stats aggregates,
+  behind a barrel re-export from `@/lib/db/items` so the many importers don't
+  change. Only worth it if it stays cohesive; skip if the re-export adds noise.
+- **`SidebarNav.tsx` collection sections** — the two near-identical
+  Favorite/Recent collection list blocks (~173-205) → a small `CollectionSection`
+  component. Minor.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Branch: `refactor/code-modularity`.
+- **No behavior change.** Verify rendered output and query results are identical;
+  this is structure-only.
+- Order of work: do the low-risk server-side items first (tag-loop extract,
+  `ItemRow` derive), then the `ItemDrawer` split, then the shared form fields
+  (highest payoff, highest risk — keep submit flows separate). The two "lower
+  value" items are optional; skip if they add more indirection than they remove.
+- Tests: server-side changes (`items.ts`) must keep `npm test` green and add a
+  unit test for the new `linkTags` helper. UI extractions (drawer pieces, form
+  fields, sidebar section) are out of the server-actions/utilities unit-test
+  scope per `context/ai-interaction.md`.
+- Per coding standards: components in
+  `src/components/[feature]/ComponentName.tsx`, utilities in `src/lib/`. Match
+  existing patterns; don't introduce a form library.
+- Run `npm run lint` + `npm run build` + `npm test` before committing.
 
 ## History
 

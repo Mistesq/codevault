@@ -131,6 +131,41 @@ function SectionLabel({ children }: { children: ReactNode }) {
   );
 }
 
+// A labelled list of collection NavRows (Favorite / Recent). `leading` renders
+// the per-collection leading element (a star, a type-colored dot, …). Renders
+// nothing when the list is empty. Callers gate on `!collapsed` since these
+// label-heavy sections are hidden in the icon rail.
+function CollectionSection<
+  T extends { id: string; name: string; itemCount: number },
+>({
+  label,
+  collections,
+  leading,
+  collapsed,
+}: {
+  label: string;
+  collections: T[];
+  leading: (collection: T) => ReactNode;
+  collapsed: boolean;
+}) {
+  if (collections.length === 0) return null;
+  return (
+    <>
+      <SectionLabel>{label}</SectionLabel>
+      {collections.map((collection) => (
+        <NavRow
+          key={collection.id}
+          href={`/collections/${collection.id}`}
+          leading={leading(collection)}
+          label={collection.name}
+          count={collection.itemCount}
+          collapsed={collapsed}
+        />
+      ))}
+    </>
+  );
+}
+
 // ---------- Sidebar content ----------
 
 export function SidebarNav({
@@ -170,38 +205,24 @@ export function SidebarNav({
         </div>
 
         {/* Collection sections are label-heavy, so hide them in the icon rail. */}
-        {!collapsed && favoriteCollections.length > 0 && (
-          <>
-            <SectionLabel>Favorite Collections</SectionLabel>
-            {favoriteCollections.map((collection) => (
-              <NavRow
-                key={collection.id}
-                href={`/collections/${collection.id}`}
-                leading={
-                  <Star className="size-4 shrink-0 fill-amber-400 text-amber-400" />
-                }
-                label={collection.name}
-                count={collection.itemCount}
-                collapsed={collapsed}
-              />
-            ))}
-          </>
+        {!collapsed && (
+          <CollectionSection
+            label="Favorite Collections"
+            collections={favoriteCollections}
+            leading={() => (
+              <Star className="size-4 shrink-0 fill-amber-400 text-amber-400" />
+            )}
+            collapsed={collapsed}
+          />
         )}
 
-        {!collapsed && recentCollections.length > 0 && (
-          <>
-            <SectionLabel>Recent Collections</SectionLabel>
-            {recentCollections.map((collection) => (
-              <NavRow
-                key={collection.id}
-                href={`/collections/${collection.id}`}
-                leading={<TypeDot color={collection.borderColor} />}
-                label={collection.name}
-                count={collection.itemCount}
-                collapsed={collapsed}
-              />
-            ))}
-          </>
+        {!collapsed && (
+          <CollectionSection
+            label="Recent Collections"
+            collections={recentCollections}
+            leading={(collection) => <TypeDot color={collection.borderColor} />}
+            collapsed={collapsed}
+          />
         )}
 
         {!collapsed && (

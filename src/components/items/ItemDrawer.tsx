@@ -1,18 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Check,
-  Copy,
-  Download,
-  ExternalLink,
-  Pencil,
-  Pin,
-  Star,
-} from "lucide-react";
+import { Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { DeleteItemDialog } from "@/components/items/DeleteItemDialog";
 import {
   Sheet,
   SheetContent,
@@ -21,138 +12,20 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
-import { CodeEditor } from "@/components/items/CodeEditor";
-import { MarkdownEditor } from "@/components/items/MarkdownEditor";
+import { CopyButton } from "@/components/items/CopyButton";
+import { DrawerActionBar } from "@/components/items/DrawerActionBar";
+import { DrawerContentSection } from "@/components/items/DrawerContentSection";
 import { ItemEditForm } from "@/components/items/ItemEditForm";
 import { SectionLabel } from "@/components/items/SectionLabel";
-import {
-  CODE_CONTENT_TYPES,
-  MARKDOWN_CONTENT_TYPES,
-} from "@/lib/item-content-types";
-import { formatFileSize, relativeTime } from "@/lib/dashboard-data";
+import { relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem, ItemDetail } from "@/lib/db/items";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
-import { cn } from "@/lib/utils";
 
 /** The text the Copy actions place on the clipboard for a given item. */
 function copyableText(detail: ItemDetail): string {
   if (detail.contentType === "FILE") return detail.fileName ?? "";
   if (detail.url) return detail.url;
   return detail.content ?? "";
-}
-
-/** Small button that copies text and briefly flips to a check. */
-function CopyButton({
-  text,
-  variant = "ghost",
-  size = "icon-sm",
-  label = "Copy",
-  withLabel = false,
-  className,
-}: {
-  text: string;
-  variant?: "ghost" | "outline" | "default";
-  size?: "icon-sm" | "sm" | "default";
-  label?: string;
-  withLabel?: boolean;
-  className?: string;
-}) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard can reject (e.g. insecure context); silently ignore.
-    }
-  }
-
-  const Icon = copied ? Check : Copy;
-
-  return (
-    <Button
-      type="button"
-      variant={variant}
-      size={size}
-      onClick={handleCopy}
-      aria-label={label}
-      className={className}
-    >
-      <Icon className={cn("size-4", copied && "text-emerald-500")} />
-      {withLabel && <span>{copied ? "Copied" : label}</span>}
-    </Button>
-  );
-}
-
-/** Download button that streams the file through the same-origin proxy route. */
-function DownloadButton({ itemId }: { itemId: string }) {
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      // Rendering as an <a>, so opt out of native-button semantics.
-      nativeButton={false}
-      render={
-        <a href={`/api/items/${itemId}/download`} download rel="noreferrer" />
-      }
-    >
-      <Download className="size-4" />
-      Download
-    </Button>
-  );
-}
-
-/** Rendered content body for a loaded item (text / url / file). */
-function ContentBody({ detail }: { detail: ItemDetail }) {
-  if (detail.contentType === "FILE") {
-    const isImage = detail.type.name.toLowerCase() === "image";
-    return (
-      <div className="space-y-3">
-        {isImage && detail.fileUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={detail.fileUrl}
-            alt={detail.fileName ?? "Image"}
-            className="max-h-72 w-full rounded-md border border-border object-contain"
-          />
-        )}
-        <div className="flex items-center justify-between gap-3">
-          <p className="min-w-0 truncate font-mono text-sm text-muted-foreground">
-            {detail.fileName ?? "File"}
-            {detail.fileSize != null && ` · ${formatFileSize(detail.fileSize)}`}
-          </p>
-          <DownloadButton itemId={detail.id} />
-        </div>
-      </div>
-    );
-  }
-
-  if (detail.url) {
-    return (
-      <a
-        href={detail.url}
-        target="_blank"
-        rel="noreferrer"
-        className="flex items-center gap-1.5 break-all font-mono text-sm text-primary hover:underline"
-      >
-        <ExternalLink className="size-3.5 shrink-0" />
-        {detail.url}
-      </a>
-    );
-  }
-
-  if (detail.content) {
-    return (
-      <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-sm text-muted-foreground">
-        {detail.content}
-      </pre>
-    );
-  }
-
-  return <p className="text-sm text-muted-foreground">No content.</p>;
 }
 
 export function ItemDrawer({
@@ -190,6 +63,8 @@ export function ItemDrawer({
     onOpenChange(next);
   }
 
+  const copyText = detail ? copyableText(detail) : "";
+
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="w-full gap-0 p-0 sm:max-w-lg">
@@ -213,58 +88,15 @@ export function ItemDrawer({
                 </div>
               </div>
 
-              {/* Action bar — replaced by the edit form's Save/Cancel when
-                  editing. Copy is wired; favorite/pin/delete land with the rest
-                  of item CRUD later, so they're display-only for now. */}
+              {/* Action bar — replaced by the edit form's Save/Cancel when editing. */}
               {!editing && (
-                <div className="flex items-center gap-1">
-                  <CopyButton text={detail ? copyableText(detail) : ""} />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Favorite"
-                  >
-                    <Star
-                      className={cn(
-                        "size-4",
-                        item.isFavorite
-                          ? "fill-amber-400 text-amber-400"
-                          : "text-muted-foreground",
-                      )}
-                    />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Pin"
-                  >
-                    <Pin
-                      className={cn(
-                        "size-4",
-                        item.isPinned
-                          ? "text-foreground"
-                          : "text-muted-foreground",
-                      )}
-                    />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Edit"
-                    disabled={!detail}
-                    onClick={() => setEditing(true)}
-                  >
-                    <Pencil className="size-4 text-muted-foreground" />
-                  </Button>
-                  <DeleteItemDialog
-                    itemId={item.id}
-                    title={item.title}
-                    onDeleted={onDeleted}
-                  />
-                </div>
+                <DrawerActionBar
+                  item={item}
+                  detail={detail}
+                  copyText={copyText}
+                  onEdit={() => setEditing(true)}
+                  onDeleted={onDeleted}
+                />
               )}
             </SheetHeader>
 
@@ -279,120 +111,70 @@ export function ItemDrawer({
               />
             ) : (
               <>
-            <div className="flex-1 space-y-6 overflow-y-auto p-4">
-              {item.description && (
-                <SheetDescription className="text-sm text-foreground">
-                  {item.description}
-                </SheetDescription>
-              )}
+                <div className="flex-1 space-y-6 overflow-y-auto p-4">
+                  {item.description && (
+                    <SheetDescription className="text-sm text-foreground">
+                      {item.description}
+                    </SheetDescription>
+                  )}
 
-              {(() => {
-                // Code types and notes/prompts display their content in an
-                // editor whose own header carries the copy button — so the
-                // section-level copy is hidden in those cases to avoid two
-                // copy controls.
-                const typeName = detail?.type.name.toLowerCase();
-                const showCodeEditor =
-                  !!detail &&
-                  CODE_CONTENT_TYPES.has(typeName!) &&
-                  !!detail.content;
-                const showMarkdown =
-                  !!detail &&
-                  MARKDOWN_CONTENT_TYPES.has(typeName!) &&
-                  !!detail.content;
-                const showEditorHeader = showCodeEditor || showMarkdown;
+                  <DrawerContentSection
+                    detail={detail}
+                    loading={loading}
+                    error={error}
+                    copyText={copyText}
+                  />
 
-                return (
-                  <section className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <SectionLabel>Content</SectionLabel>
-                      {detail && !showEditorHeader && (
-                        <CopyButton
-                          text={copyableText(detail)}
-                          size="sm"
-                          withLabel
-                        />
-                      )}
-                    </div>
-                    {loading && !detail ? (
-                      <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-3">
-                        <Skeleton className="h-4 w-3/4" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
+                  {item.tags.length > 0 && (
+                    <section className="space-y-2">
+                      <SectionLabel>Tags</SectionLabel>
+                      <div className="flex flex-wrap gap-1.5">
+                        {item.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
                       </div>
-                    ) : error ? (
-                      <div className="rounded-lg border border-border bg-muted/40 p-3">
-                        <p className="text-sm text-destructive">
-                          Couldn&apos;t load this item. Please try again.
-                        </p>
-                      </div>
-                    ) : showCodeEditor && detail ? (
-                      <CodeEditor
-                        value={detail.content ?? ""}
-                        language={detail.language}
-                        readOnly
-                      />
-                    ) : showMarkdown && detail ? (
-                      <MarkdownEditor value={detail.content ?? ""} readOnly />
-                    ) : detail ? (
-                      <div className="rounded-lg border border-border bg-muted/40 p-3">
-                        <ContentBody detail={detail} />
-                      </div>
-                    ) : null}
-                  </section>
-                );
-              })()}
+                    </section>
+                  )}
 
-              {item.tags.length > 0 && (
-                <section className="space-y-2">
-                  <SectionLabel>Tags</SectionLabel>
-                  <div className="flex flex-wrap gap-1.5">
-                    {item.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </section>
-              )}
+                  {detail?.collection && (
+                    <section className="space-y-2">
+                      <SectionLabel>Collection</SectionLabel>
+                      <p className="text-sm text-foreground">
+                        {detail.collection.name}
+                      </p>
+                    </section>
+                  )}
 
-              {detail?.collection && (
-                <section className="space-y-2">
-                  <SectionLabel>Collection</SectionLabel>
-                  <p className="text-sm text-foreground">
-                    {detail.collection.name}
+                  <p className="text-xs text-muted-foreground">
+                    Last updated {relativeTime(item.updatedAt)}
                   </p>
-                </section>
-              )}
+                </div>
 
-              <p className="text-xs text-muted-foreground">
-                Last updated {relativeTime(item.updatedAt)}
-              </p>
-            </div>
-
-            <SheetFooter className="flex-row gap-2 border-t border-border p-4">
-              <CopyButton
-                text={detail ? copyableText(detail) : ""}
-                variant="default"
-                size="default"
-                label="Copy to clipboard"
-                withLabel
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="default"
-                disabled={!detail}
-                onClick={() => setEditing(true)}
-              >
-                <Pencil className="size-4" />
-                Edit
-              </Button>
-            </SheetFooter>
+                <SheetFooter className="flex-row gap-2 border-t border-border p-4">
+                  <CopyButton
+                    text={copyText}
+                    variant="default"
+                    size="default"
+                    label="Copy to clipboard"
+                    withLabel
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="default"
+                    disabled={!detail}
+                    onClick={() => setEditing(true)}
+                  >
+                    <Pencil className="size-4" />
+                    Edit
+                  </Button>
+                </SheetFooter>
               </>
             )}
           </>
