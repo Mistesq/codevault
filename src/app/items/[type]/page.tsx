@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { ItemCard } from "@/components/dashboard/ItemCard";
+import { ImageCard } from "@/components/items/ImageCard";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { getItemsByTypeSlug } from "@/lib/db/items";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
@@ -33,6 +34,8 @@ export default async function ItemsByTypePage({
   // Pluralize the capitalized type label: "snippet" -> "Snippets", "URL" -> "URLs".
   const heading = `${typeLabel(type.name)}s`;
   const createType = toCreateType(type.name);
+  // Image items get a thumbnail gallery instead of the standard item cards.
+  const isImageType = type.name.toLowerCase() === "image";
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -61,9 +64,13 @@ export default async function ItemsByTypePage({
 
       {items.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} />
-          ))}
+          {items.map((item) =>
+            isImageType ? (
+              <ImageCard key={item.id} item={item} />
+            ) : (
+              <ItemCard key={item.id} item={item} />
+            ),
+          )}
         </div>
       ) : (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
