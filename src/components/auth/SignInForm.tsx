@@ -114,7 +114,9 @@ export function SignInForm() {
 
   function handleGitHub() {
     setPending("github");
-    signIn("github", { callbackUrl: callbackUrl ?? "/dashboard" });
+    // Sanitize the callback the same way the credentials path does, so an
+    // off-origin ?callbackUrl can't redirect the user away after OAuth.
+    signIn("github", { callbackUrl: toInternalPath(callbackUrl) });
   }
 
   return (

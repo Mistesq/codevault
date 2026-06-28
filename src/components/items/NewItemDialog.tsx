@@ -22,6 +22,7 @@ import { CodeEditor } from "@/components/items/CodeEditor";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
+import { CODE_CONTENT_TYPES } from "@/lib/item-content-types";
 import { createItem } from "@/actions/items";
 import type { CreateItemType } from "@/lib/validations/items";
 
@@ -50,8 +51,6 @@ const CONTENT_TYPES = new Set<CreateItemType>([
   "command",
   "note",
 ]);
-// Code types get the Monaco-based CodeEditor; the rest keep the plain Textarea.
-const CODE_CONTENT_TYPES = new Set<CreateItemType>(["snippet", "command"]);
 const LANGUAGE_TYPES = new Set<CreateItemType>(["snippet", "command"]);
 // File/image types swap the content fields for the R2 FileUpload picker.
 const FILE_TYPES = new Set<CreateItemType>(["file", "image"]);
@@ -143,8 +142,8 @@ export function NewItemDialog({
     const result = await createItem(payload);
 
     if (!result.success) {
+      // Inline error is shown directly above the actions; no duplicate toast.
       setError(result.error);
-      toast.error(result.error);
       setSaving(false);
       return;
     }

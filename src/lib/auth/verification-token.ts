@@ -43,7 +43,14 @@ export async function consumeVerificationToken(
 ): Promise<ConsumeResult> {
   const token = hashToken(rawToken);
 
-  const record = await prisma.verificationToken.findFirst({ where: { token } });
+  // Only match genuine email-verification tokens. Password-reset tokens live in
+  // the same table but namespace their identifier as `password-reset:{email}`;
+  // excluding them here keeps a reset token from being consumed (and the email
+  // wrongly marked verified) via the verify-email path. Mirrors the prefix guard
+  // in consumePasswordResetToken.
+  const record = await prisma.verificationToken.findFirst({
+    where: { token, identifier: { not: { startsWith: "password-reset:" } } },
+  });
   if (!record) return "invalid";
 
   // Single use: remove it regardless of the outcome below.

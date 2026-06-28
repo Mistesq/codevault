@@ -25,16 +25,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CodeEditor } from "@/components/items/CodeEditor";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { ItemEditForm } from "@/components/items/ItemEditForm";
+import { SectionLabel } from "@/components/items/SectionLabel";
+import {
+  CODE_CONTENT_TYPES,
+  MARKDOWN_CONTENT_TYPES,
+} from "@/lib/item-content-types";
 import { formatFileSize, relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem, ItemDetail } from "@/lib/db/items";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import { cn } from "@/lib/utils";
-
-// Code item types render their content in the read-only CodeEditor; notes &
-// prompts render in the read-only Markdown preview; other types (url/file) keep
-// the plain block in ContentBody.
-const CODE_CONTENT_TYPES = new Set(["snippet", "command"]);
-const MARKDOWN_CONTENT_TYPES = new Set(["note", "prompt"]);
 
 /** The text the Copy actions place on the clipboard for a given item. */
 function copyableText(detail: ItemDetail): string {
@@ -154,14 +153,6 @@ function ContentBody({ detail }: { detail: ItemDetail }) {
   }
 
   return <p className="text-sm text-muted-foreground">No content.</p>;
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-      {children}
-    </p>
-  );
 }
 
 export function ItemDrawer({

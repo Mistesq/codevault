@@ -11,23 +11,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CodeEditor } from "@/components/items/CodeEditor";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
+import { SectionLabel } from "@/components/items/SectionLabel";
 import { updateItem } from "@/actions/items";
+import { CODE_CONTENT_TYPES } from "@/lib/item-content-types";
 import type { ItemDetail } from "@/lib/db/items";
 
 // Which type-specific fields each system item type exposes in edit mode.
 const CONTENT_TYPES = new Set(["snippet", "prompt", "command", "note"]);
-// Code types get the Monaco-based CodeEditor; the rest keep the plain Textarea.
-const CODE_CONTENT_TYPES = new Set(["snippet", "command"]);
 const LANGUAGE_TYPES = new Set(["snippet", "command"]);
 const URL_TYPES = new Set(["url"]);
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-      {children}
-    </p>
-  );
-}
 
 /**
  * Inline edit form for the item drawer. Plain controlled inputs (no form
@@ -84,8 +76,8 @@ export function ItemEditForm({
     const result = await updateItem(detail.id, payload);
 
     if (!result.success) {
+      // Inline error is shown directly above the actions; no duplicate toast.
       setError(result.error);
-      toast.error(result.error);
       setSaving(false);
       return;
     }
