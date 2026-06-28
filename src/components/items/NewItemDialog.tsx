@@ -18,11 +18,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CodeEditor } from "@/components/items/CodeEditor";
-import { MarkdownEditor } from "@/components/items/MarkdownEditor";
+import { ItemContentField } from "@/components/items/ItemContentField";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import { CODE_CONTENT_TYPES } from "@/lib/item-content-types";
+import { buildItemFields } from "@/lib/item-form";
 import { createItem } from "@/actions/items";
 import type { CreateItemType } from "@/lib/validations/items";
 
@@ -125,18 +125,20 @@ export function NewItemDialog({
 
     const payload = {
       type,
-      title,
-      description,
-      content: showContent ? content : null,
-      language: showLanguage ? language : null,
-      url: showUrl ? url : null,
+      ...buildItemFields({
+        title,
+        description,
+        content,
+        language,
+        url,
+        tags,
+        showContent,
+        showLanguage,
+        showUrl,
+      }),
       fileUrl: showFile ? file?.fileUrl ?? null : null,
       fileName: showFile ? file?.fileName ?? null : null,
       fileSize: showFile ? file?.fileSize ?? null : null,
-      tags: tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
     };
 
     const result = await createItem(payload);
@@ -239,16 +241,12 @@ export function NewItemDialog({
           {showContent && (
             <div className="space-y-1.5">
               <Label htmlFor="new-item-content">Content</Label>
-              {isCodeContent ? (
-                <CodeEditor
-                  value={content}
-                  onChange={setContent}
-                  language={language}
-                />
-              ) : (
-                // Notes & prompts get the Markdown editor (Write/Preview).
-                <MarkdownEditor value={content} onChange={setContent} />
-              )}
+              <ItemContentField
+                isCode={isCodeContent}
+                value={content}
+                onChange={setContent}
+                language={language}
+              />
             </div>
           )}
 

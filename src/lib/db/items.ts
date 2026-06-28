@@ -1,3 +1,4 @@
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getDemoUser } from "@/lib/db/user";
 import { deleteFromR2, keyFromPublicUrl } from "@/lib/r2";
@@ -70,22 +71,8 @@ const itemSelect = {
   tags: { select: { tag: { select: { name: true } } } },
 } as const;
 
-type ItemRow = {
-  id: string;
-  title: string;
-  description: string | null;
-  contentType: "TEXT" | "FILE";
-  content: string | null;
-  fileUrl: string | null;
-  fileName: string | null;
-  fileSize: number | null;
-  url: string | null;
-  isFavorite: boolean;
-  isPinned: boolean;
-  updatedAt: Date;
-  type: { name: string; icon: string | null; color: string | null };
-  tags: { tag: { name: string } }[];
-};
+// Derived from itemSelect so the row shape can't drift from the query.
+type ItemRow = Prisma.ItemGetPayload<{ select: typeof itemSelect }>;
 
 function toDashboardItem(row: ItemRow): DashboardItem {
   return {
@@ -202,6 +189,27 @@ export interface CreateItemData {
 const FILE_TYPE_NAMES = new Set(["file", "image"]);
 
 /**
+ * Connect-or-create each tag (tags are unique per user) and link it to the item,
+ * inside the given transaction. Shared by createItem and updateItem. Exported for
+ * unit testing.
+ */
+export async function linkTags(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  itemId: string,
+  tagNames: string[],
+): Promise<void> {
+  for (const name of tagNames) {
+    const tag = await tx.tag.upsert({
+      where: { userId_name: { userId, name } },
+      create: { name, userId },
+      update: {},
+    });
+    await tx.itemTag.create({ data: { itemId, tagId: tag.id } });
+  }
+}
+
+/**
  * Create a new item for the demo user (matching the rest of the domain data,
  * still demo-scoped). Resolves the chosen type name to its system ItemType and
  * returns null when it doesn't exist (so the action can error). File/image
@@ -242,15 +250,7 @@ export async function createItem(
       select: { id: true },
     });
 
-    // Connect-or-create each tag, then link it to the new item.
-    for (const name of data.tags) {
-      const tag = await tx.tag.upsert({
-        where: { userId_name: { userId: user.id, name } },
-        create: { name, userId: user.id },
-        update: {},
-      });
-      await tx.itemTag.create({ data: { itemId: item.id, tagId: tag.id } });
-    }
+    await linkTags(tx, user.id, item.id, data.tags);
 
     return item;
   });
@@ -304,14 +304,7 @@ export async function updateItem(
 
     // Disconnect all existing tags, then connect-or-create the new set.
     await tx.itemTag.deleteMany({ where: { itemId: id } });
-    for (const name of data.tags) {
-      const tag = await tx.tag.upsert({
-        where: { userId_name: { userId: user.id, name } },
-        create: { name, userId: user.id },
-        update: {},
-      });
-      await tx.itemTag.create({ data: { itemId: id, tagId: tag.id } });
-    }
+    await linkTags(tx, user.id, id, data.tags);
   });
 
   return getItemDetail(id);

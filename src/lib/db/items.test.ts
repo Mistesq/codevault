@@ -43,10 +43,49 @@ vi.mock("@/lib/r2", () => ({
   keyFromPublicUrl,
 }));
 
-import { createItem, deleteItem, getItemDetail, updateItem } from "@/lib/db/items";
+import {
+  createItem,
+  deleteItem,
+  getItemDetail,
+  linkTags,
+  updateItem,
+} from "@/lib/db/items";
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe("linkTags", () => {
+  // The mocked tag/itemTag delegates stand in for the transaction client.
+  const tx = { tag, itemTag } as never;
+
+  it("does nothing for an empty tag list", async () => {
+    await linkTags(tx, "user_1", "item_1", []);
+
+    expect(tag.upsert).not.toHaveBeenCalled();
+    expect(itemTag.create).not.toHaveBeenCalled();
+  });
+
+  it("connect-or-creates each tag scoped to the user, then links it", async () => {
+    tag.upsert
+      .mockResolvedValueOnce({ id: "tag_react" })
+      .mockResolvedValueOnce({ id: "tag_hooks" });
+
+    await linkTags(tx, "user_1", "item_1", ["react", "hooks"]);
+
+    expect(tag.upsert).toHaveBeenCalledTimes(2);
+    expect(tag.upsert.mock.calls[0][0]).toEqual({
+      where: { userId_name: { userId: "user_1", name: "react" } },
+      create: { name: "react", userId: "user_1" },
+      update: {},
+    });
+    expect(itemTag.create).toHaveBeenNthCalledWith(1, {
+      data: { itemId: "item_1", tagId: "tag_react" },
+    });
+    expect(itemTag.create).toHaveBeenNthCalledWith(2, {
+      data: { itemId: "item_1", tagId: "tag_hooks" },
+    });
+  });
 });
 
 describe("getItemDetail", () => {

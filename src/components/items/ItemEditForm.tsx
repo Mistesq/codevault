@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CodeEditor } from "@/components/items/CodeEditor";
-import { MarkdownEditor } from "@/components/items/MarkdownEditor";
+import { ItemContentField } from "@/components/items/ItemContentField";
 import { SectionLabel } from "@/components/items/SectionLabel";
 import { updateItem } from "@/actions/items";
 import { CODE_CONTENT_TYPES } from "@/lib/item-content-types";
+import { buildItemFields } from "@/lib/item-form";
 import type { ItemDetail } from "@/lib/db/items";
 
 // Which type-specific fields each system item type exposes in edit mode.
@@ -61,17 +61,17 @@ export function ItemEditForm({
     setSaving(true);
     setError(null);
 
-    const payload = {
+    const payload = buildItemFields({
       title,
       description,
-      content: showContent ? content : null,
-      language: showLanguage ? language : null,
-      url: showUrl ? url : null,
-      tags: tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-    };
+      content,
+      language,
+      url,
+      tags,
+      showContent,
+      showLanguage,
+      showUrl,
+    });
 
     const result = await updateItem(detail.id, payload);
 
@@ -117,16 +117,12 @@ export function ItemEditForm({
         {showContent && (
           <div className="space-y-1.5">
             <Label htmlFor="item-content">Content</Label>
-            {isCodeContent ? (
-              <CodeEditor
-                value={content}
-                onChange={setContent}
-                language={language}
-              />
-            ) : (
-              // Notes & prompts get the Markdown editor (Write/Preview).
-              <MarkdownEditor value={content} onChange={setContent} />
-            )}
+            <ItemContentField
+              isCode={isCodeContent}
+              value={content}
+              onChange={setContent}
+              language={language}
+            />
           </div>
         )}
 
