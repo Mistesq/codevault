@@ -1,16 +1,32 @@
-# Current Feature
+# Current Feature: File & Image Upload with Cloudflare R2
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Add file and image upload to CodeVault, backed by Cloudflare R2 storage
+- Create an upload API route that pushes files to R2 (keep all Prisma/DB access in `lib/db/items.ts`)
+- Build a `FileUpload` component with drag-and-drop and an upload progress indicator
+- Wire `FileUpload` into the create-item modal for the File and Image item types
+- Display an image preview for images and file info (name/size) for files
+- Add a download proxy API route to stream files back (avoids R2 CORS issues)
+- Add a Download button in `ItemDrawer` for file/image types
+- Delete the underlying R2 object when an item is deleted
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **File constraints:**
+  - Images — max **5 MB**; extensions `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`
+  - Files — max **10 MB**; extensions `.pdf`, `.txt`, `.md`, `.json`, `.yaml`, `.yml`, `.xml`, `.csv`, `.toml`, `.ini`
+- **Allowed MIME types:**
+  - Images: `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `image/svg+xml`
+  - Files: `application/pdf`, `text/plain`, `text/markdown`, `application/json`, `application/x-yaml`, `text/yaml`, `application/xml`, `text/xml`, `text/csv`, `application/toml` (`.ini` → `text/plain`)
+- File/image items use `contentType = FILE` with `fileUrl`/`fileName`/`fileSize` on the `Item` model (vs `TEXT` for snippet/prompt/command/note/url).
+- R2 env keys already scaffolded in project overview: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`.
+- File uploads are a **Pro** feature per the project overview; create-item type selector currently excludes File/Image (`CREATE_ITEM_TYPES`) — revisit when wiring the modal.
+- Spec source: `context/features/file-image-spec.md`.
 
 ## History
 

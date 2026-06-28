@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CodeEditor } from "@/components/items/CodeEditor";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
+import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import { createItem } from "@/actions/items";
 import type { CreateItemType } from "@/lib/validations/items";
@@ -38,6 +39,8 @@ const TYPE_OPTIONS: {
   { value: "command", icon: "Terminal", color: "#f97316", label: typeLabel("command") },
   { value: "note", icon: "StickyNote", color: "#fde047", label: typeLabel("note") },
   { value: "URL", icon: "Link", color: "#10b981", label: "Link" },
+  { value: "file", icon: "File", color: "#6b7280", label: typeLabel("file") },
+  { value: "image", icon: "Image", color: "#ec4899", label: typeLabel("image") },
 ];
 
 // Which type-specific fields each selectable type exposes (mirrors ItemEditForm).
@@ -50,6 +53,8 @@ const CONTENT_TYPES = new Set<CreateItemType>([
 // Code types get the Monaco-based CodeEditor; the rest keep the plain Textarea.
 const CODE_CONTENT_TYPES = new Set<CreateItemType>(["snippet", "command"]);
 const LANGUAGE_TYPES = new Set<CreateItemType>(["snippet", "command"]);
+// File/image types swap the content fields for the R2 FileUpload picker.
+const FILE_TYPES = new Set<CreateItemType>(["file", "image"]);
 
 const DEFAULT_TYPE: CreateItemType = "snippet";
 
@@ -82,6 +87,8 @@ export function NewItemDialog({
   const [language, setLanguage] = useState("");
   const [url, setUrl] = useState("");
   const [tags, setTags] = useState("");
+  const [file, setFile] = useState<UploadedFile | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,7 +96,11 @@ export function NewItemDialog({
   const isCodeContent = CODE_CONTENT_TYPES.has(type);
   const showLanguage = LANGUAGE_TYPES.has(type);
   const showUrl = type === "URL";
+  const showFile = FILE_TYPES.has(type);
   const titleEmpty = title.trim().length === 0;
+  // File/image items can't be created until their upload has finished.
+  const fileMissing = showFile && !file;
+  const submitDisabled = titleEmpty || saving || uploading || fileMissing;
 
   function reset() {
     setType(defaultType);
@@ -100,13 +111,15 @@ export function NewItemDialog({
     setLanguage("");
     setUrl("");
     setTags("");
+    setFile(null);
+    setUploading(false);
     setError(null);
     setSaving(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (titleEmpty || saving) return;
+    if (submitDisabled) return;
 
     setSaving(true);
     setError(null);
@@ -118,6 +131,9 @@ export function NewItemDialog({
       content: showContent ? content : null,
       language: showLanguage ? language : null,
       url: showUrl ? url : null,
+      fileUrl: showFile ? file?.fileUrl ?? null : null,
+      fileName: showFile ? file?.fileName ?? null : null,
+      fileSize: showFile ? file?.fileSize ?? null : null,
       tags: tags
         .split(",")
         .map((t) => t.trim())
@@ -155,7 +171,8 @@ export function NewItemDialog({
         <DialogHeader>
           <DialogTitle>New Item</DialogTitle>
           <DialogDescription>
-            Add a snippet, prompt, command, note, or link to your vault.
+            Add a snippet, prompt, command, note, link, file, or image to your
+            vault.
           </DialogDescription>
         </DialogHeader>
 
@@ -169,7 +186,12 @@ export function NewItemDialog({
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => setType(opt.value)}
+                    onClick={() => {
+                      setType(opt.value);
+                      // Clear any staged upload when leaving a file/image type.
+                      if (!FILE_TYPES.has(opt.value)) setFile(null);
+                      setError(null);
+                    }}
                     aria-pressed={selected}
                     className={cn(
                       "flex flex-col items-center gap-1.5 rounded-md border p-2.5 text-xs font-medium transition-colors",
@@ -257,6 +279,18 @@ export function NewItemDialog({
             </div>
           )}
 
+          {showFile && (
+            <div className="space-y-1.5">
+              <Label>{type === "image" ? "Image" : "File"}</Label>
+              <FileUpload
+                kind={type === "image" ? "image" : "file"}
+                value={file}
+                onChange={setFile}
+                onUploadingChange={setUploading}
+              />
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="new-item-tags">Tags</Label>
             <Input
@@ -278,7 +312,7 @@ export function NewItemDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={titleEmpty || saving}>
+            <Button type="submit" disabled={submitDisabled}>
               {saving && <Loader2 className="size-4 animate-spin" />}
               {saving ? "Creating…" : "Create Item"}
             </Button>

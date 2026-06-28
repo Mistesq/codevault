@@ -41,18 +41,23 @@ export const updateItemSchema = z.object({
 
 export type UpdateItemInput = z.infer<typeof updateItemSchema>;
 
-// Types the create dialog can choose. File/Image are out of scope (uploads),
-// so only the text- and URL-based system types are selectable here. "URL"
-// matches the system ItemType.name exactly (it's stored uppercase).
+// Types the create dialog can choose. "URL" matches the system ItemType.name
+// exactly (stored uppercase); "file"/"image" carry an uploaded R2 object rather
+// than text content.
 export const CREATE_ITEM_TYPES = [
   "snippet",
   "prompt",
   "command",
   "note",
   "URL",
+  "file",
+  "image",
 ] as const;
 
 export type CreateItemType = (typeof CREATE_ITEM_TYPES)[number];
+
+// The file/image types store an uploaded object instead of text.
+export const FILE_CREATE_TYPES = ["file", "image"] as const;
 
 export const createItemSchema = z
   .object({
@@ -62,23 +67,32 @@ export const createItemSchema = z
     content: contentField,
     language: optionalTrimmed,
     url: optionalTrimmed,
+    // File metadata, set only for the file/image types (uploaded beforehand).
+    fileUrl: optionalTrimmed,
+    fileName: optionalTrimmed,
+    fileSize: z.number().int().positive().nullish().transform((v) => v ?? null),
     tags: tagsField,
   })
-  // URL items require a valid URL; other types tolerate a stray one being null.
   .superRefine((data, ctx) => {
-    if (data.type !== "URL") return;
-    if (!data.url) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["url"],
-        message: "URL is required.",
-      });
-    } else if (!z.url().safeParse(data.url).success) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["url"],
-        message: "Enter a valid URL.",
-      });
+    if (data.type === "URL") {
+      // URL items require a valid URL.
+      if (!data.url) {
+        ctx.addIssue({ code: "custom", path: ["url"], message: "URL is required." });
+      } else if (!z.url().safeParse(data.url).success) {
+        ctx.addIssue({ code: "custom", path: ["url"], message: "Enter a valid URL." });
+      }
+      return;
+    }
+
+    if ((FILE_CREATE_TYPES as readonly string[]).includes(data.type)) {
+      // File/image items require the uploaded file's metadata.
+      if (!data.fileUrl || !data.fileName || data.fileSize === null) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["fileUrl"],
+          message: "Please upload a file.",
+        });
+      }
     }
   });
 

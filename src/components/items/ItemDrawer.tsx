@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, ExternalLink, Pencil, Pin, Star } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Download,
+  ExternalLink,
+  Pencil,
+  Pin,
+  Star,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DeleteItemDialog } from "@/components/items/DeleteItemDialog";
@@ -80,14 +88,46 @@ function CopyButton({
   );
 }
 
+/** Download button that streams the file through the same-origin proxy route. */
+function DownloadButton({ itemId }: { itemId: string }) {
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      // Rendering as an <a>, so opt out of native-button semantics.
+      nativeButton={false}
+      render={
+        <a href={`/api/items/${itemId}/download`} download rel="noreferrer" />
+      }
+    >
+      <Download className="size-4" />
+      Download
+    </Button>
+  );
+}
+
 /** Rendered content body for a loaded item (text / url / file). */
 function ContentBody({ detail }: { detail: ItemDetail }) {
-  if (detail.contentType === "FILE" && detail.fileName) {
+  if (detail.contentType === "FILE") {
+    const isImage = detail.type.name.toLowerCase() === "image";
     return (
-      <p className="font-mono text-sm text-muted-foreground">
-        {detail.fileName}
-        {detail.fileSize != null && ` · ${formatFileSize(detail.fileSize)}`}
-      </p>
+      <div className="space-y-3">
+        {isImage && detail.fileUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={detail.fileUrl}
+            alt={detail.fileName ?? "Image"}
+            className="max-h-72 w-full rounded-md border border-border object-contain"
+          />
+        )}
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 truncate font-mono text-sm text-muted-foreground">
+            {detail.fileName ?? "File"}
+            {detail.fileSize != null && ` · ${formatFileSize(detail.fileSize)}`}
+          </p>
+          <DownloadButton itemId={detail.id} />
+        </div>
+      </div>
     );
   }
 

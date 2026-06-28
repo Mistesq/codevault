@@ -1,0 +1,82 @@
+import { NextResponse } from "next/server";
+
+import { auth } from "@/auth";
+import { getDemoUser } from "@/lib/db/user";
+import { buildObjectKey, isR2Configured, uploadToR2 } from "@/lib/r2";
+import { UPLOAD_CONSTRAINTS, validateUpload } from "@/lib/validations/file";
+import type { UploadKind } from "@/lib/validations/file";
+
+// POST /api/upload — store a file/image in R2 and return its public metadata.
+// The item itself is created afterward via the createItem action (this route
+// only handles the upload so it can stream multipart with progress). Requires a
+// signed-in session. The object is namespaced under the demo user (matching the
+// rest of the demo-scoped domain data).
+export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!isR2Configured()) {
+    return NextResponse.json(
+      { error: "File storage is not configured." },
+      { status: 503 },
+    );
+  }
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return NextResponse.json({ error: "Invalid upload." }, { status: 400 });
+  }
+
+  const kindRaw = formData.get("kind");
+  const kind = kindRaw === "image" ? "image" : kindRaw === "file" ? "file" : null;
+  if (!kind) {
+    return NextResponse.json({ error: "Invalid upload kind." }, { status: 400 });
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: "No file provided." }, { status: 400 });
+  }
+
+  const validation = validateUpload(
+    kind as UploadKind,
+    file.name,
+    file.type,
+    file.size,
+  );
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
+  }
+
+  // Resolve the user namespace; fall back to the session id if the demo user
+  // can't be read (the object key only needs to be stable + unique).
+  const demoUser = await getDemoUser();
+  const userId = demoUser?.id ?? session.user.id ?? "anonymous";
+
+  try {
+    const key = buildObjectKey(userId, kind, file.name);
+    // R2 needs a concrete buffer; these are small (≤10 MB, enforced above).
+    const buffer = Buffer.from(await file.arrayBuffer());
+    // Trust the validated extension's canonical MIME when the browser sent none.
+    const contentType =
+      file.type || UPLOAD_CONSTRAINTS[kind].mimeTypes[0] || "application/octet-stream";
+
+    const fileUrl = await uploadToR2(key, buffer, contentType);
+
+    return NextResponse.json({
+      fileUrl,
+      fileName: file.name,
+      fileSize: file.size,
+    });
+  } catch (error) {
+    console.error("Upload failed:", error);
+    return NextResponse.json(
+      { error: "Upload failed. Please try again." },
+      { status: 500 },
+    );
+  }
+}
