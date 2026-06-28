@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CodeEditor } from "@/components/items/CodeEditor";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import { createItem } from "@/actions/items";
 import type { CreateItemType } from "@/lib/validations/items";
@@ -45,6 +46,8 @@ const CONTENT_TYPES = new Set<CreateItemType>([
   "command",
   "note",
 ]);
+// Code types get the Monaco-based CodeEditor; the rest keep the plain Textarea.
+const CODE_CONTENT_TYPES = new Set<CreateItemType>(["snippet", "command"]);
 const LANGUAGE_TYPES = new Set<CreateItemType>(["snippet", "command"]);
 
 const DEFAULT_TYPE: CreateItemType = "snippet";
@@ -54,13 +57,25 @@ const DEFAULT_TYPE: CreateItemType = "snippet";
  * inputs (no form library); the server action's Zod schema is the source of
  * truth. Fields shown depend on the selected type. On success it toasts, closes,
  * resets, and refreshes so the grids and sidebar counts update.
+ *
+ * `defaultType` preselects the type (e.g. the per-type pages pass their own
+ * type); `triggerLabel` customizes the button text.
  */
-export function NewItemDialog() {
+export function NewItemDialog({
+  defaultType = DEFAULT_TYPE,
+  triggerLabel = "New Item",
+}: {
+  defaultType?: CreateItemType;
+  triggerLabel?: string;
+} = {}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const [type, setType] = useState<CreateItemType>(DEFAULT_TYPE);
+  const [type, setType] = useState<CreateItemType>(defaultType);
   const [title, setTitle] = useState("");
+  // Only flag the title as invalid once the user has interacted with it, so it
+  // isn't shown red while still pristine right after the dialog opens.
+  const [titleTouched, setTitleTouched] = useState(false);
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
   const [language, setLanguage] = useState("");
@@ -70,13 +85,15 @@ export function NewItemDialog() {
   const [error, setError] = useState<string | null>(null);
 
   const showContent = CONTENT_TYPES.has(type);
+  const isCodeContent = CODE_CONTENT_TYPES.has(type);
   const showLanguage = LANGUAGE_TYPES.has(type);
   const showUrl = type === "URL";
   const titleEmpty = title.trim().length === 0;
 
   function reset() {
-    setType(DEFAULT_TYPE);
+    setType(defaultType);
     setTitle("");
+    setTitleTouched(false);
     setDescription("");
     setContent("");
     setLanguage("");
@@ -131,7 +148,7 @@ export function NewItemDialog() {
     >
       <DialogTrigger render={<Button className="shrink-0" />}>
         <Plus className="size-4" />
-        New Item
+        {triggerLabel}
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -177,8 +194,11 @@ export function NewItemDialog() {
             <Input
               id="new-item-title"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              aria-invalid={titleEmpty}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setTitleTouched(true);
+              }}
+              aria-invalid={titleTouched && titleEmpty}
               placeholder="Give it a descriptive name"
               required
             />
@@ -197,13 +217,21 @@ export function NewItemDialog() {
           {showContent && (
             <div className="space-y-1.5">
               <Label htmlFor="new-item-content">Content</Label>
-              <Textarea
-                id="new-item-content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={8}
-                className="font-mono text-sm"
-              />
+              {isCodeContent ? (
+                <CodeEditor
+                  value={content}
+                  onChange={setContent}
+                  language={language}
+                />
+              ) : (
+                <Textarea
+                  id="new-item-content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  rows={8}
+                  className="font-mono text-sm"
+                />
+              )}
             </div>
           )}
 

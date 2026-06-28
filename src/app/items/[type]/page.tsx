@@ -1,11 +1,23 @@
 import { notFound } from "next/navigation";
 
 import { ItemCard } from "@/components/dashboard/ItemCard";
+import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { getItemsByTypeSlug } from "@/lib/db/items";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
+import { CREATE_ITEM_TYPES, type CreateItemType } from "@/lib/validations/items";
 
 // User-specific data fetched from the database — render per request.
 export const dynamic = "force-dynamic";
+
+// Resolve a system ItemType.name to the matching create-dialog type, or null
+// for types that can't be created here (File/Image — uploads are out of scope).
+function toCreateType(name: string): CreateItemType | null {
+  if (name === "URL") return "URL";
+  const lower = name.toLowerCase();
+  return (CREATE_ITEM_TYPES as readonly string[]).includes(lower)
+    ? (lower as CreateItemType)
+    : null;
+}
 
 export default async function ItemsByTypePage({
   params,
@@ -20,6 +32,7 @@ export default async function ItemsByTypePage({
   const { type, items } = result;
   // Pluralize the capitalized type label: "snippet" -> "Snippets", "URL" -> "URLs".
   const heading = `${typeLabel(type.name)}s`;
+  const createType = toCreateType(type.name);
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -36,6 +49,14 @@ export default async function ItemsByTypePage({
             {items.length} {items.length === 1 ? "item" : "items"}
           </p>
         </div>
+        {createType && (
+          <div className="ml-auto">
+            <NewItemDialog
+              defaultType={createType}
+              triggerLabel={`New ${typeLabel(type.name)}`}
+            />
+          </div>
+        )}
       </header>
 
       {items.length > 0 ? (
