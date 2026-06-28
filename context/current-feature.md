@@ -1,16 +1,57 @@
-# Current Feature
+# Audit Quick Wins
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Apply a batch of low-risk "quick win" fixes surfaced by the code-scanner audit.
+Each is isolated, with no behavior change for normal use.
+
+- **Sanitize GitHub OAuth callback** — in `src/components/auth/SignInForm.tsx`,
+  run the GitHub `callbackUrl` through the existing `toInternalPath()` helper
+  (currently only the credentials path does), so an off-origin `?callbackUrl`
+  can't redirect after OAuth. One-line change.
+- **Namespace guard on verify-email token lookup** — in
+  `src/lib/auth/verification-token.ts`, add
+  `identifier: { not: { startsWith: "password-reset:" } }` to the
+  `consumeVerificationToken` `findFirst` where-clause so a password-reset token
+  can't be consumed (and the email marked verified) via the verify-email path.
+  Mirrors the guard already in the password-reset helper.
+- **RFC 5987 filename encoding** — in
+  `src/app/api/items/[id]/download/route.ts`, encode the `Content-Disposition`
+  filename as `filename*=UTF-8''${encodeURIComponent(name)}` so non-ASCII
+  filenames (Cyrillic/CJK/emoji) download correctly instead of producing a
+  malformed header.
+- **Extract duplicated content-type sets** — pull `CODE_CONTENT_TYPES` and
+  `MARKDOWN_CONTENT_TYPES` (identical in `ItemDrawer.tsx`, `ItemEditForm.tsx`,
+  `NewItemDialog.tsx`) into one shared module and import from there. Pure
+  refactor, identical values.
+- **Extract duplicated `SectionLabel`** — one shared component replacing the
+  identical definitions in `ItemDrawer.tsx` and `ItemEditForm.tsx`. Pure
+  refactor.
+- **Drop redundant `toast.error`** — on the inline-error forms
+  (`NewItemDialog.tsx`, `ItemEditForm.tsx`), remove the duplicate failure toast
+  and keep the inline error message only.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Branch: `fix/audit-quick-wins`.
+- Out of scope (not "no-risk", deferred): the `getDashboardCollections`
+  load-all-items count (needs a `groupBy` rewrite + tests) and the
+  `changePassword` same-password reuse check (a behavior change).
+- Also intentionally skipped: the "AppShell open redirect" audit finding (the
+  `callbackUrl` there is only ever a hardcoded literal — not exploitable), and
+  the "item mutations use the demo user" finding (intentional, documented
+  demo-scoping until per-user data migration lands).
+- Add/maintain unit tests for any touched server-side logic — the
+  `verification-token.ts` guard is the main testable change here (add a case
+  proving a `password-reset:`-namespaced token is rejected by
+  `consumeVerificationToken`). UI-only changes (toast/SectionLabel/content-type
+  constants) are out of unit-test scope.
+- Verify in the browser: GitHub sign-in still completes; a normal email-verify
+  link still works; a file download still names correctly.
 
 ## History
 

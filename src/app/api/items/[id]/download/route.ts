@@ -37,9 +37,16 @@ export async function GET(
   if (object.contentLength != null) {
     headers.set("Content-Length", String(object.contentLength));
   }
-  // Force a download with the original filename (sanitized for the header).
-  const safeName = (item.fileName ?? "download").replace(/["\r\n]/g, "");
-  headers.set("Content-Disposition", `attachment; filename="${safeName}"`);
+  // Force a download with the original filename. Provide an ASCII-only
+  // `filename` fallback plus an RFC 5987 `filename*` so non-ASCII names
+  // (Cyrillic/CJK/emoji) survive instead of producing a malformed header.
+  const rawName = item.fileName ?? "download";
+  const asciiName = rawName.replace(/[^\x20-\x7e]/g, "_").replace(/["\r\n]/g, "");
+  const encodedName = encodeURIComponent(rawName);
+  headers.set(
+    "Content-Disposition",
+    `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`,
+  );
 
   return new Response(object.body, { status: 200, headers });
 }
