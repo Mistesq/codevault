@@ -1,24 +1,16 @@
-# Current Feature: Pagination
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Add pagination to `/items/[type]` and `/collections/[id]` pages
-- Pagination controls at the bottom with numbered page links plus prev/next links
-- Disable (grey out) prev/next when there is no previous/next page
-- Use constants: `ITEMS_PER_PAGE = 21`, `COLLECTIONS_PER_PAGE = 21`
-- Dashboard limits: `DASHBOARD_COLLECTIONS_LIMIT = 6`, `DASHBOARD_RECENT_ITEMS_LIMIT = 10`
-- Only fetch the resources a single page requires — never fetch everything at once
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Spec source: `context/features/pagination-spec.md`
-- Server-side pagination: queries must take page/limit and return both the page slice and a total count so the UI can render page numbers
-- `/items/[type]` renders cards plus Images gallery / Files list — pagination must work across all three render modes
-- `/collections/[id]` renders mixed item types in sections; paginate the collection's items
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -65,3 +57,4 @@ In Progress
 - Collections Pages - /collections (all collections via CollectionCard + New Collection button) and /collections/[id] (header + items, mixed types rendered in sections: cards, then Images gallery, then Files list); getAllCollections + getCollectionWithItems (ownership-scoped via ItemCollection join); migrated whole domain layer off demo user (getDemoUser → getSessionUser from auth session), upload route namespaces under session user; 6 tests (Completed)
 - Collection Edit/Delete/Favorite Controls - /collections/[id] header gets Favorite/Edit/Delete buttons + cards (collections & dashboard) get a 3-dots dropdown (Edit/Favorite/Delete) over a Link overlay so the rest of the card navigates; EditCollectionDialog (controlled, mirrors NewCollectionDialog) + DeleteCollectionDialog (confirm, removes only collection + ItemCollection rows, items kept); updateCollectionSchema, ownership-scoped updateCollection/deleteCollection queries (updateMany/deleteMany count>0) + actions (P2002 + not-found); Favorite display-only; 14 tests (Completed)
 - Global Search / Command Palette - Cmd/Ctrl+K (or top-bar search button) opens a cmdk Command dialog with grouped Items/Collections results (type icons, item counts); item → drawer, collection → page; getAllItems + getSearchData prefetched in AppShell (ItemDrawerProvider hoisted to wrap shell); command.tsx adapted to base-ui Dialog with forwardable filter; custom substring filter (every term contiguous) replaces cmdk's over-broad subsequence scorer; 4 tests (Completed)
+- Pagination - server-side pagination on /items/[type], /collections/[id] and /collections; shared lib/pagination.ts (constants ITEMS/COLLECTIONS_PER_PAGE=21, DASHBOARD limits + parsePageParam/totalPagesFor/clampPage/pageOffset/getPageRange/Paginated<T>), ui/pagination.tsx (numbered links, greyed-out prev/next, page-1 clean URL); queries fetch one page (count + skip/take, page clamped) via getItemsByTypeSlug/getCollectionWithItems + new getPaginatedCollections (getAllCollections kept for search); dashboard uses limit constants; seed bulk batch for multi-page lists; 17 tests (Completed)
