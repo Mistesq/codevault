@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   ChevronRight,
   Clock,
+  Home,
   LayoutGrid,
   Pin,
   Sparkles,
@@ -89,7 +90,7 @@ function NavRow({
       title={collapsed ? label : undefined}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group/navrow flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+        "group/navrow flex items-center gap-3 rounded-md px-3 py-[0.45rem] text-sm text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
         active && "bg-sidebar-accent text-sidebar-foreground",
         collapsed && "justify-center px-0",
       )}
@@ -182,7 +183,8 @@ export function SidebarNav({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Scrollable navigation */}
-      <nav className="min-h-0 flex-1 overflow-y-auto p-2">
+      <nav className="sidebar-scroll min-h-0 flex-1 overflow-y-auto p-2">
+        <NavRow href="/dashboard" icon={Home} label="Dashboard" collapsed={collapsed} />
         <NavRow href="/items" icon={LayoutGrid} label="All Items" count={counts.total} collapsed={collapsed} />
         <NavRow href="/favorites" icon={Star} label="Favorites" count={counts.favorites} collapsed={collapsed} />
         <NavRow href="/pinned" icon={Pin} label="Pinned" count={counts.pinned} collapsed={collapsed} />
