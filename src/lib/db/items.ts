@@ -130,6 +130,23 @@ export async function getRecentItems(limit = 10): Promise<DashboardItem[]> {
 }
 
 /**
+ * Every item the signed-in user owns, most recently updated first — the source
+ * data for the command palette's client-side fuzzy search.
+ */
+export async function getAllItems(): Promise<DashboardItem[]> {
+  const user = await getSessionUser();
+  if (!user) return [];
+
+  const rows = await prisma.item.findMany({
+    where: { userId: user.id },
+    orderBy: { updatedAt: "desc" },
+    select: itemSelect,
+  });
+
+  return rows.map(toDashboardItem);
+}
+
+/**
  * Full item detail for the item drawer — the card's fields plus the extras that
  * are only fetched on click (content lives on the card too today, but the drawer
  * treats it as detail so the card query can drop it later). Dates are ISO so the

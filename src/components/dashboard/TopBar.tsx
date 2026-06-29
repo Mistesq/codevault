@@ -4,23 +4,24 @@ import Link from "next/link";
 import { Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 import { Brand } from "@/components/dashboard/Brand";
 import { useSidebar } from "@/components/dashboard/sidebar-context";
+import { useCommandPalette } from "@/components/search/command-palette-context";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { NewCollectionDialog } from "@/components/collections/NewCollectionDialog";
 import type { SelectableCollection } from "@/lib/db/collections";
 
 // Top bar for the dashboard. The brand block on the left sits on the same row
-// as the search and tracks the sidebar width. Search is display-only for now;
-// "New Item" opens the create-item dialog (with the user's collections for the
-// assignment picker).
+// as the search and tracks the sidebar width. The search field opens the global
+// command palette (Cmd/Ctrl+K); "New Item" opens the create-item dialog (with
+// the user's collections for the assignment picker).
 export function TopBar({
   collections,
 }: {
   collections: SelectableCollection[];
 }) {
   const { collapsed, toggleCollapsed, setMobileOpen } = useSidebar();
+  const { openPalette } = useCommandPalette();
 
   return (
     <header className="flex h-14 shrink-0 items-center border-b border-border">
@@ -62,18 +63,18 @@ export function TopBar({
           <Menu className="size-5" />
         </button>
 
-        <div className="relative mx-auto w-full max-w-2xl">
+        <button
+          type="button"
+          onClick={openPalette}
+          aria-label="Search items and collections"
+          className="relative mx-auto flex h-9 w-full max-w-2xl cursor-pointer items-center rounded-md border border-input bg-transparent pl-9 pr-12 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search snippets, prompts, commands…"
-            aria-label="Search"
-            className="pl-9 pr-12"
-          />
+          <span className="truncate">Search snippets, prompts, commands…</span>
           <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
             ⌘K
           </kbd>
-        </div>
+        </button>
 
         <NewCollectionDialog />
         <NewItemDialog collections={collections} />

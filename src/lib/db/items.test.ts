@@ -8,6 +8,7 @@ const { item, itemType, itemTag, itemCollection, collection, tag, $transaction }
   vi.hoisted(() => {
     const item = {
       findFirst: vi.fn(),
+      findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       deleteMany: vi.fn(),
@@ -57,6 +58,7 @@ vi.mock("@/lib/r2", () => ({
 import {
   createItem,
   deleteItem,
+  getAllItems,
   getItemDetail,
   linkCollections,
   linkTags,
@@ -131,6 +133,63 @@ describe("linkCollections", () => {
     await linkCollections(tx, "user_1", "item_1", ["col_x"]);
 
     expect(itemCollection.createMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("getAllItems", () => {
+  it("returns an empty array without querying when there is no user", async () => {
+    getSessionUser.mockResolvedValue(null);
+
+    const result = await getAllItems();
+
+    expect(result).toEqual([]);
+    expect(item.findMany).not.toHaveBeenCalled();
+  });
+
+  it("scopes to the user, orders by updatedAt desc, and maps to DashboardItem", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    item.findMany.mockResolvedValue([
+      {
+        id: "item_1",
+        title: "useDebounce hook",
+        description: "Debounce a value.",
+        contentType: "TEXT",
+        content: "export function useDebounce() {}",
+        fileUrl: null,
+        fileName: null,
+        fileSize: null,
+        url: null,
+        isFavorite: false,
+        isPinned: false,
+        updatedAt: new Date("2026-01-02T03:04:05.000Z"),
+        type: { name: "snippet", icon: "Code", color: "#abc" },
+        tags: [{ tag: { name: "react" } }],
+      },
+    ]);
+
+    const result = await getAllItems();
+
+    const arg = item.findMany.mock.calls[0][0];
+    expect(arg.where).toEqual({ userId: "user_1" });
+    expect(arg.orderBy).toEqual({ updatedAt: "desc" });
+    expect(result).toEqual([
+      {
+        id: "item_1",
+        title: "useDebounce hook",
+        description: "Debounce a value.",
+        contentType: "TEXT",
+        content: "export function useDebounce() {}",
+        fileUrl: null,
+        fileName: null,
+        fileSize: null,
+        url: null,
+        isFavorite: false,
+        isPinned: false,
+        tags: ["react"],
+        updatedAt: "2026-01-02T03:04:05.000Z",
+        type: { name: "snippet", icon: "Code", color: "#abc" },
+      },
+    ]);
   });
 });
 
