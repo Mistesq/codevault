@@ -31,8 +31,8 @@ const { item, itemType, itemTag, itemCollection, collection, tag, $transaction }
       $transaction,
     };
   });
-const { getDemoUser } = vi.hoisted(() => ({
-  getDemoUser: vi.fn(),
+const { getSessionUser } = vi.hoisted(() => ({
+  getSessionUser: vi.fn(),
 }));
 const { deleteFromR2, keyFromPublicUrl } = vi.hoisted(() => ({
   deleteFromR2: vi.fn(),
@@ -47,7 +47,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: { item, itemType, itemTag, itemCollection, collection, tag, $transaction },
 }));
 vi.mock("@/lib/db/user", () => ({
-  getDemoUser,
+  getSessionUser,
 }));
 vi.mock("@/lib/r2", () => ({
   deleteFromR2,
@@ -136,7 +136,7 @@ describe("linkCollections", () => {
 
 describe("getItemDetail", () => {
   it("returns null when there is no demo user (no query)", async () => {
-    getDemoUser.mockResolvedValue(null);
+    getSessionUser.mockResolvedValue(null);
 
     const result = await getItemDetail("item_1");
 
@@ -145,7 +145,7 @@ describe("getItemDetail", () => {
   });
 
   it("scopes the lookup to the demo user and the given id", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     item.findFirst.mockResolvedValue(null);
 
     const result = await getItemDetail("item_1");
@@ -156,7 +156,7 @@ describe("getItemDetail", () => {
   });
 
   it("maps a row into the ItemDetail shape (ISO dates, tags, collections)", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     const updatedAt = new Date("2026-01-02T03:04:05.000Z");
     const createdAt = new Date("2026-01-01T00:00:00.000Z");
     item.findFirst.mockResolvedValue({
@@ -207,7 +207,7 @@ describe("getItemDetail", () => {
   });
 
   it("maps an item with no collections to an empty array", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     item.findFirst.mockResolvedValue({
       id: "item_2",
       title: "Standalone",
@@ -246,7 +246,7 @@ describe("updateItem", () => {
   };
 
   it("returns null when there is no demo user (no writes)", async () => {
-    getDemoUser.mockResolvedValue(null);
+    getSessionUser.mockResolvedValue(null);
 
     const result = await updateItem("item_1", data);
 
@@ -256,7 +256,7 @@ describe("updateItem", () => {
   });
 
   it("returns null without writing when the item isn't the demo user's", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     item.findFirst.mockResolvedValue(null);
 
     const result = await updateItem("item_x", data);
@@ -271,7 +271,7 @@ describe("updateItem", () => {
   });
 
   it("updates fields, replaces tags (disconnect + connect-or-create), then re-reads", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     // First findFirst = ownership check; second = getItemDetail re-read.
     item.findFirst
       .mockResolvedValueOnce({ id: "item_1" })
@@ -350,7 +350,7 @@ describe("createItem", () => {
   };
 
   it("returns null when there is no demo user (no writes)", async () => {
-    getDemoUser.mockResolvedValue(null);
+    getSessionUser.mockResolvedValue(null);
 
     const result = await createItem(data);
 
@@ -360,7 +360,7 @@ describe("createItem", () => {
   });
 
   it("returns null when the type doesn't resolve (no writes)", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     itemType.findFirst.mockResolvedValue(null);
 
     const result = await createItem({ ...data, type: "bogus" });
@@ -374,7 +374,7 @@ describe("createItem", () => {
   });
 
   it("creates the item (TEXT, user+type scoped), links tags, then re-reads", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     itemType.findFirst.mockResolvedValue({ id: "type_snippet" });
     item.create.mockResolvedValue({ id: "item_new" });
     tag.upsert.mockResolvedValueOnce({ id: "tag_react" });
@@ -427,7 +427,7 @@ describe("createItem", () => {
   });
 
   it("links the chosen collections (ownership-checked) on create", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     itemType.findFirst.mockResolvedValue({ id: "type_snippet" });
     item.create.mockResolvedValue({ id: "item_new" });
     tag.upsert.mockResolvedValueOnce({ id: "tag_react" });
@@ -464,7 +464,7 @@ describe("createItem", () => {
   });
 
   it("creates a FILE item with the R2 metadata (no text fields)", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     itemType.findFirst.mockResolvedValue({ id: "type_image" });
     item.create.mockResolvedValue({ id: "item_img" });
     item.findFirst.mockResolvedValue({
@@ -525,7 +525,7 @@ describe("createItem", () => {
 
 describe("deleteItem", () => {
   it("returns false when there is no demo user (no delete)", async () => {
-    getDemoUser.mockResolvedValue(null);
+    getSessionUser.mockResolvedValue(null);
 
     const result = await deleteItem("item_1");
 
@@ -534,7 +534,7 @@ describe("deleteItem", () => {
   });
 
   it("scopes the delete to the demo user and returns true when a row is removed", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     item.findFirst.mockResolvedValue({ fileUrl: null });
     item.deleteMany.mockResolvedValue({ count: 1 });
 
@@ -549,7 +549,7 @@ describe("deleteItem", () => {
   });
 
   it("deletes the backing R2 object for a file item after the row is gone", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     item.findFirst.mockResolvedValue({
       fileUrl: "https://pub-test.r2.dev/uploads/user_1/file/doc.pdf",
     });
@@ -565,7 +565,7 @@ describe("deleteItem", () => {
   });
 
   it("does not touch R2 when the row didn't match", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     item.findFirst.mockResolvedValue({
       fileUrl: "https://pub-test.r2.dev/uploads/user_1/file/doc.pdf",
     });
@@ -578,7 +578,7 @@ describe("deleteItem", () => {
   });
 
   it("returns false when no row matched (unknown or foreign id)", async () => {
-    getDemoUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1" });
     item.deleteMany.mockResolvedValue({ count: 0 });
 
     const result = await deleteItem("item_x");
