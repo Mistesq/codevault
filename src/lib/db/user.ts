@@ -2,21 +2,24 @@ import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 
-// The dashboard's domain data (items/collections) is still scoped to the seeded
-// demo user until ownership is migrated to the signed-in user.
-export const DEMO_EMAIL = "demo@codevault.io";
-
 /**
- * Resolves the seeded demo user, standing in for the signed-in user until auth
- * lands. Wrapped in React `cache()` so the many DB helpers that need the user
- * share a single lookup per server request instead of querying independently.
+ * Resolves the signed-in user (id + the bits the DB helpers need) from the auth
+ * session. Returns null when there's no session, so callers that run outside a
+ * guaranteed-authenticated context (e.g. API routes) can turn that into a 401
+ * and page helpers can short-circuit to empty results. Wrapped in React
+ * `cache()` so the many DB helpers that need the user share a single lookup per
+ * server request instead of querying independently.
  */
-export const getDemoUser = cache(() =>
-  prisma.user.findUnique({
-    where: { email: DEMO_EMAIL },
+export const getSessionUser = cache(async () => {
+  const session = await auth();
+  const id = session?.user?.id;
+  if (!id) return null;
+
+  return prisma.user.findUnique({
+    where: { id },
     select: { id: true, name: true, isPro: true },
-  }),
-);
+  });
+});
 
 export interface CurrentUser {
   name: string;

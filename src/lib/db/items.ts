@@ -1,6 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getDemoUser } from "@/lib/db/user";
+import { getSessionUser } from "@/lib/db/user";
 import { deleteFromR2, keyFromPublicUrl } from "@/lib/r2";
 
 export interface DashboardItemType {
@@ -53,8 +53,9 @@ export interface SidebarItemCounts {
   pinned: number;
 }
 
-// Shared shape of the Prisma query — keeps the two item selectors in sync.
-const itemSelect = {
+// Shared shape of the Prisma query — keeps the item selectors in sync.
+// Exported so collection queries can return items in the same DashboardItem shape.
+export const itemSelect = {
   id: true,
   title: true,
   description: true,
@@ -74,7 +75,8 @@ const itemSelect = {
 // Derived from itemSelect so the row shape can't drift from the query.
 type ItemRow = Prisma.ItemGetPayload<{ select: typeof itemSelect }>;
 
-function toDashboardItem(row: ItemRow): DashboardItem {
+// Exported so collection queries can map rows into the shared DashboardItem shape.
+export function toDashboardItem(row: ItemRow): DashboardItem {
   return {
     id: row.id,
     title: row.title,
@@ -94,11 +96,11 @@ function toDashboardItem(row: ItemRow): DashboardItem {
 }
 
 /**
- * Pinned items for the demo user, most recently updated first.
+ * Pinned items for the signed-in user, most recently updated first.
  * Returns an empty array when nothing is pinned (the section then hides).
  */
 export async function getPinnedItems(): Promise<DashboardItem[]> {
-  const user = await getDemoUser();
+  const user = await getSessionUser();
   if (!user) return [];
 
   const rows = await prisma.item.findMany({
@@ -111,10 +113,10 @@ export async function getPinnedItems(): Promise<DashboardItem[]> {
 }
 
 /**
- * The demo user's most recently updated items for the "Recent Items" grid.
+ * The signed-in user's most recently updated items for the "Recent Items" grid.
  */
 export async function getRecentItems(limit = 10): Promise<DashboardItem[]> {
-  const user = await getDemoUser();
+  const user = await getSessionUser();
   if (!user) return [];
 
   const rows = await prisma.item.findMany({
@@ -148,12 +150,12 @@ const itemDetailSelect = {
 } as const;
 
 /**
- * Full detail for a single item, scoped to the demo user (matching the cards).
- * Returns null when the item doesn't exist or isn't the demo user's — the API
+ * Full detail for a single item, scoped to the signed-in user (matching the cards).
+ * Returns null when the item doesn't exist or isn't the signed-in user's — the API
  * route turns that into a 404.
  */
 export async function getItemDetail(id: string): Promise<ItemDetail | null> {
-  const user = await getDemoUser();
+  const user = await getSessionUser();
   if (!user) return null;
 
   const row = await prisma.item.findFirst({
@@ -238,8 +240,7 @@ export async function linkCollections(
 }
 
 /**
- * Create a new item for the demo user (matching the rest of the domain data,
- * still demo-scoped). Resolves the chosen type name to its system ItemType and
+ * Create a new item for the signed-in user. Resolves the chosen type name to its system ItemType and
  * returns null when it doesn't exist (so the action can error). File/image
  * types are stored as contentType FILE with the R2 file metadata; everything
  * else is TEXT. Tags are connect-or-created (unique per user) in the same
@@ -249,7 +250,7 @@ export async function linkCollections(
 export async function createItem(
   data: CreateItemData,
 ): Promise<ItemDetail | null> {
-  const user = await getDemoUser();
+  const user = await getSessionUser();
   if (!user) return null;
 
   const type = await prisma.itemType.findFirst({
@@ -300,9 +301,9 @@ export interface UpdateItemData {
 }
 
 /**
- * Update an item's editable fields and its tag set, scoped to the demo user
- * (matching getItemDetail — domain data is still demo-scoped). Ownership is the
- * guard: an id that isn't the demo user's returns null, which the action turns
+ * Update an item's editable fields and its tag set, scoped to the signed-in user
+ * (matching getItemDetail). Ownership is the
+ * guard: an id that isn't the signed-in user's returns null, which the action turns
  * into an error. Tag handling per spec: disconnect all existing ItemTags, then
  * connect-or-create each new tag (tags are unique per user). Returns the fresh
  * ItemDetail so the drawer can refresh without a second fetch.
@@ -311,10 +312,10 @@ export async function updateItem(
   id: string,
   data: UpdateItemData,
 ): Promise<ItemDetail | null> {
-  const user = await getDemoUser();
+  const user = await getSessionUser();
   if (!user) return null;
 
-  // Ownership check — only the demo user's own item may be edited.
+  // Ownership check — only the signed-in user's own item may be edited.
   const existing = await prisma.item.findFirst({
     where: { id, userId: user.id },
     select: { id: true },
@@ -346,7 +347,7 @@ export async function updateItem(
 }
 
 /**
- * Permanently delete an item, scoped to the demo user (ownership is the guard,
+ * Permanently delete an item, scoped to the signed-in user (ownership is the guard,
  * matching updateItem). `deleteMany` with a user-scoped where never throws on a
  * missing/foreign id — it reports `count: 0`, which we surface as false so the
  * action can return "Item not found." ItemTag rows cascade on delete per schema.
@@ -354,7 +355,7 @@ export async function updateItem(
  * (best-effort — a failed R2 delete is logged but doesn't fail the operation).
  */
 export async function deleteItem(id: string): Promise<boolean> {
-  const user = await getDemoUser();
+  const user = await getSessionUser();
   if (!user) return false;
 
   // Read the file URL first so we can clean up R2 after the row is deleted.
@@ -390,7 +391,7 @@ export interface ItemsByTypeResult {
 
 /**
  * Resolve a plural type slug (e.g. "snippets", "urls") to its system item type
- * and the demo user's items of that type, most recently updated first. Returns
+ * and the signed-in user's items of that type, most recently updated first. Returns
  * null when the slug matches no system type (so the route can 404).
  */
 export async function getItemsByTypeSlug(
@@ -406,7 +407,7 @@ export async function getItemsByTypeSlug(
   const type = types.find((t) => `${t.name.toLowerCase()}s` === normalized);
   if (!type) return null;
 
-  const user = await getDemoUser();
+  const user = await getSessionUser();
   if (!user) return { type, items: [] };
 
   const rows = await prisma.item.findMany({
@@ -420,10 +421,10 @@ export async function getItemsByTypeSlug(
 
 /**
  * Aggregate counts for the dashboard stats cards (items, collections, and
- * favorites of each), scoped to the demo user.
+ * favorites of each), scoped to the signed-in user.
  */
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const user = await getDemoUser();
+  const user = await getSessionUser();
   if (!user) {
     return {
       totalItems: 0,
@@ -464,7 +465,7 @@ export function typeOrderIndex(name: string): number {
 
 /**
  * System item types (shared across all users) for the sidebar "Types" section,
- * each with the demo user's item count of that type. Ordered to match the
+ * each with the signed-in user's item count of that type. Ordered to match the
  * sidebar's intended layout (see SYSTEM_TYPE_ORDER).
  */
 export async function getSystemItemTypes(): Promise<SidebarItemType[]> {
@@ -478,7 +479,7 @@ export async function getSystemItemTypes(): Promise<SidebarItemType[]> {
     return order !== 0 ? order : a.name.localeCompare(b.name);
   });
 
-  const user = await getDemoUser();
+  const user = await getSessionUser();
   if (!user) return types.map((type) => ({ ...type, count: 0 }));
 
   // One grouped query for all per-type counts, then merge by type id.
@@ -497,10 +498,10 @@ export async function getSystemItemTypes(): Promise<SidebarItemType[]> {
 
 /**
  * Item counts for the sidebar's All Items / Favorites / Pinned rows,
- * scoped to the demo user.
+ * scoped to the signed-in user.
  */
 export async function getSidebarItemCounts(): Promise<SidebarItemCounts> {
-  const user = await getDemoUser();
+  const user = await getSessionUser();
   if (!user) return { total: 0, favorites: 0, pinned: 0 };
 
   const [total, favorites, pinned] = await Promise.all([

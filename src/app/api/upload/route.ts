@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
-import { getDemoUser } from "@/lib/db/user";
 import { buildObjectKey, isR2Configured, uploadToR2 } from "@/lib/r2";
 import { UPLOAD_CONSTRAINTS, validateUpload } from "@/lib/validations/file";
 import type { UploadKind } from "@/lib/validations/file";
@@ -9,8 +8,7 @@ import type { UploadKind } from "@/lib/validations/file";
 // POST /api/upload — store a file/image in R2 and return its public metadata.
 // The item itself is created afterward via the createItem action (this route
 // only handles the upload so it can stream multipart with progress). Requires a
-// signed-in session. The object is namespaced under the demo user (matching the
-// rest of the demo-scoped domain data).
+// signed-in session. The object is namespaced under the signed-in user.
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user) {
@@ -52,10 +50,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
-  // Resolve the user namespace; fall back to the session id if the demo user
-  // can't be read (the object key only needs to be stable + unique).
-  const demoUser = await getDemoUser();
-  const userId = demoUser?.id ?? session.user.id ?? "anonymous";
+  // Namespace the object under the signed-in user (the key only needs to be
+  // stable + unique).
+  const userId = session.user.id ?? "anonymous";
 
   try {
     const key = buildObjectKey(userId, kind, file.name);
