@@ -315,6 +315,45 @@ npx vercel deploy --prebuilt --prod`,
     },
   ]);
 
+  // --- Bulk data so the paginated list pages span more than one page ---
+
+  // 30 snippets in one collection. This pushes both /items/snippets and this
+  // collection's detail page past a single page (ITEMS_PER_PAGE = 21).
+  const librarySnippets: SeedItem[] = Array.from({ length: 30 }, (_, i) => {
+    const n = i + 1;
+    return {
+      title: `Utility helper #${n}`,
+      typeName: "snippet",
+      language: "ts",
+      description: `Generated sample snippet number ${n}.`,
+      content: `export function helper${n}(input: string) {
+  return input.repeat(${n});
+}`,
+    };
+  });
+  await seedCollection(
+    "Snippet Library",
+    "A large set of sample snippets for pagination testing",
+    librarySnippets,
+  );
+
+  // Extra collections to push the total past one page of /collections
+  // (COLLECTIONS_PER_PAGE = 21). Each gets a single note so the cards aren't empty.
+  for (let i = 1; i <= 20; i++) {
+    await seedCollection(
+      `Sample Collection ${String(i).padStart(2, "0")}`,
+      "Generated collection for pagination testing",
+      [
+        {
+          title: `Sample note ${i}`,
+          typeName: "note",
+          description: "Placeholder note.",
+          content: `This is sample note ${i}.`,
+        },
+      ],
+    );
+  }
+
   const [collections, items, types] = await Promise.all([
     prisma.collection.count({ where: { userId: user.id } }),
     prisma.item.count({ where: { userId: user.id } }),

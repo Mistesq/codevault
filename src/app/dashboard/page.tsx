@@ -9,6 +9,7 @@ import {
   getPinnedItems,
   getRecentItems,
 } from "@/lib/db/items";
+import { DASHBOARD_RECENT_ITEMS_LIMIT } from "@/lib/pagination";
 
 // User-specific data fetched from the database — render per request.
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export default async function DashboardPage() {
       getDashboardStats(),
       getPinnedItems(),
       getDashboardCollections(),
-      getRecentItems(10),
+      getRecentItems(DASHBOARD_RECENT_ITEMS_LIMIT),
     ]);
 
   return (
