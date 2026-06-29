@@ -1,35 +1,16 @@
-# Current Feature: Settings Page
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Create a new protected `/settings` route, rendered inside the dashboard app
-  shell (top bar + sidebar) like the profile page.
-- Add a "Settings" link to the user-avatar dropdown menu at the bottom of the
-  sidebar (`UserMenu`), pointing to `/settings`.
-- Move the account actions out of the profile page and onto the settings page:
-  - Change Password (`ChangePasswordDialog`)
-  - Delete Account (`DeleteAccountDialog`)
-- Profile page keeps its account info + usage statistics; the account-actions
-  block is removed from it.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Protection follows the existing pattern: a `settings/layout.tsx` wrapping
-  children in `<AppShell callbackUrl="/settings">`, which enforces the session
-  guard. Use `export const dynamic = "force-dynamic"`.
-- The spec calls the action "forgot password", but the profile page's action is
-  **Change Password** (`ChangePasswordDialog`) — interpreting it as that. Change
-  Password is only shown when the account has a password (`profile.hasPassword`),
-  same conditional as today.
-- Existing pieces to reuse: `ChangePasswordDialog` and `DeleteAccountDialog`
-  components, `getProfileData()` for `hasPassword`. No new server actions needed
-  (changePassword/deleteAccount already exist).
-- Add the Settings dropdown item in `UserMenu.tsx` near the Profile link, with a
-  `Settings` icon from lucide-react.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -77,3 +58,4 @@ In Progress
 - Collection Edit/Delete/Favorite Controls - /collections/[id] header gets Favorite/Edit/Delete buttons + cards (collections & dashboard) get a 3-dots dropdown (Edit/Favorite/Delete) over a Link overlay so the rest of the card navigates; EditCollectionDialog (controlled, mirrors NewCollectionDialog) + DeleteCollectionDialog (confirm, removes only collection + ItemCollection rows, items kept); updateCollectionSchema, ownership-scoped updateCollection/deleteCollection queries (updateMany/deleteMany count>0) + actions (P2002 + not-found); Favorite display-only; 14 tests (Completed)
 - Global Search / Command Palette - Cmd/Ctrl+K (or top-bar search button) opens a cmdk Command dialog with grouped Items/Collections results (type icons, item counts); item → drawer, collection → page; getAllItems + getSearchData prefetched in AppShell (ItemDrawerProvider hoisted to wrap shell); command.tsx adapted to base-ui Dialog with forwardable filter; custom substring filter (every term contiguous) replaces cmdk's over-broad subsequence scorer; 4 tests (Completed)
 - Pagination - server-side pagination on /items/[type], /collections/[id] and /collections; shared lib/pagination.ts (constants ITEMS/COLLECTIONS_PER_PAGE=21, DASHBOARD limits + parsePageParam/totalPagesFor/clampPage/pageOffset/getPageRange/Paginated<T>), ui/pagination.tsx (numbered links, greyed-out prev/next, page-1 clean URL); queries fetch one page (count + skip/take, page clamped) via getItemsByTypeSlug/getCollectionWithItems + new getPaginatedCollections (getAllCollections kept for search); dashboard uses limit constants; seed bulk batch for multi-page lists; 17 tests (Completed)
+- Settings Page - new protected /settings route in dashboard app shell (settings/layout.tsx AppShell callbackUrl guard + force-dynamic page); Settings link added to sidebar UserMenu dropdown (lucide Settings icon, between Profile and Sign out); moved Change Password + Delete Account from profile onto a settings Account section (reuses ChangePasswordDialog/DeleteAccountDialog + getProfileData hasPassword gate), profile keeps account info + usage stats; no new server actions/tests (Completed)
