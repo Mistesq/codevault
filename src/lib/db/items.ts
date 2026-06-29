@@ -2,6 +2,14 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/db/user";
 import { deleteFromR2, keyFromPublicUrl } from "@/lib/r2";
+import {
+  clampPage,
+  DASHBOARD_RECENT_ITEMS_LIMIT,
+  ITEMS_PER_PAGE,
+  pageOffset,
+  totalPagesFor,
+  type Paginated,
+} from "@/lib/pagination";
 
 export interface DashboardItemType {
   name: string;
@@ -115,7 +123,9 @@ export async function getPinnedItems(): Promise<DashboardItem[]> {
 /**
  * The signed-in user's most recently updated items for the "Recent Items" grid.
  */
-export async function getRecentItems(limit = 10): Promise<DashboardItem[]> {
+export async function getRecentItems(
+  limit = DASHBOARD_RECENT_ITEMS_LIMIT,
+): Promise<DashboardItem[]> {
   const user = await getSessionUser();
   if (!user) return [];
 
@@ -401,18 +411,21 @@ export interface ItemTypeView {
   color: string | null;
 }
 
-export interface ItemsByTypeResult {
+export interface ItemsByTypeResult extends Paginated<DashboardItem> {
   type: ItemTypeView;
-  items: DashboardItem[];
 }
 
 /**
  * Resolve a plural type slug (e.g. "snippets", "urls") to its system item type
- * and the signed-in user's items of that type, most recently updated first. Returns
- * null when the slug matches no system type (so the route can 404).
+ * and a single page of the signed-in user's items of that type, most recently
+ * updated first. Returns null when the slug matches no system type (so the
+ * route can 404). Only the requested page is fetched (count + skip/take); the
+ * requested page is clamped into range so a too-high `?page=` lands on the last
+ * page.
  */
 export async function getItemsByTypeSlug(
   slug: string,
+  page = 1,
 ): Promise<ItemsByTypeResult | null> {
   const normalized = slug.toLowerCase();
 
@@ -425,15 +438,28 @@ export async function getItemsByTypeSlug(
   if (!type) return null;
 
   const user = await getSessionUser();
-  if (!user) return { type, items: [] };
+  if (!user) return { type, items: [], page: 1, totalPages: 1, totalCount: 0 };
+
+  const where = { userId: user.id, typeId: type.id };
+  const totalCount = await prisma.item.count({ where });
+  const totalPages = totalPagesFor(totalCount, ITEMS_PER_PAGE);
+  const current = clampPage(page, totalPages);
 
   const rows = await prisma.item.findMany({
-    where: { userId: user.id, typeId: type.id },
+    where,
     orderBy: { updatedAt: "desc" },
+    skip: pageOffset(current, ITEMS_PER_PAGE),
+    take: ITEMS_PER_PAGE,
     select: itemSelect,
   });
 
-  return { type, items: rows.map(toDashboardItem) };
+  return {
+    type,
+    items: rows.map(toDashboardItem),
+    page: current,
+    totalPages,
+    totalCount,
+  };
 }
 
 /**

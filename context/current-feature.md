@@ -1,16 +1,24 @@
-# Current Feature
+# Current Feature: Pagination
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Add pagination to `/items/[type]` and `/collections/[id]` pages
+- Pagination controls at the bottom with numbered page links plus prev/next links
+- Disable (grey out) prev/next when there is no previous/next page
+- Use constants: `ITEMS_PER_PAGE = 21`, `COLLECTIONS_PER_PAGE = 21`
+- Dashboard limits: `DASHBOARD_COLLECTIONS_LIMIT = 6`, `DASHBOARD_RECENT_ITEMS_LIMIT = 10`
+- Only fetch the resources a single page requires — never fetch everything at once
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Spec source: `context/features/pagination-spec.md`
+- Server-side pagination: queries must take page/limit and return both the page slice and a total count so the UI can render page numbers
+- `/items/[type]` renders cards plus Images gallery / Files list — pagination must work across all three render modes
+- `/collections/[id]` renders mixed item types in sections; paginate the collection's items
 
 ## History
 

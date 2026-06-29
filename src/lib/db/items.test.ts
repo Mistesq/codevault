@@ -12,8 +12,9 @@ const { item, itemType, itemTag, itemCollection, collection, tag, $transaction }
       create: vi.fn(),
       update: vi.fn(),
       deleteMany: vi.fn(),
+      count: vi.fn(),
     };
-    const itemType = { findFirst: vi.fn() };
+    const itemType = { findFirst: vi.fn(), findMany: vi.fn() };
     const itemTag = { deleteMany: vi.fn(), create: vi.fn() };
     const itemCollection = { deleteMany: vi.fn(), createMany: vi.fn() };
     const collection = { findMany: vi.fn() };
@@ -60,13 +61,90 @@ import {
   deleteItem,
   getAllItems,
   getItemDetail,
+  getItemsByTypeSlug,
   linkCollections,
   linkTags,
   updateItem,
 } from "@/lib/db/items";
+import { ITEMS_PER_PAGE } from "@/lib/pagination";
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe("getItemsByTypeSlug", () => {
+  const types = [
+    { id: "t_snip", name: "snippet", icon: "Code", color: "#blue" },
+    { id: "t_url", name: "URL", icon: "Link", color: "#green" },
+  ];
+
+  it("returns null for a slug that matches no system type (no item query)", async () => {
+    itemType.findMany.mockResolvedValue(types);
+
+    const result = await getItemsByTypeSlug("widgets");
+
+    expect(result).toBeNull();
+    expect(item.count).not.toHaveBeenCalled();
+    expect(item.findMany).not.toHaveBeenCalled();
+  });
+
+  it("resolves the plural slug and returns an empty page when there is no user", async () => {
+    itemType.findMany.mockResolvedValue(types);
+    getSessionUser.mockResolvedValue(null);
+
+    const result = await getItemsByTypeSlug("snippets");
+
+    expect(result).toEqual({
+      type: types[0],
+      items: [],
+      page: 1,
+      totalPages: 1,
+      totalCount: 0,
+    });
+    expect(item.count).not.toHaveBeenCalled();
+  });
+
+  it("fetches only the requested page (count + skip/take), scoped to user + type", async () => {
+    itemType.findMany.mockResolvedValue(types);
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    item.count.mockResolvedValue(1);
+    item.findMany.mockResolvedValue([]);
+
+    const result = await getItemsByTypeSlug("urls");
+
+    expect(item.count).toHaveBeenCalledWith({
+      where: { userId: "user_1", typeId: "t_url" },
+    });
+    expect(item.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user_1", typeId: "t_url" },
+        orderBy: { updatedAt: "desc" },
+        skip: 0,
+        take: ITEMS_PER_PAGE,
+      }),
+    );
+    expect(result).toMatchObject({
+      type: types[1],
+      page: 1,
+      totalPages: 1,
+      totalCount: 1,
+    });
+  });
+
+  it("clamps a too-high page to the last page", async () => {
+    itemType.findMany.mockResolvedValue(types);
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    // 22 items → 2 pages of 21. Page 7 should clamp to page 2 (skip = 21).
+    item.count.mockResolvedValue(ITEMS_PER_PAGE + 1);
+    item.findMany.mockResolvedValue([]);
+
+    const result = await getItemsByTypeSlug("snippets", 7);
+
+    expect(item.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: ITEMS_PER_PAGE, take: ITEMS_PER_PAGE }),
+    );
+    expect(result).toMatchObject({ page: 2, totalPages: 2, totalCount: 22 });
+  });
 });
 
 describe("linkTags", () => {

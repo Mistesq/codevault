@@ -5,8 +5,10 @@ import { ItemCard } from "@/components/dashboard/ItemCard";
 import { FileRow } from "@/components/items/FileRow";
 import { ImageCard } from "@/components/items/ImageCard";
 import { CollectionHeaderActions } from "@/components/collections/CollectionHeaderActions";
+import { Pagination } from "@/components/ui/pagination";
 import { getCollectionWithItems } from "@/lib/db/collections";
 import type { DashboardItem } from "@/lib/db/items";
+import { parsePageParam } from "@/lib/pagination";
 
 // User-specific data fetched from the database — render per request.
 export const dynamic = "force-dynamic";
@@ -16,15 +18,18 @@ const isFile = (item: DashboardItem) => item.type.name.toLowerCase() === "file";
 
 export default async function CollectionDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { id } = await params;
+  const page = parsePageParam((await searchParams).page);
 
-  const collection = await getCollectionWithItems(id);
+  const collection = await getCollectionWithItems(id, page);
   if (!collection) notFound();
 
-  const { items } = collection;
+  const { items, totalCount, totalPages } = collection;
   // Mixed-type collections render in sections, mirroring how each type renders
   // on /items/[type]: standard cards first, then an image gallery, then a file
   // list. All cards open the shared item drawer.
@@ -51,7 +56,7 @@ export default async function CollectionDetailPage({
             </p>
           )}
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {items.length} {items.length === 1 ? "item" : "items"}
+            {totalCount} {totalCount === 1 ? "item" : "items"}
           </p>
         </div>
         <CollectionHeaderActions
@@ -63,7 +68,7 @@ export default async function CollectionDetailPage({
         />
       </header>
 
-      {items.length === 0 ? (
+      {totalCount === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
           This collection has no items yet.
         </p>
@@ -98,6 +103,12 @@ export default async function CollectionDetailPage({
               </div>
             </section>
           )}
+
+          <Pagination
+            page={collection.page}
+            totalPages={totalPages}
+            baseHref={`/collections/${id}`}
+          />
         </>
       )}
     </div>

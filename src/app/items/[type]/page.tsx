@@ -4,8 +4,10 @@ import { ItemCard } from "@/components/dashboard/ItemCard";
 import { FileRow } from "@/components/items/FileRow";
 import { ImageCard } from "@/components/items/ImageCard";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
+import { Pagination } from "@/components/ui/pagination";
 import { getItemsByTypeSlug } from "@/lib/db/items";
 import { getSelectableCollections } from "@/lib/db/collections";
+import { parsePageParam } from "@/lib/pagination";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import { CREATE_ITEM_TYPES, type CreateItemType } from "@/lib/validations/items";
 
@@ -24,18 +26,21 @@ function toCreateType(name: string): CreateItemType | null {
 
 export default async function ItemsByTypePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ type: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   const { type: slug } = await params;
+  const page = parsePageParam((await searchParams).page);
 
   const [result, collections] = await Promise.all([
-    getItemsByTypeSlug(slug),
+    getItemsByTypeSlug(slug, page),
     getSelectableCollections(),
   ]);
   if (!result) notFound();
 
-  const { type, items } = result;
+  const { type, items, totalCount, totalPages } = result;
   // Pluralize the capitalized type label: "snippet" -> "Snippets", "URL" -> "URLs".
   const heading = `${typeLabel(type.name)}s`;
   const createType = toCreateType(type.name);
@@ -56,7 +61,7 @@ export default async function ItemsByTypePage({
         <div>
           <h1 className="text-lg font-semibold">{heading}</h1>
           <p className="text-xs text-muted-foreground">
-            {items.length} {items.length === 1 ? "item" : "items"}
+            {totalCount} {totalCount === 1 ? "item" : "items"}
           </p>
         </div>
         {createType && (
@@ -70,24 +75,32 @@ export default async function ItemsByTypePage({
         )}
       </header>
 
-      {items.length > 0 ? (
-        isFileType ? (
-          <div className="flex flex-col gap-2">
-            {items.map((item) => (
-              <FileRow key={item.id} item={item} />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {items.map((item) =>
-              isImageType ? (
-                <ImageCard key={item.id} item={item} />
-              ) : (
-                <ItemCard key={item.id} item={item} />
-              ),
-            )}
-          </div>
-        )
+      {totalCount > 0 ? (
+        <>
+          {isFileType ? (
+            <div className="flex flex-col gap-2">
+              {items.map((item) => (
+                <FileRow key={item.id} item={item} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {items.map((item) =>
+                isImageType ? (
+                  <ImageCard key={item.id} item={item} />
+                ) : (
+                  <ItemCard key={item.id} item={item} />
+                ),
+              )}
+            </div>
+          )}
+
+          <Pagination
+            page={result.page}
+            totalPages={totalPages}
+            baseHref={`/items/${slug}`}
+          />
+        </>
       ) : (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
           No {heading.toLowerCase()} yet.

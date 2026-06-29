@@ -11,8 +11,9 @@ const { collection, item } = vi.hoisted(() => ({
     findFirst: vi.fn(),
     updateMany: vi.fn(),
     deleteMany: vi.fn(),
+    count: vi.fn(),
   },
-  item: { findMany: vi.fn() },
+  item: { findMany: vi.fn(), count: vi.fn() },
 }));
 const { getSessionUser } = vi.hoisted(() => ({
   getSessionUser: vi.fn(),
@@ -31,9 +32,11 @@ import {
   getAllCollections,
   getCollectionWithItems,
   getDashboardCollections,
+  getPaginatedCollections,
   getSelectableCollections,
   updateCollection,
 } from "@/lib/db/collections";
+import { COLLECTIONS_PER_PAGE, ITEMS_PER_PAGE } from "@/lib/pagination";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -325,6 +328,7 @@ describe("getCollectionWithItems", () => {
       description: "Reusable bits",
       isFavorite: false,
     });
+    item.count.mockResolvedValue(1);
     item.findMany.mockResolvedValue([
       {
         id: "item_1",
@@ -346,7 +350,8 @@ describe("getCollectionWithItems", () => {
 
     const result = await getCollectionWithItems("col_1");
 
-    // Items are pulled through the ItemCollection join, scoped to the user.
+    // Items are pulled through the ItemCollection join, scoped to the user, one
+    // page at a time (skip/take).
     expect(item.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
@@ -354,6 +359,8 @@ describe("getCollectionWithItems", () => {
           collections: { some: { collectionId: "col_1" } },
         },
         orderBy: { updatedAt: "desc" },
+        skip: 0,
+        take: ITEMS_PER_PAGE,
       }),
     );
     expect(result).toEqual({
@@ -361,6 +368,9 @@ describe("getCollectionWithItems", () => {
       name: "React Patterns",
       description: "Reusable bits",
       isFavorite: false,
+      page: 1,
+      totalPages: 1,
+      totalCount: 1,
       items: [
         {
           id: "item_1",
@@ -380,5 +390,96 @@ describe("getCollectionWithItems", () => {
         },
       ],
     });
+  });
+
+  it("clamps a too-high page to the last page and offsets by skip", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    collection.findFirst.mockResolvedValue({
+      id: "col_1",
+      name: "React Patterns",
+      description: null,
+      isFavorite: false,
+    });
+    // 22 items → 2 pages of 21. Requesting page 9 should land on page 2.
+    item.count.mockResolvedValue(ITEMS_PER_PAGE + 1);
+    item.findMany.mockResolvedValue([]);
+
+    const result = await getCollectionWithItems("col_1", 9);
+
+    expect(item.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: ITEMS_PER_PAGE, take: ITEMS_PER_PAGE }),
+    );
+    expect(result).toMatchObject({ page: 2, totalPages: 2, totalCount: 22 });
+  });
+});
+
+describe("getPaginatedCollections", () => {
+  it("returns an empty page without querying when there is no user", async () => {
+    getSessionUser.mockResolvedValue(null);
+
+    const result = await getPaginatedCollections();
+
+    expect(result).toEqual({ items: [], page: 1, totalPages: 1, totalCount: 0 });
+    expect(collection.count).not.toHaveBeenCalled();
+    expect(collection.findMany).not.toHaveBeenCalled();
+  });
+
+  it("fetches only the requested page (count + skip/take) and maps the rows", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    const url = { id: "t_url", name: "url", icon: "Link", color: "#green" };
+    collection.count.mockResolvedValue(1);
+    collection.findMany.mockResolvedValue([
+      {
+        id: "col_2",
+        name: "Links",
+        description: null,
+        isFavorite: true,
+        items: [{ item: { type: url } }],
+      },
+    ]);
+
+    const result = await getPaginatedCollections(1);
+
+    expect(collection.count).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+    });
+    expect(collection.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user_1" },
+        orderBy: { updatedAt: "desc" },
+        skip: 0,
+        take: COLLECTIONS_PER_PAGE,
+      }),
+    );
+    expect(result).toEqual({
+      page: 1,
+      totalPages: 1,
+      totalCount: 1,
+      items: [
+        {
+          id: "col_2",
+          name: "Links",
+          description: null,
+          isFavorite: true,
+          itemCount: 1,
+          borderColor: "#green",
+          types: [url],
+        },
+      ],
+    });
+  });
+
+  it("clamps a too-high page to the last page", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    // 22 collections → 2 pages of 21. Requesting page 5 should land on page 2.
+    collection.count.mockResolvedValue(COLLECTIONS_PER_PAGE + 1);
+    collection.findMany.mockResolvedValue([]);
+
+    const result = await getPaginatedCollections(5);
+
+    expect(collection.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: COLLECTIONS_PER_PAGE }),
+    );
+    expect(result).toMatchObject({ page: 2, totalPages: 2, totalCount: 22 });
   });
 });

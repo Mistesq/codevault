@@ -6,6 +6,15 @@ import {
   toDashboardItem,
   type DashboardItem,
 } from "@/lib/db/items";
+import {
+  clampPage,
+  COLLECTIONS_PER_PAGE,
+  DASHBOARD_COLLECTIONS_LIMIT,
+  ITEMS_PER_PAGE,
+  pageOffset,
+  totalPagesFor,
+  type Paginated,
+} from "@/lib/pagination";
 
 export interface CollectionType {
   id: string;
@@ -132,7 +141,7 @@ function toDashboardCollection(
  * it contains, and a border color derived from its most-used type.
  */
 export async function getDashboardCollections(
-  limit = 6,
+  limit = DASHBOARD_COLLECTIONS_LIMIT,
 ): Promise<DashboardCollection[]> {
   const user = await getSessionUser();
   if (!user) return [];
@@ -164,23 +173,57 @@ export async function getAllCollections(): Promise<DashboardCollection[]> {
   return collections.map(toDashboardCollection);
 }
 
-export interface CollectionWithItems {
+/**
+ * A single page of the signed-in user's collections, newest first, for the
+ * /collections page. Same DashboardCollection shape as the dashboard grid, plus
+ * pagination metadata. Only the requested page is fetched (count + skip/take),
+ * with the page clamped into range.
+ */
+export async function getPaginatedCollections(
+  page = 1,
+): Promise<Paginated<DashboardCollection>> {
+  const user = await getSessionUser();
+  if (!user) return { items: [], page: 1, totalPages: 1, totalCount: 0 };
+
+  const where = { userId: user.id };
+  const totalCount = await prisma.collection.count({ where });
+  const totalPages = totalPagesFor(totalCount, COLLECTIONS_PER_PAGE);
+  const current = clampPage(page, totalPages);
+
+  const collections = await prisma.collection.findMany({
+    where,
+    orderBy: { updatedAt: "desc" },
+    skip: pageOffset(current, COLLECTIONS_PER_PAGE),
+    take: COLLECTIONS_PER_PAGE,
+    include: collectionCardInclude,
+  });
+
+  return {
+    items: collections.map(toDashboardCollection),
+    page: current,
+    totalPages,
+    totalCount,
+  };
+}
+
+export interface CollectionWithItems extends Paginated<DashboardItem> {
   id: string;
   name: string;
   description: string | null;
   isFavorite: boolean;
-  // The collection's items, most recently updated first (DashboardItem shape).
-  items: DashboardItem[];
 }
 
 /**
- * A single collection plus its items, scoped to the signed-in user (ownership is the
- * guard). Returns null when the id doesn't exist or isn't the signed-in user's, so
- * the route can 404. Items come through the ItemCollection join in the shared
- * DashboardItem shape so the existing item cards render them.
+ * A single collection plus one page of its items, scoped to the signed-in user
+ * (ownership is the guard). Returns null when the id doesn't exist or isn't the
+ * signed-in user's, so the route can 404. Items come through the ItemCollection
+ * join in the shared DashboardItem shape so the existing item cards render them.
+ * Only the requested page of items is fetched (count + skip/take), with the page
+ * clamped into range.
  */
 export async function getCollectionWithItems(
   id: string,
+  page = 1,
 ): Promise<CollectionWithItems | null> {
   const user = await getSessionUser();
   if (!user) return null;
@@ -191,13 +234,29 @@ export async function getCollectionWithItems(
   });
   if (!collection) return null;
 
+  const where = {
+    userId: user.id,
+    collections: { some: { collectionId: id } },
+  };
+  const totalCount = await prisma.item.count({ where });
+  const totalPages = totalPagesFor(totalCount, ITEMS_PER_PAGE);
+  const current = clampPage(page, totalPages);
+
   const rows = await prisma.item.findMany({
-    where: { userId: user.id, collections: { some: { collectionId: id } } },
+    where,
     orderBy: { updatedAt: "desc" },
+    skip: pageOffset(current, ITEMS_PER_PAGE),
+    take: ITEMS_PER_PAGE,
     select: itemSelect,
   });
 
-  return { ...collection, items: rows.map(toDashboardItem) };
+  return {
+    ...collection,
+    items: rows.map(toDashboardItem),
+    page: current,
+    totalPages,
+    totalCount,
+  };
 }
 
 /** Fields the New Collection dialog can set (already Zod-validated upstream). */
