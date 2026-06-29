@@ -1,6 +1,11 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import {
+  DEFAULT_EDITOR_PREFERENCES,
+  parseEditorPreferences,
+  type EditorPreferences,
+} from "@/lib/editor-preferences";
 
 /**
  * Resolves the signed-in user (id + the bits the DB helpers need) from the auth
@@ -55,3 +60,25 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     isPro: dbUser?.isPro ?? false,
   };
 }
+
+/**
+ * The signed-in user's Monaco editor preferences, read from the JSON column and
+ * normalized into a complete object (every field filled with its default when
+ * missing or invalid). Returns the defaults when there's no session so callers
+ * outside a guaranteed-authenticated context still get a usable object. Wrapped
+ * in React `cache()` so the app shell shares one lookup per request.
+ */
+export const getEditorPreferences = cache(
+  async (): Promise<EditorPreferences> => {
+    const session = await auth();
+    const id = session?.user?.id;
+    if (!id) return { ...DEFAULT_EDITOR_PREFERENCES };
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { editorPreferences: true },
+    });
+
+    return parseEditorPreferences(user?.editorPreferences);
+  },
+);

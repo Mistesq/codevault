@@ -31,6 +31,10 @@ model User {
   stripeCustomerId     String? @unique
   stripeSubscriptionId String? @unique
 
+  // Monaco editor preferences (font size, tab size, word wrap, minimap, theme).
+  // Stored as JSON; shape + defaults live in src/lib/editor-preferences.ts.
+  editorPreferences Json?
+
   accounts    Account[]
   sessions    Session[]
   items       Item[]

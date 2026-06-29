@@ -1,16 +1,28 @@
-# Current Feature
+# Current Feature: Editor Preferences Settings
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Add an "Editor Preferences" section to the settings page
+- Font size dropdown
+- Tab size dropdown
+- Word wrap toggle (default: on)
+- Minimap toggle (default: off)
+- Theme dropdown: vs-dark, monokai, github-dark (default: vs-dark)
+- Server action to update preferences
+- Apply the saved settings to the Monaco editor component
+- Auto-save on change (no save button) with a success toast
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Store preferences in a JSON column `editorPreferences` on the `User` model.
+- Create and run a Prisma migration for the schema change (`prisma migrate dev`) — never `db push`.
+- Auto-save: persist on each change rather than via an explicit Save button.
+- Create an `EditorPreferencesContext` so client components can read the current preferences.
+- Migration targets the Neon **development** branch (`br-autumn-sunset-asqlkegf`).
 
 ## History
 
