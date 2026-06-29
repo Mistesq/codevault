@@ -1,16 +1,42 @@
-# Current Feature
+# Current Feature: Item ↔ Collections (Many-to-Many)
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- An item can belong to **zero, one, or multiple** collections.
+- The **New Item** and **Edit Item** forms get a collection selector (multi-select) listing the user's available collections; selecting collections assigns the item to them on save.
+- Existing single-collection data is preserved through the migration (each item currently in a collection stays in that collection).
+- No collection **pages** yet — this feature is only about the assignment input + persistence. (Out of scope: a `/collections/[id]` view.)
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+### Decision
+
+- Confirmed with the user: migrate from the current **one-to-many** (`Item.collectionId`) to a **many-to-many** relationship via a new join table. Single-select fallback was rejected.
+
+### Schema change (migration required)
+
+- New join model, e.g. `ItemCollection { itemId, collectionId, @@id([itemId, collectionId]) }` with cascade deletes on both sides (mirrors the `ItemTag` pattern already in the schema).
+- `Item.collectionId` / `Item.collection` (one-to-many) and the `@@index([collectionId])` are removed; `Collection.items` becomes the many-to-many side.
+- **Data migration:** backfill `ItemCollection` rows from existing non-null `Item.collectionId` values before dropping the column so current memberships survive. Use `prisma migrate dev` (per coding standards — not `db push`). Target the Neon **development** branch only.
+
+### Surfaces to update (everything that reads `item.collection` / `collectionId`)
+
+- `src/lib/db/items.ts` — `itemSelect`, `getItemDetail` (returns `collection {id,name}` → becomes `collections []`), `createItem`/`updateItem` (write membership; reuse the `linkTags` connect-or-create pattern for collections), `ItemDetail`/`DashboardItem` shapes.
+- `src/lib/db/collections.ts` — `getDashboardCollections` item-count / distinct-type / border-color logic (currently joins via `item.collectionId`), `getFavoriteCollections`.
+- `src/lib/validations/items.ts` — `createItemSchema` / `updateItemSchema` gain a `collectionIds: string[]` field.
+- `src/actions/items.ts` — `createItem` / `updateItem` actions pass collection ids through.
+- UI: `src/components/items/NewItemDialog.tsx` and `ItemEditForm.tsx` get the collection multi-select input (needs the user's collections fetched/passed in); `ItemDrawer` view mode shows the collection list (plural) instead of a single collection name.
+
+### Constraints
+
+- Demo-user scoped, consistent with existing item/collection mutations.
+- Validate selected collection ids belong to the user (ownership check) before linking.
+- Add/maintain unit tests for the touched server actions, validation schema, and DB helpers (`npm test`).
+- Many-to-many membership only — file/image/type behavior unchanged.
 
 ## History
 

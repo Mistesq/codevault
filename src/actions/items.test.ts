@@ -31,6 +31,7 @@ const validInput = {
   language: "",
   url: "",
   tags: ["react"],
+  collectionIds: ["col_a"],
 };
 
 beforeEach(() => {
@@ -46,6 +47,7 @@ describe("createItem action", () => {
     language: "",
     url: "",
     tags: ["react"],
+    collectionIds: ["col_a"],
   };
 
   it("rejects when there is no session (no query)", async () => {
@@ -84,6 +86,8 @@ describe("createItem action", () => {
       language: null,
       url: null,
       tags: ["react"],
+      // Collection ids are validated and forwarded to the query.
+      collectionIds: ["col_a"],
     });
   });
 
@@ -135,6 +139,8 @@ describe("updateItem action", () => {
       language: null,
       url: null,
       tags: ["react"],
+      // Collection membership is forwarded to the query.
+      collectionIds: ["col_a"],
     });
   });
 

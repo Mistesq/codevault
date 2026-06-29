@@ -4,22 +4,33 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // test — no database. We assert the where-clause is user-scoped and that rows
 // are mapped into the ItemDetail shape (ISO dates, tag names, collection
 // passthrough). `vi.hoisted` lets the mocks exist before the hoisted factories.
-const { item, itemType, itemTag, tag, $transaction } = vi.hoisted(() => {
-  const item = {
-    findFirst: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    deleteMany: vi.fn(),
-  };
-  const itemType = { findFirst: vi.fn() };
-  const itemTag = { deleteMany: vi.fn(), create: vi.fn() };
-  const tag = { upsert: vi.fn() };
-  // Run the transaction callback against the same mocked delegates.
-  const $transaction = vi.fn((cb: (tx: unknown) => unknown) =>
-    cb({ item, itemTag, tag }),
-  );
-  return { item, itemType, itemTag, tag, $transaction };
-});
+const { item, itemType, itemTag, itemCollection, collection, tag, $transaction } =
+  vi.hoisted(() => {
+    const item = {
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      deleteMany: vi.fn(),
+    };
+    const itemType = { findFirst: vi.fn() };
+    const itemTag = { deleteMany: vi.fn(), create: vi.fn() };
+    const itemCollection = { deleteMany: vi.fn(), createMany: vi.fn() };
+    const collection = { findMany: vi.fn() };
+    const tag = { upsert: vi.fn() };
+    // Run the transaction callback against the same mocked delegates.
+    const $transaction = vi.fn((cb: (tx: unknown) => unknown) =>
+      cb({ item, itemTag, itemCollection, collection, tag }),
+    );
+    return {
+      item,
+      itemType,
+      itemTag,
+      itemCollection,
+      collection,
+      tag,
+      $transaction,
+    };
+  });
 const { getDemoUser } = vi.hoisted(() => ({
   getDemoUser: vi.fn(),
 }));
@@ -33,7 +44,7 @@ const { deleteFromR2, keyFromPublicUrl } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { item, itemType, itemTag, tag, $transaction },
+  prisma: { item, itemType, itemTag, itemCollection, collection, tag, $transaction },
 }));
 vi.mock("@/lib/db/user", () => ({
   getDemoUser,
@@ -47,6 +58,7 @@ import {
   createItem,
   deleteItem,
   getItemDetail,
+  linkCollections,
   linkTags,
   updateItem,
 } from "@/lib/db/items";
@@ -88,6 +100,40 @@ describe("linkTags", () => {
   });
 });
 
+describe("linkCollections", () => {
+  const tx = { collection, itemCollection } as never;
+
+  it("does nothing for an empty id list (no ownership query, no write)", async () => {
+    await linkCollections(tx, "user_1", "item_1", []);
+
+    expect(collection.findMany).not.toHaveBeenCalled();
+    expect(itemCollection.createMany).not.toHaveBeenCalled();
+  });
+
+  it("links only the collections the user owns", async () => {
+    // user owns col_a; col_x is foreign and silently dropped.
+    collection.findMany.mockResolvedValue([{ id: "col_a" }]);
+
+    await linkCollections(tx, "user_1", "item_1", ["col_a", "col_x"]);
+
+    expect(collection.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["col_a", "col_x"] }, userId: "user_1" },
+      select: { id: true },
+    });
+    expect(itemCollection.createMany).toHaveBeenCalledWith({
+      data: [{ itemId: "item_1", collectionId: "col_a" }],
+    });
+  });
+
+  it("writes nothing when none of the ids belong to the user", async () => {
+    collection.findMany.mockResolvedValue([]);
+
+    await linkCollections(tx, "user_1", "item_1", ["col_x"]);
+
+    expect(itemCollection.createMany).not.toHaveBeenCalled();
+  });
+});
+
 describe("getItemDetail", () => {
   it("returns null when there is no demo user (no query)", async () => {
     getDemoUser.mockResolvedValue(null);
@@ -109,7 +155,7 @@ describe("getItemDetail", () => {
     expect(arg.where).toEqual({ id: "item_1", userId: "user_1" });
   });
 
-  it("maps a row into the ItemDetail shape (ISO dates, tags, collection)", async () => {
+  it("maps a row into the ItemDetail shape (ISO dates, tags, collections)", async () => {
     getDemoUser.mockResolvedValue({ id: "user_1" });
     const updatedAt = new Date("2026-01-02T03:04:05.000Z");
     const createdAt = new Date("2026-01-01T00:00:00.000Z");
@@ -128,7 +174,10 @@ describe("getItemDetail", () => {
       createdAt,
       language: "tsx",
       type: { name: "snippet", icon: "Code", color: "#abc" },
-      collection: { id: "col_1", name: "React Patterns" },
+      collections: [
+        { collection: { id: "col_1", name: "React Patterns" } },
+        { collection: { id: "col_2", name: "Hooks" } },
+      ],
       tags: [{ tag: { name: "react" } }, { tag: { name: "hooks" } }],
     });
 
@@ -150,11 +199,14 @@ describe("getItemDetail", () => {
       createdAt: "2026-01-01T00:00:00.000Z",
       language: "tsx",
       type: { name: "snippet", icon: "Code", color: "#abc" },
-      collection: { id: "col_1", name: "React Patterns" },
+      collections: [
+        { id: "col_1", name: "React Patterns" },
+        { id: "col_2", name: "Hooks" },
+      ],
     });
   });
 
-  it("passes through a null collection", async () => {
+  it("maps an item with no collections to an empty array", async () => {
     getDemoUser.mockResolvedValue({ id: "user_1" });
     item.findFirst.mockResolvedValue({
       id: "item_2",
@@ -171,13 +223,13 @@ describe("getItemDetail", () => {
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       language: null,
       type: { name: "note", icon: "StickyNote", color: null },
-      collection: null,
+      collections: [],
       tags: [],
     });
 
     const result = await getItemDetail("item_2");
 
-    expect(result?.collection).toBeNull();
+    expect(result?.collections).toEqual([]);
     expect(result?.tags).toEqual([]);
   });
 });
@@ -190,6 +242,7 @@ describe("updateItem", () => {
     url: null,
     language: "tsx",
     tags: ["react", "hooks"],
+    collectionIds: ["col_a"],
   };
 
   it("returns null when there is no demo user (no writes)", async () => {
@@ -237,12 +290,13 @@ describe("updateItem", () => {
         createdAt: new Date("2026-01-01T00:00:00.000Z"),
         language: "tsx",
         type: { name: "snippet", icon: "Code", color: null },
-        collection: null,
+        collections: [{ collection: { id: "col_a", name: "A" } }],
         tags: [{ tag: { name: "react" } }, { tag: { name: "hooks" } }],
       });
     tag.upsert
       .mockResolvedValueOnce({ id: "tag_react" })
       .mockResolvedValueOnce({ id: "tag_hooks" });
+    collection.findMany.mockResolvedValue([{ id: "col_a" }]);
 
     const result = await updateItem("item_1", data);
 
@@ -269,9 +323,17 @@ describe("updateItem", () => {
     expect(itemTag.create).toHaveBeenCalledWith({
       data: { itemId: "item_1", tagId: "tag_react" },
     });
+    // Collection membership replaced: old links cleared, owned set re-linked.
+    expect(itemCollection.deleteMany).toHaveBeenCalledWith({
+      where: { itemId: "item_1" },
+    });
+    expect(itemCollection.createMany).toHaveBeenCalledWith({
+      data: [{ itemId: "item_1", collectionId: "col_a" }],
+    });
     // Returns the freshly re-read ItemDetail.
     expect(result?.title).toBe("New title");
     expect(result?.tags).toEqual(["react", "hooks"]);
+    expect(result?.collections).toEqual([{ id: "col_a", name: "A" }]);
   });
 });
 
@@ -284,6 +346,7 @@ describe("createItem", () => {
     url: null,
     language: "tsx",
     tags: ["react"],
+    collectionIds: [],
   };
 
   it("returns null when there is no demo user (no writes)", async () => {
@@ -331,7 +394,7 @@ describe("createItem", () => {
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       language: "tsx",
       type: { name: "snippet", icon: "Code", color: null },
-      collection: null,
+      collections: [],
       tags: [{ tag: { name: "react" } }],
     });
 
@@ -363,6 +426,43 @@ describe("createItem", () => {
     expect(result?.tags).toEqual(["react"]);
   });
 
+  it("links the chosen collections (ownership-checked) on create", async () => {
+    getDemoUser.mockResolvedValue({ id: "user_1" });
+    itemType.findFirst.mockResolvedValue({ id: "type_snippet" });
+    item.create.mockResolvedValue({ id: "item_new" });
+    tag.upsert.mockResolvedValueOnce({ id: "tag_react" });
+    collection.findMany.mockResolvedValue([{ id: "col_a" }]);
+    item.findFirst.mockResolvedValue({
+      id: "item_new",
+      title: "New snippet",
+      description: "desc",
+      contentType: "TEXT",
+      content: "x",
+      fileName: null,
+      fileSize: null,
+      url: null,
+      isFavorite: false,
+      isPinned: false,
+      updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      language: "tsx",
+      type: { name: "snippet", icon: "Code", color: null },
+      collections: [{ collection: { id: "col_a", name: "A" } }],
+      tags: [{ tag: { name: "react" } }],
+    });
+
+    const result = await createItem({ ...data, collectionIds: ["col_a", "col_x"] });
+
+    expect(collection.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["col_a", "col_x"] }, userId: "user_1" },
+      select: { id: true },
+    });
+    expect(itemCollection.createMany).toHaveBeenCalledWith({
+      data: [{ itemId: "item_new", collectionId: "col_a" }],
+    });
+    expect(result?.collections).toEqual([{ id: "col_a", name: "A" }]);
+  });
+
   it("creates a FILE item with the R2 metadata (no text fields)", async () => {
     getDemoUser.mockResolvedValue({ id: "user_1" });
     itemType.findFirst.mockResolvedValue({ id: "type_image" });
@@ -383,7 +483,7 @@ describe("createItem", () => {
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       language: null,
       type: { name: "image", icon: "Image", color: null },
-      collection: null,
+      collections: [],
       tags: [],
     });
 
@@ -398,6 +498,7 @@ describe("createItem", () => {
       fileName: "logo.png",
       fileSize: 2048,
       tags: [],
+      collectionIds: [],
     });
 
     // Text fields are nulled; file metadata + FILE content type are stored.

@@ -69,20 +69,27 @@ async function main() {
     const collection = await prisma.collection.create({
       data: { name, description, userId: user.id },
     });
-    await prisma.item.createMany({
-      data: items.map((it) => ({
-        title: it.title,
-        content: it.content ?? null,
-        language: it.language ?? null,
-        url: it.url ?? null,
-        description: it.description ?? null,
-        isPinned: it.isPinned ?? false,
-        isFavorite: it.isFavorite ?? false,
-        typeId: typeId[it.typeName],
-        collectionId: collection.id,
-        userId: user.id,
-      })),
-    });
+    // Items belong to collections via the ItemCollection join table; create each
+    // item then link it to this collection (matching the many-to-many schema).
+    for (const it of items) {
+      const item = await prisma.item.create({
+        data: {
+          title: it.title,
+          content: it.content ?? null,
+          language: it.language ?? null,
+          url: it.url ?? null,
+          description: it.description ?? null,
+          isPinned: it.isPinned ?? false,
+          isFavorite: it.isFavorite ?? false,
+          typeId: typeId[it.typeName],
+          userId: user.id,
+        },
+        select: { id: true },
+      });
+      await prisma.itemCollection.create({
+        data: { itemId: item.id, collectionId: collection.id },
+      });
+    }
   }
 
   await seedCollection("React Patterns", "Reusable React patterns and hooks", [

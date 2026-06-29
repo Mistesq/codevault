@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import type { DashboardItem, ItemDetail } from "@/lib/db/items";
+import type { SelectableCollection } from "@/lib/db/collections";
 import { ItemDrawer } from "@/components/items/ItemDrawer";
 
 interface ItemDrawerContextValue {
@@ -36,8 +37,10 @@ export function useItemDrawer(): ItemDrawerContextValue {
  */
 export function ItemDrawerProvider({
   children,
+  collections,
 }: {
   children: React.ReactNode;
+  collections: SelectableCollection[];
 }) {
   const [open, setOpen] = useState(false);
   const [item, setItem] = useState<DashboardItem | null>(null);
@@ -95,6 +98,7 @@ export function ItemDrawerProvider({
         onOpenChange={handleOpenChange}
         item={item}
         detail={detail}
+        collections={collections}
         loading={loading}
         error={error}
         onUpdated={applyUpdatedDetail}

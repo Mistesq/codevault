@@ -26,6 +26,29 @@ export interface SidebarCollection {
   itemCount: number;
 }
 
+/** Minimal collection shape for the item form's collection picker. */
+export interface SelectableCollection {
+  id: string;
+  name: string;
+}
+
+/**
+ * The demo user's collections (id + name only), alphabetical, for the
+ * multi-select on the New/Edit Item forms.
+ */
+export async function getSelectableCollections(): Promise<
+  SelectableCollection[]
+> {
+  const user = await getDemoUser();
+  if (!user) return [];
+
+  return prisma.collection.findMany({
+    where: { userId: user.id },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+}
+
 /**
  * The demo user's favorite collections for the sidebar, alphabetical.
  */
@@ -64,8 +87,12 @@ export async function getDashboardCollections(
     include: {
       items: {
         select: {
-          type: {
-            select: { id: true, name: true, icon: true, color: true },
+          item: {
+            select: {
+              type: {
+                select: { id: true, name: true, icon: true, color: true },
+              },
+            },
           },
         },
       },
@@ -76,7 +103,8 @@ export async function getDashboardCollections(
     // Count items per type and remember each type's metadata.
     const counts = new Map<string, number>();
     const meta = new Map<string, CollectionType>();
-    for (const { type } of collection.items) {
+    for (const { item } of collection.items) {
+      const { type } = item;
       counts.set(type.id, (counts.get(type.id) ?? 0) + 1);
       if (!meta.has(type.id)) meta.set(type.id, type);
     }

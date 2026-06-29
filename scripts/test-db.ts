@@ -58,8 +58,10 @@ async function main() {
       orderBy: { name: "asc" },
       include: {
         items: {
-          orderBy: { createdAt: "asc" },
-          include: { type: { select: { name: true } } },
+          // `items` is now the ItemCollection join; reach through to the item.
+          include: {
+            item: { include: { type: { select: { name: true } } } },
+          },
         },
       },
     });
@@ -67,7 +69,7 @@ async function main() {
     console.log(`📚 Collections (${collections.length})`);
     for (const c of collections) {
       console.log(`\n   ▸ ${c.name} — ${c.description ?? ""} (${c.items.length} items)`);
-      for (const item of c.items) {
+      for (const { item } of c.items) {
         const meta = item.url ?? item.language ?? "";
         console.log(
           `      • [${item.type.name}] ${item.title}${meta ? `  (${meta})` : ""}`,

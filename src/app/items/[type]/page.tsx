@@ -5,6 +5,7 @@ import { FileRow } from "@/components/items/FileRow";
 import { ImageCard } from "@/components/items/ImageCard";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { getItemsByTypeSlug } from "@/lib/db/items";
+import { getSelectableCollections } from "@/lib/db/collections";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import { CREATE_ITEM_TYPES, type CreateItemType } from "@/lib/validations/items";
 
@@ -28,7 +29,10 @@ export default async function ItemsByTypePage({
 }) {
   const { type: slug } = await params;
 
-  const result = await getItemsByTypeSlug(slug);
+  const [result, collections] = await Promise.all([
+    getItemsByTypeSlug(slug),
+    getSelectableCollections(),
+  ]);
   if (!result) notFound();
 
   const { type, items } = result;
@@ -58,6 +62,7 @@ export default async function ItemsByTypePage({
         {createType && (
           <div className="ml-auto">
             <NewItemDialog
+              collections={collections}
               defaultType={createType}
               triggerLabel={`New ${typeLabel(type.name)}`}
             />

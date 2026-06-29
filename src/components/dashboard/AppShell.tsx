@@ -8,6 +8,7 @@ import { ItemDrawerProvider } from "@/components/items/item-drawer-context";
 import {
   getDashboardCollections,
   getFavoriteCollections,
+  getSelectableCollections,
 } from "@/lib/db/collections";
 import { getSidebarItemCounts, getSystemItemTypes } from "@/lib/db/items";
 import { getCurrentUser } from "@/lib/db/user";
@@ -30,14 +31,21 @@ export async function AppShell({
     redirect(`/sign-in?callbackUrl=${callbackUrl}`);
   }
 
-  const [itemTypes, counts, favoriteCollections, recentCollections, user] =
-    await Promise.all([
-      getSystemItemTypes(),
-      getSidebarItemCounts(),
-      getFavoriteCollections(),
-      getDashboardCollections(5),
-      getCurrentUser(),
-    ]);
+  const [
+    itemTypes,
+    counts,
+    favoriteCollections,
+    recentCollections,
+    selectableCollections,
+    user,
+  ] = await Promise.all([
+    getSystemItemTypes(),
+    getSidebarItemCounts(),
+    getFavoriteCollections(),
+    getDashboardCollections(5),
+    getSelectableCollections(),
+    getCurrentUser(),
+  ]);
 
   const sidebarData = {
     itemTypes,
@@ -50,11 +58,13 @@ export async function AppShell({
   return (
     <SidebarProvider>
       <div className="flex h-screen flex-col">
-        <TopBar />
+        <TopBar collections={selectableCollections} />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar data={sidebarData} />
           <main className="flex-1 overflow-auto p-6">
-            <ItemDrawerProvider>{children}</ItemDrawerProvider>
+            <ItemDrawerProvider collections={selectableCollections}>
+              {children}
+            </ItemDrawerProvider>
           </main>
         </div>
       </div>
