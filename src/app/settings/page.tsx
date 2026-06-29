@@ -1,6 +1,7 @@
 import { getProfileData } from "@/lib/db/profile";
 import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
 import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog";
+import { EditorPreferencesForm } from "@/components/settings/EditorPreferencesForm";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,10 @@ export default async function SettingsPage() {
           Manage your account settings
         </p>
       </div>
+
+      {/* Editor preferences (reads current values from EditorPreferencesContext,
+          seeded by the app shell from the database). */}
+      <EditorPreferencesForm />
 
       {/* Account actions */}
       <section className="rounded-xl border border-border bg-card p-6">

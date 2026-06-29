@@ -7,12 +7,19 @@ import { Check, Copy } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useEditorPreferences } from "@/components/editor/editor-preferences-context";
+import type { EditorTheme } from "@/lib/editor-preferences";
 
 const MIN_HEIGHT = 100;
 const MAX_HEIGHT = 400;
 
-/** Name of the custom theme registered before the editor mounts. */
-const THEME_NAME = "codevault-dark";
+// Each selectable theme maps to a custom Monaco theme registered before mount,
+// so the names never collide with Monaco's built-ins.
+const THEME_NAMES: Record<EditorTheme, string> = {
+  "vs-dark": "codevault-dark",
+  monokai: "codevault-monokai",
+  "github-dark": "codevault-github-dark",
+};
 
 // Map the free-text `language` we store on items to a Monaco language id.
 // Unknown values fall through unchanged — Monaco just renders them as plaintext.
@@ -38,12 +45,20 @@ function toMonacoLanguage(language?: string | null): string {
   return LANGUAGE_ALIASES[normalized] ?? normalized;
 }
 
+// Shared themed scrollbar slider so every theme keeps the same subtle look.
+const SCROLLBAR_COLORS = {
+  "scrollbarSlider.background": "#ffffff1f",
+  "scrollbarSlider.hoverBackground": "#ffffff33",
+  "scrollbarSlider.activeBackground": "#ffffff4d",
+};
+
 /**
- * Registers a dark theme tuned to the app's neutral palette, with a subtle
- * themed scrollbar slider. Called once per editor before mount.
+ * Registers the three selectable themes before the editor mounts. "vs-dark" is
+ * the app's neutral palette; "monokai" and "github-dark" add token colors to
+ * approximate their namesakes. Called once per editor.
  */
-const defineTheme: BeforeMount = (monaco) => {
-  monaco.editor.defineTheme(THEME_NAME, {
+const defineThemes: BeforeMount = (monaco) => {
+  monaco.editor.defineTheme(THEME_NAMES["vs-dark"], {
     base: "vs-dark",
     inherit: true,
     rules: [],
@@ -51,9 +66,47 @@ const defineTheme: BeforeMount = (monaco) => {
       "editor.background": "#1e1e1e",
       "editorGutter.background": "#1e1e1e",
       "editor.lineHighlightBorder": "#00000000",
-      "scrollbarSlider.background": "#ffffff1f",
-      "scrollbarSlider.hoverBackground": "#ffffff33",
-      "scrollbarSlider.activeBackground": "#ffffff4d",
+      ...SCROLLBAR_COLORS,
+    },
+  });
+
+  monaco.editor.defineTheme(THEME_NAMES.monokai, {
+    base: "vs-dark",
+    inherit: true,
+    rules: [
+      { token: "comment", foreground: "75715e", fontStyle: "italic" },
+      { token: "string", foreground: "e6db74" },
+      { token: "number", foreground: "ae81ff" },
+      { token: "keyword", foreground: "f92672" },
+      { token: "type", foreground: "66d9ef", fontStyle: "italic" },
+      { token: "function", foreground: "a6e22e" },
+    ],
+    colors: {
+      "editor.background": "#272822",
+      "editor.foreground": "#f8f8f2",
+      "editorGutter.background": "#272822",
+      "editor.lineHighlightBorder": "#00000000",
+      ...SCROLLBAR_COLORS,
+    },
+  });
+
+  monaco.editor.defineTheme(THEME_NAMES["github-dark"], {
+    base: "vs-dark",
+    inherit: true,
+    rules: [
+      { token: "comment", foreground: "8b949e", fontStyle: "italic" },
+      { token: "string", foreground: "a5d6ff" },
+      { token: "number", foreground: "79c0ff" },
+      { token: "keyword", foreground: "ff7b72" },
+      { token: "type", foreground: "ffa657" },
+      { token: "function", foreground: "d2a8ff" },
+    ],
+    colors: {
+      "editor.background": "#0d1117",
+      "editor.foreground": "#c9d1d9",
+      "editorGutter.background": "#0d1117",
+      "editor.lineHighlightBorder": "#00000000",
+      ...SCROLLBAR_COLORS,
     },
   });
 };
@@ -109,6 +162,7 @@ export function CodeEditor({
   className?: string;
 }) {
   const [height, setHeight] = useState(MIN_HEIGHT);
+  const { preferences } = useEditorPreferences();
 
   function updateHeight(ed: editor.IStandaloneCodeEditor) {
     const next = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, ed.getContentHeight()));
@@ -151,11 +205,11 @@ export function CodeEditor({
       <div style={{ height }}>
         <Editor
           height="100%"
-          theme={THEME_NAME}
+          theme={THEME_NAMES[preferences.theme]}
           language={toMonacoLanguage(language)}
           value={value}
           onChange={(next) => onChange?.(next ?? "")}
-          beforeMount={defineTheme}
+          beforeMount={defineThemes}
           onMount={handleMount}
           loading={
             <div className="w-full space-y-2 p-3">
@@ -167,16 +221,17 @@ export function CodeEditor({
           options={{
             readOnly,
             domReadOnly: readOnly,
-            minimap: { enabled: false },
+            minimap: { enabled: preferences.minimap },
+            wordWrap: preferences.wordWrap ? "on" : "off",
             scrollBeyondLastLine: false,
             automaticLayout: true,
-            fontSize: 13,
+            fontSize: preferences.fontSize,
             lineHeight: 20,
             fontFamily:
               'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
             fontLigatures: false,
             padding: { top: 12, bottom: 12 },
-            tabSize: 2,
+            tabSize: preferences.tabSize,
             renderLineHighlight: readOnly ? "none" : "line",
             overviewRulerLanes: 0,
             hideCursorInOverviewRuler: true,
