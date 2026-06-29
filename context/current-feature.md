@@ -1,28 +1,16 @@
-# Current Feature: Editor Preferences Settings
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Add an "Editor Preferences" section to the settings page
-- Font size dropdown
-- Tab size dropdown
-- Word wrap toggle (default: on)
-- Minimap toggle (default: off)
-- Theme dropdown: vs-dark, monokai, github-dark (default: vs-dark)
-- Server action to update preferences
-- Apply the saved settings to the Monaco editor component
-- Auto-save on change (no save button) with a success toast
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Store preferences in a JSON column `editorPreferences` on the `User` model.
-- Create and run a Prisma migration for the schema change (`prisma migrate dev`) — never `db push`.
-- Auto-save: persist on each change rather than via an explicit Save button.
-- Create an `EditorPreferencesContext` so client components can read the current preferences.
-- Migration targets the Neon **development** branch (`br-autumn-sunset-asqlkegf`).
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -71,3 +59,4 @@ In Progress
 - Global Search / Command Palette - Cmd/Ctrl+K (or top-bar search button) opens a cmdk Command dialog with grouped Items/Collections results (type icons, item counts); item → drawer, collection → page; getAllItems + getSearchData prefetched in AppShell (ItemDrawerProvider hoisted to wrap shell); command.tsx adapted to base-ui Dialog with forwardable filter; custom substring filter (every term contiguous) replaces cmdk's over-broad subsequence scorer; 4 tests (Completed)
 - Pagination - server-side pagination on /items/[type], /collections/[id] and /collections; shared lib/pagination.ts (constants ITEMS/COLLECTIONS_PER_PAGE=21, DASHBOARD limits + parsePageParam/totalPagesFor/clampPage/pageOffset/getPageRange/Paginated<T>), ui/pagination.tsx (numbered links, greyed-out prev/next, page-1 clean URL); queries fetch one page (count + skip/take, page clamped) via getItemsByTypeSlug/getCollectionWithItems + new getPaginatedCollections (getAllCollections kept for search); dashboard uses limit constants; seed bulk batch for multi-page lists; 17 tests (Completed)
 - Settings Page - new protected /settings route in dashboard app shell (settings/layout.tsx AppShell callbackUrl guard + force-dynamic page); Settings link added to sidebar UserMenu dropdown (lucide Settings icon, between Profile and Sign out); moved Change Password + Delete Account from profile onto a settings Account section (reuses ChangePasswordDialog/DeleteAccountDialog + getProfileData hasPassword gate), profile keeps account info + usage stats; no new server actions/tests (Completed)
+- Editor Preferences Settings - auto-saving Editor Preferences section on /settings (font size, tab size, word wrap, minimap, theme) persisted to new User.editorPreferences JSON column (migration on Neon dev); shared editor-preferences.ts (types/defaults/options/parser) + Zod schema, updateEditorPreferences action, cached getEditorPreferences loader; EditorPreferencesContext seeded in AppShell, CodeEditor applies prefs + defines vs-dark/monokai/github-dark themes; Base UI Switch (neutral primary track, dark thumb when on); 18 tests (Completed)
