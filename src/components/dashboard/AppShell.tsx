@@ -11,7 +11,9 @@ import {
   getSelectableCollections,
 } from "@/lib/db/collections";
 import { getSidebarItemCounts, getSystemItemTypes } from "@/lib/db/items";
+import { getSearchData } from "@/lib/db/search";
 import { getCurrentUser } from "@/lib/db/user";
+import { CommandPaletteProvider } from "@/components/search/command-palette-context";
 
 /**
  * The authenticated app shell: top bar + sidebar around the page content.
@@ -37,6 +39,7 @@ export async function AppShell({
     favoriteCollections,
     recentCollections,
     selectableCollections,
+    searchData,
     user,
   ] = await Promise.all([
     getSystemItemTypes(),
@@ -44,6 +47,7 @@ export async function AppShell({
     getFavoriteCollections(),
     getDashboardCollections(5),
     getSelectableCollections(),
+    getSearchData(),
     getCurrentUser(),
   ]);
 
@@ -57,17 +61,20 @@ export async function AppShell({
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen flex-col">
-        <TopBar collections={selectableCollections} />
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar data={sidebarData} />
-          <main className="flex-1 overflow-auto p-6">
-            <ItemDrawerProvider collections={selectableCollections}>
-              {children}
-            </ItemDrawerProvider>
-          </main>
-        </div>
-      </div>
+      <ItemDrawerProvider collections={selectableCollections}>
+        <CommandPaletteProvider
+          items={searchData.items}
+          collections={searchData.collections}
+        >
+          <div className="flex h-screen flex-col">
+            <TopBar collections={selectableCollections} />
+            <div className="flex flex-1 overflow-hidden">
+              <Sidebar data={sidebarData} />
+              <main className="flex-1 overflow-auto p-6">{children}</main>
+            </div>
+          </div>
+        </CommandPaletteProvider>
+      </ItemDrawerProvider>
     </SidebarProvider>
   );
 }
