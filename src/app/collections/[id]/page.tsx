@@ -4,6 +4,7 @@ import { Folder, Star } from "lucide-react";
 import { ItemCard } from "@/components/dashboard/ItemCard";
 import { FileRow } from "@/components/items/FileRow";
 import { ImageCard } from "@/components/items/ImageCard";
+import { CollectionHeaderActions } from "@/components/collections/CollectionHeaderActions";
 import { getCollectionWithItems } from "@/lib/db/collections";
 import type { DashboardItem } from "@/lib/db/items";
 
@@ -53,6 +54,13 @@ export default async function CollectionDetailPage({
             {items.length} {items.length === 1 ? "item" : "items"}
           </p>
         </div>
+        <CollectionHeaderActions
+          collection={{
+            id: collection.id,
+            name: collection.name,
+            description: collection.description,
+          }}
+        />
       </header>
 
       {items.length === 0 ? (

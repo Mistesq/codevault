@@ -4,6 +4,7 @@ import { Folder, Star } from "lucide-react";
 
 import type { DashboardCollection } from "@/lib/db/collections";
 import { getTypeIcon } from "@/lib/type-icons";
+import { CollectionActions } from "@/components/collections/CollectionActions";
 
 export function CollectionCard({
   collection,
@@ -15,20 +16,35 @@ export function CollectionCard({
     ? { borderColor: collection.borderColor }
     : undefined;
 
+  // The card navigates to the collection page via a Link overlay (absolute,
+  // covering the card) so clicking anywhere goes to the page — except the
+  // actions menu, which sits above the overlay (z-index) and handles its own
+  // clicks.
   return (
-    <Link
-      href={`/collections/${collection.id}`}
+    <div
       style={style}
-      className="flex flex-col gap-2 rounded-xl border-l-2 border-border bg-card p-4 transition-colors hover:border-ring/40"
+      className="group relative flex flex-col gap-2 rounded-xl border-l-2 border-border bg-card p-4 transition-colors hover:border-ring/40"
     >
+      <Link
+        href={`/collections/${collection.id}`}
+        aria-label={`Open ${collection.name}`}
+        className="absolute inset-0 z-0 rounded-xl"
+      />
+
       <div className="flex items-center gap-2">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
           <Folder className="size-4" />
         </span>
         <h3 className="truncate text-sm font-semibold">{collection.name}</h3>
-        {collection.isFavorite && (
-          <Star className="ml-auto size-3.5 shrink-0 fill-amber-400 text-amber-400" />
-        )}
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {collection.isFavorite && (
+            <Star className="size-3.5 fill-amber-400 text-amber-400" />
+          )}
+          <CollectionActions
+            collection={collection}
+            className="relative z-10 -mr-3.5"
+          />
+        </div>
       </div>
 
       {collection.description && (
@@ -54,6 +70,6 @@ export function CollectionCard({
           {collection.itemCount} {collection.itemCount === 1 ? "item" : "items"}
         </p>
       </div>
-    </Link>
+    </div>
   );
 }

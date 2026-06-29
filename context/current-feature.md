@@ -1,16 +1,24 @@
-# Current Feature
+# Current Feature: Collection Edit / Delete / Favorite Controls
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- On `/collections/[id]`, add action buttons to the collection header: **Edit**, **Delete**, and **Favorite** (favorite is icon/button only — no behavior yet).
+- **Edit** opens a modal to edit the collection's metadata (name, description).
+- **Delete** asks for confirmation before removing the collection. Items are NOT deleted — they simply stop belonging to that collection (remove the `ItemCollection` join rows only).
+- On the cards at `/collections` and on the dashboard, the 3-dots icon opens a dropdown with **Edit**, **Delete**, and **Favorite** (favorite icon/button only — no behavior yet).
+- Clicking anywhere else on a collection card navigates to that collection's page.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Favorites: render the icon/button only this round — do NOT implement favorite toggling logic yet.
+- Edit modal mirrors the existing NewCollectionDialog metadata fields (name, description).
+- Delete must only remove collection membership/the collection itself, never cascade to the items.
+- Reuse existing patterns: Zod schemas in validations, ownership-scoped queries in the domain layer, server actions returning `{ success, data, error }`, toast + `router.refresh()` on success.
+- Add/maintain Vitest unit tests for any new server actions / query helpers.
 
 ## History
 
