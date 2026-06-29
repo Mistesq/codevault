@@ -3,8 +3,6 @@ import { Calendar, Code, FolderOpen, Mail } from "lucide-react";
 import { getProfileData } from "@/lib/db/profile";
 import { UserAvatar } from "@/components/auth/UserAvatar";
 import { TypeIcon } from "@/lib/type-icons";
-import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
-import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog";
 
 export const dynamic = "force-dynamic";
 
@@ -69,11 +67,6 @@ export default async function ProfilePage() {
             </dd>
           </div>
         </dl>
-
-        <div className="mt-6 flex flex-wrap gap-3 border-t border-border pt-6">
-          {profile.hasPassword && <ChangePasswordDialog />}
-          <DeleteAccountDialog />
-        </div>
       </section>
 
       {/* Usage statistics */}

@@ -1,16 +1,35 @@
-# Current Feature
+# Current Feature: Settings Page
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Create a new protected `/settings` route, rendered inside the dashboard app
+  shell (top bar + sidebar) like the profile page.
+- Add a "Settings" link to the user-avatar dropdown menu at the bottom of the
+  sidebar (`UserMenu`), pointing to `/settings`.
+- Move the account actions out of the profile page and onto the settings page:
+  - Change Password (`ChangePasswordDialog`)
+  - Delete Account (`DeleteAccountDialog`)
+- Profile page keeps its account info + usage statistics; the account-actions
+  block is removed from it.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Protection follows the existing pattern: a `settings/layout.tsx` wrapping
+  children in `<AppShell callbackUrl="/settings">`, which enforces the session
+  guard. Use `export const dynamic = "force-dynamic"`.
+- The spec calls the action "forgot password", but the profile page's action is
+  **Change Password** (`ChangePasswordDialog`) — interpreting it as that. Change
+  Password is only shown when the account has a password (`profile.hasPassword`),
+  same conditional as today.
+- Existing pieces to reuse: `ChangePasswordDialog` and `DeleteAccountDialog`
+  components, `getProfileData()` for `hasPassword`. No new server actions needed
+  (changePassword/deleteAccount already exist).
+- Add the Settings dropdown item in `UserMenu.tsx` near the Profile link, with a
+  `Settings` icon from lucide-react.
 
 ## History
 
