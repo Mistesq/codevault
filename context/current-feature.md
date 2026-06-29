@@ -1,30 +1,16 @@
-# Current Feature: Collections Pages
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Create the `/collections` page that lists all of the user's collections using the existing `CollectionCard`.
-- Create the `/collections/[id]` page that shows the items inside that collection using the existing item cards.
-- Each collection card links to its own `/collections/[id]` page.
-- The sidebar "View all collections" link points to `/collections`.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Links are already wired up** — no change needed there, just verify after the pages exist:
-  - `SidebarNav.tsx` "View all collections" already has `href="/collections"`.
-  - `CollectionCard.tsx` already wraps the card in `<Link href={`/collections/${collection.id}`}>`.
-  - Both currently 404 because the pages don't exist yet.
-- Reuse existing cards (do not build new ones):
-  - `CollectionCard` (`src/components/dashboard/CollectionCard.tsx`) takes a `DashboardCollection`.
-  - Item cards: `ItemCard`, plus the type-specific `ImageCard` / `FileRow` used on `/items/[type]` — mirror that page's rendering split (image gallery, file list, default grid).
-- Data: extend `src/lib/db/collections.ts`.
-  - Need a `getCollections()`-style query returning all demo-user collections in `DashboardCollection` shape (the dashboard's `getDashboardCollections` is limited to 6/newest — generalize or add a sibling).
-  - Need a `getCollectionWithItems(id)` query returning the collection + its items (demo-scoped, via the `ItemCollection` join model), `null` → `notFound()`.
-- Pages live under `src/app/collections/` with a `layout.tsx` wrapping `AppShell` (mirror `src/app/items/layout.tsx`).
-- The `/collections/[id]` header should show collection name/description; reuse the item-drawer wiring like `/items/[type]` does so clicking an item opens the detail drawer.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -68,3 +54,4 @@ In Progress
 - Dashboard Navigation - way back to dashboard: Brand wrapped in link to /dashboard (TopBar + mobile drawer), new "Dashboard" NavRow with Home icon, tightened NavRow padding + slim .sidebar-scroll scrollbar in globals.css (Completed)
 - Collection Create - New Collection button in top bar, NewCollectionDialog modal with name/description fields, createCollectionSchema (Zod), createCollection(data) query (demo-scoped), createCollection action (P2002 duplicate handling), toast + router.refresh(), 13 tests (Completed)
 - Item ↔ Collections (Many-to-Many) - new ItemCollection join model (hand-written migration with backfill, applied to Neon dev), ItemDetail.collections[], linkCollections helper (ownership-filtered), createItem/updateItem link/replace membership, getSelectableCollections, CollectionMultiSelect (Base UI Combobox, searchable/portaled), 9 tests (Completed)
+- Collections Pages - /collections (all collections via CollectionCard + New Collection button) and /collections/[id] (header + items, mixed types rendered in sections: cards, then Images gallery, then Files list); getAllCollections + getCollectionWithItems (ownership-scoped via ItemCollection join); migrated whole domain layer off demo user (getDemoUser → getSessionUser from auth session), upload route namespaces under session user; 6 tests (Completed)
