@@ -1,25 +1,16 @@
-# Current Feature: Global Search / Command Palette
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Global command palette opened with Cmd+K (Mac) / Ctrl+K (Windows)
-- Fuzzy search across all items and collections (client-side, no server round-trips)
-- Grouped results: an Items section and a Collections section
-- Keyboard navigation (arrow keys to move, Enter to select)
-- Show item type icon per item; show item count per collection
-- Selecting an item opens its drawer; selecting a collection navigates to its page
-- TopBar search input opens the palette on click
-- Show ⌘K hint in the search input placeholder
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Use shadcn `cmdk` component (Command)
-- Pre-fetch searchable data on app load; reuse existing data-fetching functions
-- Search data shape: items (id, title, type, content preview), collections (id, name, itemCount)
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -65,3 +56,4 @@ In Progress
 - Item ↔ Collections (Many-to-Many) - new ItemCollection join model (hand-written migration with backfill, applied to Neon dev), ItemDetail.collections[], linkCollections helper (ownership-filtered), createItem/updateItem link/replace membership, getSelectableCollections, CollectionMultiSelect (Base UI Combobox, searchable/portaled), 9 tests (Completed)
 - Collections Pages - /collections (all collections via CollectionCard + New Collection button) and /collections/[id] (header + items, mixed types rendered in sections: cards, then Images gallery, then Files list); getAllCollections + getCollectionWithItems (ownership-scoped via ItemCollection join); migrated whole domain layer off demo user (getDemoUser → getSessionUser from auth session), upload route namespaces under session user; 6 tests (Completed)
 - Collection Edit/Delete/Favorite Controls - /collections/[id] header gets Favorite/Edit/Delete buttons + cards (collections & dashboard) get a 3-dots dropdown (Edit/Favorite/Delete) over a Link overlay so the rest of the card navigates; EditCollectionDialog (controlled, mirrors NewCollectionDialog) + DeleteCollectionDialog (confirm, removes only collection + ItemCollection rows, items kept); updateCollectionSchema, ownership-scoped updateCollection/deleteCollection queries (updateMany/deleteMany count>0) + actions (P2002 + not-found); Favorite display-only; 14 tests (Completed)
+- Global Search / Command Palette - Cmd/Ctrl+K (or top-bar search button) opens a cmdk Command dialog with grouped Items/Collections results (type icons, item counts); item → drawer, collection → page; getAllItems + getSearchData prefetched in AppShell (ItemDrawerProvider hoisted to wrap shell); command.tsx adapted to base-ui Dialog with forwardable filter; custom substring filter (every term contiguous) replaces cmdk's over-broad subsequence scorer; 4 tests (Completed)
