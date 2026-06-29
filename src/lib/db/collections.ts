@@ -98,3 +98,42 @@ export async function getDashboardCollections(
     };
   });
 }
+
+/** Fields the New Collection dialog can set (already Zod-validated upstream). */
+export interface CreateCollectionData {
+  name: string;
+  description: string | null;
+}
+
+/**
+ * Create a new, empty collection scoped to the demo user (matching the rest of
+ * the domain data, still demo-scoped until ownership is migrated). The schema's
+ * `@@unique([userId, name])` is the duplicate-name guard — a clashing name
+ * throws a Prisma P2002 the action turns into a friendly message. Returns the
+ * created collection in the DashboardCollection shape (no items yet).
+ */
+export async function createCollection(
+  data: CreateCollectionData,
+): Promise<DashboardCollection | null> {
+  const user = await getDemoUser();
+  if (!user) return null;
+
+  const created = await prisma.collection.create({
+    data: {
+      name: data.name,
+      description: data.description,
+      userId: user.id,
+    },
+    select: { id: true, name: true, description: true, isFavorite: true },
+  });
+
+  return {
+    id: created.id,
+    name: created.name,
+    description: created.description,
+    isFavorite: created.isFavorite,
+    itemCount: 0,
+    borderColor: null,
+    types: [],
+  };
+}

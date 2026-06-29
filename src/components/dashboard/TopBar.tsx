@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Brand } from "@/components/dashboard/Brand";
 import { useSidebar } from "@/components/dashboard/sidebar-context";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
+import { NewCollectionDialog } from "@/components/collections/NewCollectionDialog";
 
 // Top bar for the dashboard. The brand block on the left sits on the same row
 // as the search and tracks the sidebar width. Search is display-only for now;
@@ -68,6 +69,7 @@ export function TopBar() {
           </kbd>
         </div>
 
+        <NewCollectionDialog />
         <NewItemDialog />
       </div>
     </header>
