@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -23,7 +24,11 @@ export function TopBar() {
           collapsed ? "w-16 justify-center px-0" : "w-64 justify-between px-3",
         )}
       >
-        {!collapsed && <Brand />}
+        {!collapsed && (
+          <Link href="/dashboard" aria-label="Go to dashboard" className="overflow-hidden">
+            <Brand />
+          </Link>
+        )}
         <button
           type="button"
           onClick={toggleCollapsed}

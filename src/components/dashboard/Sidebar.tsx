@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -40,7 +41,14 @@ export function Sidebar({ data }: { data: SidebarData }) {
         aria-hidden={!mobileOpen}
       >
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-3">
-          <Brand />
+          <Link
+            href="/dashboard"
+            aria-label="Go to dashboard"
+            onClick={() => setMobileOpen(false)}
+            className="overflow-hidden"
+          >
+            <Brand />
+          </Link>
           <button
             type="button"
             onClick={() => setMobileOpen(false)}
