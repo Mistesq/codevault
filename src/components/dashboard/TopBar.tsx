@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { Menu, PanelLeftClose, PanelLeftOpen, Search, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Brand } from "@/components/dashboard/Brand";
@@ -75,6 +75,15 @@ export function TopBar({
             ⌘K
           </kbd>
         </button>
+
+        <Link
+          href="/favorites"
+          aria-label="Favorites"
+          title="Favorites"
+          className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Star className="size-4" />
+        </Link>
 
         <NewCollectionDialog />
         <NewItemDialog collections={collections} />
