@@ -10,11 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ItemContentField } from "@/components/items/ItemContentField";
-import { SectionLabel } from "@/components/items/SectionLabel";
+import { CollectionMultiSelect } from "@/components/items/CollectionMultiSelect";
 import { updateItem } from "@/actions/items";
 import { CODE_CONTENT_TYPES } from "@/lib/item-content-types";
 import { buildItemFields } from "@/lib/item-form";
 import type { ItemDetail } from "@/lib/db/items";
+import type { SelectableCollection } from "@/lib/db/collections";
 
 // Which type-specific fields each system item type exposes in edit mode.
 const CONTENT_TYPES = new Set(["snippet", "prompt", "command", "note"]);
@@ -29,10 +30,12 @@ const URL_TYPES = new Set(["url"]);
  */
 export function ItemEditForm({
   detail,
+  collections,
   onCancel,
   onSaved,
 }: {
   detail: ItemDetail;
+  collections: SelectableCollection[];
   onCancel: () => void;
   onSaved: (updated: ItemDetail) => void;
 }) {
@@ -49,6 +52,9 @@ export function ItemEditForm({
   const [language, setLanguage] = useState(detail.language ?? "");
   const [url, setUrl] = useState(detail.url ?? "");
   const [tags, setTags] = useState(detail.tags.join(", "));
+  const [collectionIds, setCollectionIds] = useState<string[]>(
+    detail.collections.map((c) => c.id),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,7 +79,7 @@ export function ItemEditForm({
       showUrl,
     });
 
-    const result = await updateItem(detail.id, payload);
+    const result = await updateItem(detail.id, { ...payload, collectionIds });
 
     if (!result.success) {
       // Inline error is shown directly above the actions; no duplicate toast.
@@ -163,18 +169,19 @@ export function ItemEditForm({
           />
         </div>
 
-        {/* Display-only context per spec — type/collection/dates aren't editable. */}
-        <div className="space-y-2 border-t border-border pt-4">
-          {detail.collection && (
-            <div className="flex items-center justify-between gap-2">
-              <SectionLabel>Collection</SectionLabel>
-              <p className="text-sm text-foreground">{detail.collection.name}</p>
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Type, collection, and dates aren&apos;t editable here.
-          </p>
+        <div className="space-y-1.5">
+          <Label>Collections</Label>
+          <CollectionMultiSelect
+            collections={collections}
+            selectedIds={collectionIds}
+            onChange={setCollectionIds}
+          />
         </div>
+
+        {/* Type and dates aren't editable here (collections now are, above). */}
+        <p className="border-t border-border pt-4 text-xs text-muted-foreground">
+          Item type and dates aren&apos;t editable here.
+        </p>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>

@@ -55,6 +55,16 @@ describe("updateItemSchema", () => {
     });
     expect(parsed.tags).toEqual(["react", "hooks"]);
   });
+
+  it("defaults collectionIds to an empty array and dedupes/trims them", () => {
+    expect(updateItemSchema.parse(base).collectionIds).toEqual([]);
+
+    const parsed = updateItemSchema.parse({
+      ...base,
+      collectionIds: [" col_a ", "col_a", "", "col_b"],
+    });
+    expect(parsed.collectionIds).toEqual(["col_a", "col_b"]);
+  });
 });
 
 describe("createItemSchema", () => {
@@ -143,6 +153,16 @@ describe("createItemSchema", () => {
       fileSize: 2048,
     });
     expect(ok.success).toBe(true);
+  });
+
+  it("defaults collectionIds to an empty array and dedupes them", () => {
+    expect(createItemSchema.parse(base).collectionIds).toEqual([]);
+
+    const parsed = createItemSchema.parse({
+      ...base,
+      collectionIds: ["col_a", "col_a", " col_b "],
+    });
+    expect(parsed.collectionIds).toEqual(["col_a", "col_b"]);
   });
 
   it("rejects a non-positive or non-integer fileSize", () => {

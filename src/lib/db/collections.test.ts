@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // DashboardCollection shape. `vi.hoisted` lets the mocks exist before the
 // hoisted factories.
 const { collection } = vi.hoisted(() => ({
-  collection: { create: vi.fn() },
+  collection: { create: vi.fn(), findMany: vi.fn() },
 }));
 const { getDemoUser } = vi.hoisted(() => ({
   getDemoUser: vi.fn(),
@@ -18,7 +18,11 @@ vi.mock("@/lib/db/user", () => ({
   getDemoUser,
 }));
 
-import { createCollection } from "@/lib/db/collections";
+import {
+  createCollection,
+  getDashboardCollections,
+  getSelectableCollections,
+} from "@/lib/db/collections";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -80,5 +84,72 @@ describe("createCollection", () => {
 
     expect(collection.create.mock.calls[0][0].data.description).toBeNull();
     expect(result?.description).toBeNull();
+  });
+});
+
+describe("getSelectableCollections", () => {
+  it("returns [] when there is no demo user (no query)", async () => {
+    getDemoUser.mockResolvedValue(null);
+
+    const result = await getSelectableCollections();
+
+    expect(result).toEqual([]);
+    expect(collection.findMany).not.toHaveBeenCalled();
+  });
+
+  it("returns the demo user's collections (id + name), alphabetical", async () => {
+    getDemoUser.mockResolvedValue({ id: "user_1" });
+    collection.findMany.mockResolvedValue([
+      { id: "col_a", name: "Alpha" },
+      { id: "col_b", name: "Beta" },
+    ]);
+
+    const result = await getSelectableCollections();
+
+    expect(collection.findMany).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    });
+    expect(result).toEqual([
+      { id: "col_a", name: "Alpha" },
+      { id: "col_b", name: "Beta" },
+    ]);
+  });
+});
+
+describe("getDashboardCollections", () => {
+  it("counts items via the join and derives the border from the most-used type", async () => {
+    getDemoUser.mockResolvedValue({ id: "user_1" });
+    const snippet = { id: "t_snip", name: "snippet", icon: "Code", color: "#blue" };
+    const note = { id: "t_note", name: "note", icon: "StickyNote", color: "#yellow" };
+    // Two snippets + one note → border color is the snippet's (most-used).
+    collection.findMany.mockResolvedValue([
+      {
+        id: "col_1",
+        name: "React Patterns",
+        description: "Reusable bits",
+        isFavorite: false,
+        items: [
+          { item: { type: snippet } },
+          { item: { type: snippet } },
+          { item: { type: note } },
+        ],
+      },
+    ]);
+
+    const result = await getDashboardCollections();
+
+    expect(result).toEqual([
+      {
+        id: "col_1",
+        name: "React Patterns",
+        description: "Reusable bits",
+        isFavorite: false,
+        itemCount: 3,
+        borderColor: "#blue",
+        types: [snippet, note],
+      },
+    ]);
   });
 });

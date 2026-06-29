@@ -19,6 +19,7 @@ import { ItemEditForm } from "@/components/items/ItemEditForm";
 import { SectionLabel } from "@/components/items/SectionLabel";
 import { relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem, ItemDetail } from "@/lib/db/items";
+import type { SelectableCollection } from "@/lib/db/collections";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 
 /** The text the Copy actions place on the clipboard for a given item. */
@@ -33,6 +34,7 @@ export function ItemDrawer({
   onOpenChange,
   item,
   detail,
+  collections,
   loading,
   error,
   onUpdated,
@@ -42,6 +44,7 @@ export function ItemDrawer({
   onOpenChange: (open: boolean) => void;
   item: DashboardItem | null;
   detail: ItemDetail | null;
+  collections: SelectableCollection[];
   loading: boolean;
   error: boolean;
   onUpdated: (detail: ItemDetail) => void;
@@ -103,6 +106,7 @@ export function ItemDrawer({
             {editing && detail ? (
               <ItemEditForm
                 detail={detail}
+                collections={collections}
                 onCancel={() => setEditing(false)}
                 onSaved={(updated) => {
                   onUpdated(updated);
@@ -141,12 +145,23 @@ export function ItemDrawer({
                     </section>
                   )}
 
-                  {detail?.collection && (
+                  {detail && detail.collections.length > 0 && (
                     <section className="space-y-2">
-                      <SectionLabel>Collection</SectionLabel>
-                      <p className="text-sm text-foreground">
-                        {detail.collection.name}
-                      </p>
+                      <SectionLabel>
+                        {detail.collections.length === 1
+                          ? "Collection"
+                          : "Collections"}
+                      </SectionLabel>
+                      <div className="flex flex-wrap gap-1.5">
+                        {detail.collections.map((collection) => (
+                          <span
+                            key={collection.id}
+                            className="rounded-md bg-muted px-2 py-0.5 text-xs text-foreground"
+                          >
+                            {collection.name}
+                          </span>
+                        ))}
+                      </div>
                     </section>
                   )}
 

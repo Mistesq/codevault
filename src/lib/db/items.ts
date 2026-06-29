@@ -135,7 +135,8 @@ export async function getRecentItems(limit = 10): Promise<DashboardItem[]> {
  */
 export interface ItemDetail extends DashboardItem {
   language: string | null;
-  collection: { id: string; name: string } | null;
+  // The collections this item belongs to (many-to-many). Empty when unfiled.
+  collections: { id: string; name: string }[];
   createdAt: string;
 }
 
@@ -143,7 +144,7 @@ const itemDetailSelect = {
   ...itemSelect,
   language: true,
   createdAt: true,
-  collection: { select: { id: true, name: true } },
+  collections: { select: { collection: { select: { id: true, name: true } } } },
 } as const;
 
 /**
@@ -165,7 +166,7 @@ export async function getItemDetail(id: string): Promise<ItemDetail | null> {
     ...toDashboardItem(row),
     language: row.language,
     createdAt: row.createdAt.toISOString(),
-    collection: row.collection,
+    collections: row.collections.map((c) => c.collection),
   };
 }
 
@@ -183,6 +184,8 @@ export interface CreateItemData {
   fileName: string | null;
   fileSize: number | null;
   tags: string[];
+  // Collections this item should belong to (ownership verified before linking).
+  collectionIds: string[];
 }
 
 // System type names whose items store an uploaded file (contentType FILE).
@@ -207,6 +210,31 @@ export async function linkTags(
     });
     await tx.itemTag.create({ data: { itemId, tagId: tag.id } });
   }
+}
+
+/**
+ * Link the item to each of the given collections (many-to-many), inside the
+ * given transaction. Ownership is enforced: only collections that belong to the
+ * user are linked, so a forged/foreign collection id is silently ignored.
+ * Shared by createItem and updateItem. Exported for unit testing.
+ */
+export async function linkCollections(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  itemId: string,
+  collectionIds: string[],
+): Promise<void> {
+  if (collectionIds.length === 0) return;
+
+  const owned = await tx.collection.findMany({
+    where: { id: { in: collectionIds }, userId },
+    select: { id: true },
+  });
+  if (owned.length === 0) return;
+
+  await tx.itemCollection.createMany({
+    data: owned.map((c) => ({ itemId, collectionId: c.id })),
+  });
 }
 
 /**
@@ -251,6 +279,7 @@ export async function createItem(
     });
 
     await linkTags(tx, user.id, item.id, data.tags);
+    await linkCollections(tx, user.id, item.id, data.collectionIds);
 
     return item;
   });
@@ -266,6 +295,8 @@ export interface UpdateItemData {
   url: string | null;
   language: string | null;
   tags: string[];
+  // The item's full collection membership after the edit (replaces the old set).
+  collectionIds: string[];
 }
 
 /**
@@ -305,6 +336,10 @@ export async function updateItem(
     // Disconnect all existing tags, then connect-or-create the new set.
     await tx.itemTag.deleteMany({ where: { itemId: id } });
     await linkTags(tx, user.id, id, data.tags);
+
+    // Replace collection membership with the new (ownership-checked) set.
+    await tx.itemCollection.deleteMany({ where: { itemId: id } });
+    await linkCollections(tx, user.id, id, data.collectionIds);
   });
 
   return getItemDetail(id);

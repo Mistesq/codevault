@@ -20,11 +20,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ItemContentField } from "@/components/items/ItemContentField";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
+import { CollectionMultiSelect } from "@/components/items/CollectionMultiSelect";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import { CODE_CONTENT_TYPES } from "@/lib/item-content-types";
 import { buildItemFields } from "@/lib/item-form";
 import { createItem } from "@/actions/items";
 import type { CreateItemType } from "@/lib/validations/items";
+import type { SelectableCollection } from "@/lib/db/collections";
 
 // Type selector options. `icon` matches the lucide names on the seeded system
 // types; `color` mirrors each system type's seeded color; `label` is the display
@@ -67,9 +69,11 @@ const DEFAULT_TYPE: CreateItemType = "snippet";
  * type); `triggerLabel` customizes the button text.
  */
 export function NewItemDialog({
+  collections = [],
   defaultType = DEFAULT_TYPE,
   triggerLabel = "New Item",
 }: {
+  collections?: SelectableCollection[];
   defaultType?: CreateItemType;
   triggerLabel?: string;
 } = {}) {
@@ -86,6 +90,7 @@ export function NewItemDialog({
   const [language, setLanguage] = useState("");
   const [url, setUrl] = useState("");
   const [tags, setTags] = useState("");
+  const [collectionIds, setCollectionIds] = useState<string[]>([]);
   const [file, setFile] = useState<UploadedFile | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -110,6 +115,7 @@ export function NewItemDialog({
     setLanguage("");
     setUrl("");
     setTags("");
+    setCollectionIds([]);
     setFile(null);
     setUploading(false);
     setError(null);
@@ -136,6 +142,7 @@ export function NewItemDialog({
         showLanguage,
         showUrl,
       }),
+      collectionIds,
       fileUrl: showFile ? file?.fileUrl ?? null : null,
       fileName: showFile ? file?.fileName ?? null : null,
       fileSize: showFile ? file?.fileSize ?? null : null,
@@ -295,6 +302,15 @@ export function NewItemDialog({
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               placeholder="Comma-separated, e.g. react, hooks"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Collections</Label>
+            <CollectionMultiSelect
+              collections={collections}
+              selectedIds={collectionIds}
+              onChange={setCollectionIds}
             />
           </div>
 

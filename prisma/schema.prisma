@@ -62,8 +62,7 @@ model Item {
   typeId String
   type   ItemType @relation(fields: [typeId], references: [id])
 
-  collectionId String?
-  collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  collections ItemCollection[]
 
   tags ItemTag[]
 
@@ -71,7 +70,6 @@ model Item {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
-  @@index([collectionId])
 }
 
 model ItemType {
@@ -98,12 +96,26 @@ model Collection {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  items Item[]
+  items ItemCollection[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([userId, name]) // no duplicate collection names per user
+}
+
+// Many-to-many join between items and collections: an item can live in zero,
+// one, or multiple collections. Mirrors the ItemTag join (composite PK, cascade
+// deletes on both sides).
+model ItemCollection {
+  itemId       String
+  collectionId String
+
+  item       Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, collectionId])
+  @@index([collectionId])
 }
 
 model Tag {

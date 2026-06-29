@@ -27,6 +27,15 @@ const tagsField = z
     Array.from(new Set(tags.map((t) => t.trim()).filter(Boolean))),
   );
 
+// Collection ids the item should belong to (many-to-many). Trim, drop empties,
+// and dedupe; ownership is verified server-side before linking.
+const collectionIdsField = z
+  .array(z.string())
+  .default([])
+  .transform((ids) =>
+    Array.from(new Set(ids.map((id) => id.trim()).filter(Boolean))),
+  );
+
 export const updateItemSchema = z.object({
   title: z.string().trim().min(1, "Title is required."),
   description: optionalTrimmed,
@@ -37,6 +46,7 @@ export const updateItemSchema = z.object({
     { message: "Enter a valid URL." },
   ),
   tags: tagsField,
+  collectionIds: collectionIdsField,
 });
 
 export type UpdateItemInput = z.infer<typeof updateItemSchema>;
@@ -72,6 +82,7 @@ export const createItemSchema = z
     fileName: optionalTrimmed,
     fileSize: z.number().int().positive().nullish().transform((v) => v ?? null),
     tags: tagsField,
+    collectionIds: collectionIdsField,
   })
   .superRefine((data, ctx) => {
     if (data.type === "URL") {
