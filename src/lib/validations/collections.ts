@@ -18,3 +18,8 @@ export const createCollectionSchema = z.object({
 });
 
 export type CreateCollectionInput = z.infer<typeof createCollectionSchema>;
+
+// Edit dialog payload — same editable metadata as create (name + description).
+export const updateCollectionSchema = createCollectionSchema;
+
+export type UpdateCollectionInput = z.infer<typeof updateCollectionSchema>;

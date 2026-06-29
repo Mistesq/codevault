@@ -237,3 +237,47 @@ export async function createCollection(
     types: [],
   };
 }
+
+/** Fields the Edit Collection dialog can change (already Zod-validated upstream). */
+export interface UpdateCollectionData {
+  name: string;
+  description: string | null;
+}
+
+/**
+ * Rename / re-describe a collection, scoped to the signed-in user (ownership is
+ * the guard). `updateMany` with a userId filter means a non-owner (or missing
+ * id) is a no-op — count 0 → returns false. A clashing name throws Prisma P2002
+ * (`@@unique([userId, name])`) for the action to translate.
+ */
+export async function updateCollection(
+  id: string,
+  data: UpdateCollectionData,
+): Promise<boolean> {
+  const user = await getSessionUser();
+  if (!user) return false;
+
+  const { count } = await prisma.collection.updateMany({
+    where: { id, userId: user.id },
+    data: { name: data.name, description: data.description },
+  });
+
+  return count > 0;
+}
+
+/**
+ * Delete a collection, scoped to the signed-in user. Only the collection row and
+ * its ItemCollection membership rows go away (the join cascades) — the items
+ * themselves are never touched. `deleteMany` with the userId filter makes a
+ * non-owner / missing id a no-op (count 0 → false).
+ */
+export async function deleteCollection(id: string): Promise<boolean> {
+  const user = await getSessionUser();
+  if (!user) return false;
+
+  const { count } = await prisma.collection.deleteMany({
+    where: { id, userId: user.id },
+  });
+
+  return count > 0;
+}

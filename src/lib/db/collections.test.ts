@@ -5,7 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // DashboardCollection shape. `vi.hoisted` lets the mocks exist before the
 // hoisted factories.
 const { collection, item } = vi.hoisted(() => ({
-  collection: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
+  collection: {
+    create: vi.fn(),
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    updateMany: vi.fn(),
+    deleteMany: vi.fn(),
+  },
   item: { findMany: vi.fn() },
 }));
 const { getSessionUser } = vi.hoisted(() => ({
@@ -21,10 +27,12 @@ vi.mock("@/lib/db/user", () => ({
 
 import {
   createCollection,
+  deleteCollection,
   getAllCollections,
   getCollectionWithItems,
   getDashboardCollections,
   getSelectableCollections,
+  updateCollection,
 } from "@/lib/db/collections";
 
 beforeEach(() => {
@@ -87,6 +95,80 @@ describe("createCollection", () => {
 
     expect(collection.create.mock.calls[0][0].data.description).toBeNull();
     expect(result?.description).toBeNull();
+  });
+});
+
+describe("updateCollection", () => {
+  it("returns false when there is no user (no write)", async () => {
+    getSessionUser.mockResolvedValue(null);
+
+    const result = await updateCollection("col_1", {
+      name: "X",
+      description: null,
+    });
+
+    expect(result).toBe(false);
+    expect(collection.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("updates scoped to the user and returns true when a row changed", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    collection.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await updateCollection("col_1", {
+      name: "Renamed",
+      description: "New desc",
+    });
+
+    expect(collection.updateMany).toHaveBeenCalledWith({
+      where: { id: "col_1", userId: "user_1" },
+      data: { name: "Renamed", description: "New desc" },
+    });
+    expect(result).toBe(true);
+  });
+
+  it("returns false when no row matched (not owned / missing)", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    collection.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await updateCollection("col_x", {
+      name: "Renamed",
+      description: null,
+    });
+
+    expect(result).toBe(false);
+  });
+});
+
+describe("deleteCollection", () => {
+  it("returns false when there is no user (no delete)", async () => {
+    getSessionUser.mockResolvedValue(null);
+
+    const result = await deleteCollection("col_1");
+
+    expect(result).toBe(false);
+    expect(collection.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("deletes scoped to the user and returns true when a row was removed", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    collection.deleteMany.mockResolvedValue({ count: 1 });
+
+    const result = await deleteCollection("col_1");
+
+    expect(collection.deleteMany).toHaveBeenCalledWith({
+      where: { id: "col_1", userId: "user_1" },
+    });
+    expect(result).toBe(true);
+  });
+
+  it("returns false when no row matched (not owned / missing)", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    collection.deleteMany.mockResolvedValue({ count: 0 });
+
+    const result = await deleteCollection("col_x");
+
+    expect(result).toBe(false);
   });
 });
 
