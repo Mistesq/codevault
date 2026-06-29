@@ -1,24 +1,16 @@
-# Current Feature: Collection Edit / Delete / Favorite Controls
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- On `/collections/[id]`, add action buttons to the collection header: **Edit**, **Delete**, and **Favorite** (favorite is icon/button only — no behavior yet).
-- **Edit** opens a modal to edit the collection's metadata (name, description).
-- **Delete** asks for confirmation before removing the collection. Items are NOT deleted — they simply stop belonging to that collection (remove the `ItemCollection` join rows only).
-- On the cards at `/collections` and on the dashboard, the 3-dots icon opens a dropdown with **Edit**, **Delete**, and **Favorite** (favorite icon/button only — no behavior yet).
-- Clicking anywhere else on a collection card navigates to that collection's page.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Favorites: render the icon/button only this round — do NOT implement favorite toggling logic yet.
-- Edit modal mirrors the existing NewCollectionDialog metadata fields (name, description).
-- Delete must only remove collection membership/the collection itself, never cascade to the items.
-- Reuse existing patterns: Zod schemas in validations, ownership-scoped queries in the domain layer, server actions returning `{ success, data, error }`, toast + `router.refresh()` on success.
-- Add/maintain Vitest unit tests for any new server actions / query helpers.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -63,3 +55,4 @@ In Progress
 - Collection Create - New Collection button in top bar, NewCollectionDialog modal with name/description fields, createCollectionSchema (Zod), createCollection(data) query (demo-scoped), createCollection action (P2002 duplicate handling), toast + router.refresh(), 13 tests (Completed)
 - Item ↔ Collections (Many-to-Many) - new ItemCollection join model (hand-written migration with backfill, applied to Neon dev), ItemDetail.collections[], linkCollections helper (ownership-filtered), createItem/updateItem link/replace membership, getSelectableCollections, CollectionMultiSelect (Base UI Combobox, searchable/portaled), 9 tests (Completed)
 - Collections Pages - /collections (all collections via CollectionCard + New Collection button) and /collections/[id] (header + items, mixed types rendered in sections: cards, then Images gallery, then Files list); getAllCollections + getCollectionWithItems (ownership-scoped via ItemCollection join); migrated whole domain layer off demo user (getDemoUser → getSessionUser from auth session), upload route namespaces under session user; 6 tests (Completed)
+- Collection Edit/Delete/Favorite Controls - /collections/[id] header gets Favorite/Edit/Delete buttons + cards (collections & dashboard) get a 3-dots dropdown (Edit/Favorite/Delete) over a Link overlay so the rest of the card navigates; EditCollectionDialog (controlled, mirrors NewCollectionDialog) + DeleteCollectionDialog (confirm, removes only collection + ItemCollection rows, items kept); updateCollectionSchema, ownership-scoped updateCollection/deleteCollection queries (updateMany/deleteMany count>0) + actions (P2002 + not-found); Favorite display-only; 14 tests (Completed)
