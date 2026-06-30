@@ -1,23 +1,16 @@
-# Current Feature: Pinned Page
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Add a pin icon button to the TopBar linking to `/pinned`
-- Create a protected `/pinned` route
-- Fetch all of the signed-in user's pinned items, sorted by most recently pinned (`updatedAt`)
-- Reuse the existing pinned-items card layout from the dashboard (same ItemCard responsive grid — no new card design)
-- Clicking an item opens the shared ItemDrawer
-- Show an empty state when there are no pinned items
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Mirror the existing `/favorites` page pattern (AppShell wrapper, `force-dynamic`, protected route).
-- Reuse the existing `ItemCard` component and the dashboard pinned section's responsive grid; keep spacing/columns consistent with the rest of the app's card grids.
-- Sort by `updatedAt` desc as the proxy for "most recently pinned".
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -71,3 +64,4 @@ In Progress
 - Favorite Toggle - Star controls now flip isFavorite across item drawer, collection header, item cards (new FavoriteButton, stopPropagation) and collection card menus; ownership-scoped setItemFavorite/setCollectionFavorite queries (updateMany count>0) + actions (idempotent desired-state, boolean+session guards), shared useFavoriteToggle hook (optimistic + router.refresh + revert/toast), 18 tests (Completed)
 - Favorites Page Sorting - client-side sort on /favorites by name/date/type with asc/desc toggle; pure favorites-sort.ts helper (sortFavoriteItems/sortFavoriteCollections, ISO-lexicographic dates, type tie-breaks on title, collections fall back to name on type sort) + FavoritesSortControl in FavoritesList (useState/useMemo, no new queries), 16 tests (Completed)
 - Pinned Items - drawer Pin button now toggles isPinned (mirrors favorite pattern): setItemPinned query (ownership-scoped updateMany count>0) + action (session/boolean guards, idempotent), usePinToggle hook (optimistic + success/error toast + router.refresh), DrawerActionBar wired (aria-pressed/filled icon), getItemsByTypeSlug sorts pinned-first, 9 tests (Completed)
+- Pinned Page - protected /pinned route (AppShell, force-dynamic) listing all pinned items in the dashboard's ItemCard 3-col grid; reuses existing getPinnedItems() (ownership-scoped, updatedAt desc), click opens shared ItemDrawer, empty state, Pin icon button added to TopBar; pure reuse (no new server actions/utils → no new tests) (Completed)
