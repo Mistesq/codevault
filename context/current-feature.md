@@ -1,16 +1,23 @@
-# Current Feature
+# Current Feature: Pinned Page
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Add a pin icon button to the TopBar linking to `/pinned`
+- Create a protected `/pinned` route
+- Fetch all of the signed-in user's pinned items, sorted by most recently pinned (`updatedAt`)
+- Reuse the existing pinned-items card layout from the dashboard (same ItemCard responsive grid — no new card design)
+- Clicking an item opens the shared ItemDrawer
+- Show an empty state when there are no pinned items
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Mirror the existing `/favorites` page pattern (AppShell wrapper, `force-dynamic`, protected route).
+- Reuse the existing `ItemCard` component and the dashboard pinned section's responsive grid; keep spacing/columns consistent with the rest of the app's card grids.
+- Sort by `updatedAt` desc as the proxy for "most recently pinned".
 
 ## History
 

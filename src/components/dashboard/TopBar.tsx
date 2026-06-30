@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, PanelLeftClose, PanelLeftOpen, Search, Star } from "lucide-react";
+import {
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pin,
+  Search,
+  Star,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Brand } from "@/components/dashboard/Brand";
@@ -75,6 +82,15 @@ export function TopBar({
             ⌘K
           </kbd>
         </button>
+
+        <Link
+          href="/pinned"
+          aria-label="Pinned"
+          title="Pinned"
+          className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Pin className="size-4" />
+        </Link>
 
         <Link
           href="/favorites"
