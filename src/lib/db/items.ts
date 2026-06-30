@@ -157,6 +157,41 @@ export async function getAllItems(): Promise<DashboardItem[]> {
 }
 
 /**
+ * A single page of every item the signed-in user owns, regardless of type, for
+ * the All Items route. Pinned items surface first, then most recently updated.
+ * Only the requested page is fetched (count + skip/take); the requested page is
+ * clamped into range so a too-high `?page=` lands on the last page. Returns an
+ * empty page when signed out.
+ */
+export async function getAllItemsPaginated(
+  page = 1,
+): Promise<Paginated<DashboardItem>> {
+  const user = await getSessionUser();
+  if (!user) return { items: [], page: 1, totalPages: 1, totalCount: 0 };
+
+  const where = { userId: user.id };
+  const totalCount = await prisma.item.count({ where });
+  const totalPages = totalPagesFor(totalCount, ITEMS_PER_PAGE);
+  const current = clampPage(page, totalPages);
+
+  const rows = await prisma.item.findMany({
+    where,
+    // Pinned items surface at the top of the listing, then most recent first.
+    orderBy: [{ isPinned: "desc" }, { updatedAt: "desc" }],
+    skip: pageOffset(current, ITEMS_PER_PAGE),
+    take: ITEMS_PER_PAGE,
+    select: itemSelect,
+  });
+
+  return {
+    items: rows.map(toDashboardItem),
+    page: current,
+    totalPages,
+    totalCount,
+  };
+}
+
+/**
  * Full item detail for the item drawer — the card's fields plus the extras that
  * are only fetched on click (content lives on the card too today, but the drawer
  * treats it as detail so the card query can drop it later). Dates are ISO so the
