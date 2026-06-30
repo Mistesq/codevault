@@ -425,6 +425,27 @@ export async function setItemFavorite(
   return count > 0;
 }
 
+/**
+ * Toggle an item's pinned flag, scoped to the signed-in user (ownership is the
+ * guard, matching setItemFavorite). `updateMany` with the userId filter makes a
+ * non-owner / missing id a no-op — count 0 → false, which the action surfaces as
+ * not-found.
+ */
+export async function setItemPinned(
+  id: string,
+  isPinned: boolean,
+): Promise<boolean> {
+  const user = await getSessionUser();
+  if (!user) return false;
+
+  const { count } = await prisma.item.updateMany({
+    where: { id, userId: user.id },
+    data: { isPinned },
+  });
+
+  return count > 0;
+}
+
 export interface ItemTypeView {
   id: string;
   name: string;
@@ -468,7 +489,8 @@ export async function getItemsByTypeSlug(
 
   const rows = await prisma.item.findMany({
     where,
-    orderBy: { updatedAt: "desc" },
+    // Pinned items surface at the top of the listing, then most recent first.
+    orderBy: [{ isPinned: "desc" }, { updatedAt: "desc" }],
     skip: pageOffset(current, ITEMS_PER_PAGE),
     take: ITEMS_PER_PAGE,
     select: itemSelect,

@@ -66,6 +66,7 @@ import {
   linkCollections,
   linkTags,
   setItemFavorite,
+  setItemPinned,
   updateItem,
 } from "@/lib/db/items";
 import { ITEMS_PER_PAGE } from "@/lib/pagination";
@@ -120,7 +121,8 @@ describe("getItemsByTypeSlug", () => {
     expect(item.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { userId: "user_1", typeId: "t_url" },
-        orderBy: { updatedAt: "desc" },
+        // Pinned items sort to the top, then most recent first.
+        orderBy: [{ isPinned: "desc" }, { updatedAt: "desc" }],
         skip: 0,
         take: ITEMS_PER_PAGE,
       }),
@@ -763,6 +765,48 @@ describe("setItemFavorite", () => {
     item.updateMany.mockResolvedValue({ count: 0 });
 
     const result = await setItemFavorite("item_x", true);
+
+    expect(result).toBe(false);
+  });
+});
+
+describe("setItemPinned", () => {
+  it("returns false when there is no user (no write)", async () => {
+    getSessionUser.mockResolvedValue(null);
+
+    const result = await setItemPinned("item_1", true);
+
+    expect(result).toBe(false);
+    expect(item.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("updates scoped to the user and returns true when a row changed", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    item.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await setItemPinned("item_1", true);
+
+    expect(item.updateMany).toHaveBeenCalledWith({
+      where: { id: "item_1", userId: "user_1" },
+      data: { isPinned: true },
+    });
+    expect(result).toBe(true);
+  });
+
+  it("passes the desired state through (unpin)", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    item.updateMany.mockResolvedValue({ count: 1 });
+
+    await setItemPinned("item_1", false);
+
+    expect(item.updateMany.mock.calls[0][0].data).toEqual({ isPinned: false });
+  });
+
+  it("returns false when no row matched (not owned / missing)", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    item.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await setItemPinned("item_x", true);
 
     expect(result).toBe(false);
   });

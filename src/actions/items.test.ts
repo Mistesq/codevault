@@ -8,12 +8,14 @@ const {
   updateItemQuery,
   deleteItemQuery,
   setItemFavoriteQuery,
+  setItemPinnedQuery,
 } = vi.hoisted(() => ({
   auth: vi.fn(),
   createItemQuery: vi.fn(),
   updateItemQuery: vi.fn(),
   deleteItemQuery: vi.fn(),
   setItemFavoriteQuery: vi.fn(),
+  setItemPinnedQuery: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({
@@ -26,12 +28,15 @@ vi.mock("@/lib/db/items", () => ({
   deleteItem: (id: string) => deleteItemQuery(id),
   setItemFavorite: (id: string, isFavorite: boolean) =>
     setItemFavoriteQuery(id, isFavorite),
+  setItemPinned: (id: string, isPinned: boolean) =>
+    setItemPinnedQuery(id, isPinned),
 }));
 
 import {
   createItem,
   deleteItem,
   setItemFavorite,
+  setItemPinned,
   updateItem,
 } from "@/actions/items";
 
@@ -239,6 +244,57 @@ describe("setItemFavorite action", () => {
     setItemFavoriteQuery.mockRejectedValue(new Error("boom"));
 
     const result = await setItemFavorite("item_1", false);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+  });
+});
+
+describe("setItemPinned action", () => {
+  it("rejects when there is no session (no query)", async () => {
+    auth.mockResolvedValue(null);
+
+    const result = await setItemPinned("item_1", true);
+
+    expect(result).toEqual({ success: false, error: "You must be signed in." });
+    expect(setItemPinnedQuery).not.toHaveBeenCalled();
+  });
+
+  it("passes the id + desired state to the query and returns the applied state", async () => {
+    auth.mockResolvedValue(signedIn);
+    setItemPinnedQuery.mockResolvedValue(true);
+
+    const result = await setItemPinned("item_1", true);
+
+    expect(setItemPinnedQuery).toHaveBeenCalledWith("item_1", true);
+    expect(result).toEqual({ success: true, data: true });
+  });
+
+  it("rejects a non-boolean state without touching the query", async () => {
+    auth.mockResolvedValue(signedIn);
+
+    const result = await setItemPinned("item_1", "yes" as unknown as boolean);
+
+    expect(result).toEqual({ success: false, error: "Invalid request." });
+    expect(setItemPinnedQuery).not.toHaveBeenCalled();
+  });
+
+  it("returns not-found when the query reports no row changed", async () => {
+    auth.mockResolvedValue(signedIn);
+    setItemPinnedQuery.mockResolvedValue(false);
+
+    const result = await setItemPinned("item_x", true);
+
+    expect(result).toEqual({ success: false, error: "Item not found." });
+  });
+
+  it("returns a generic error for an unexpected failure", async () => {
+    auth.mockResolvedValue(signedIn);
+    setItemPinnedQuery.mockRejectedValue(new Error("boom"));
+
+    const result = await setItemPinned("item_1", false);
 
     expect(result).toEqual({
       success: false,
