@@ -1,28 +1,16 @@
-# Current Feature: Favorite Toggle
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Make the favorite (Star) control actually toggle `isFavorite`, replacing the current display-only behavior across all four surfaces:
-  - **Item drawer** action bar (`DrawerActionBar`) — Star toggles the item's favorite state.
-  - **Collection detail page** header (`CollectionHeaderActions`) — Star toggles the collection's favorite state.
-  - **Item cards** (`ItemCard`) — Star becomes an interactive toggle (currently a static indicator); click must not open the drawer.
-  - **Collection cards** (`CollectionActions` 3-dots menu) — Favorite/Unfavorite item toggles the collection's favorite state.
-- Add ownership-scoped server actions + queries to flip `Item.isFavorite` and `Collection.isFavorite`.
-- UI reflects the new state immediately and stays in sync (toast + refresh, or optimistic update).
-- Favorited items/collections show up on the existing `/favorites` page.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- `isFavorite` columns already exist on both `Item` and `Collection`; this is wiring behavior, not a schema change.
-- Existing controls are explicitly marked "display-only for now" in: `DrawerActionBar.tsx`, `CollectionHeaderActions.tsx`, `CollectionActions.tsx`. `ItemCard.tsx` renders a non-interactive Star.
-- Follow existing mutation patterns: ownership-scoped `updateMany` (count > 0) queries in `src/lib/db/*`, `{ success, data, error }` server actions in `src/actions/*`, toast + `router.refresh()`.
-- Star toggles on cards must `stopPropagation` so they don't trigger card navigation / drawer open.
-- Add Vitest unit tests for the new server actions / queries (server-action + utility scope only).
-- Reuse the amber fill styling already used for the favorited Star (`fill-amber-400 text-amber-400`).
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -73,3 +61,4 @@ In Progress
 - Settings Page - new protected /settings route in dashboard app shell (settings/layout.tsx AppShell callbackUrl guard + force-dynamic page); Settings link added to sidebar UserMenu dropdown (lucide Settings icon, between Profile and Sign out); moved Change Password + Delete Account from profile onto a settings Account section (reuses ChangePasswordDialog/DeleteAccountDialog + getProfileData hasPassword gate), profile keeps account info + usage stats; no new server actions/tests (Completed)
 - Editor Preferences Settings - auto-saving Editor Preferences section on /settings (font size, tab size, word wrap, minimap, theme) persisted to new User.editorPreferences JSON column (migration on Neon dev); shared editor-preferences.ts (types/defaults/options/parser) + Zod schema, updateEditorPreferences action, cached getEditorPreferences loader; EditorPreferencesContext seeded in AppShell, CodeEditor applies prefs + defines vs-dark/monokai/github-dark themes; Base UI Switch (neutral primary track, dark thumb when on); 18 tests (Completed)
 - Favorites Page - protected /favorites route (AppShell, force-dynamic) listing the user's favorited items + collections newest-first; getFavorites() query, dense monospace FavoritesList (type icon/title/badge/date, sections with counts, item→ItemDrawer, collection→page), TopBar star button, empty state, 3 tests (Completed)
+- Favorite Toggle - Star controls now flip isFavorite across item drawer, collection header, item cards (new FavoriteButton, stopPropagation) and collection card menus; ownership-scoped setItemFavorite/setCollectionFavorite queries (updateMany count>0) + actions (idempotent desired-state, boolean+session guards), shared useFavoriteToggle hook (optimistic + router.refresh + revert/toast), 18 tests (Completed)
