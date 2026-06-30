@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { formatFileSize, relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem } from "@/lib/db/items";
 import { useItemDrawer } from "@/components/items/item-drawer-context";
+import { useFavoriteToggle } from "@/components/favorites/use-favorite-toggle";
 import { TypeIcon } from "@/lib/type-icons";
 
 /** The text the quick-copy button places on the clipboard for a card. */
@@ -45,6 +46,40 @@ function QuickCopyButton({ item }: { item: DashboardItem }) {
       className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <Icon className={cn("size-3.5", copied && "text-emerald-500")} />
+    </button>
+  );
+}
+
+/** Favorite toggle shown on the card; stops the click from opening the drawer. */
+function FavoriteButton({ item }: { item: DashboardItem }) {
+  const { favorite, pending, toggle } = useFavoriteToggle(
+    "item",
+    item.id,
+    item.isFavorite,
+  );
+
+  function handleClick(e: MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    toggle();
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={pending}
+      aria-label={favorite ? "Remove favorite" : "Favorite"}
+      aria-pressed={favorite}
+      className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <Star
+        className={cn(
+          "size-4",
+          favorite
+            ? "fill-amber-400 text-amber-400"
+            : "text-muted-foreground/40",
+        )}
+      />
     </button>
   );
 }
@@ -128,14 +163,7 @@ export function ItemCard({ item }: { item: DashboardItem }) {
 
         <div className="flex shrink-0 items-center gap-1">
           <QuickCopyButton item={item} />
-          <Star
-            className={cn(
-              "size-4 shrink-0",
-              item.isFavorite
-                ? "fill-amber-400 text-amber-400"
-                : "text-muted-foreground/40",
-            )}
-          />
+          <FavoriteButton item={item} />
         </div>
       </div>
 

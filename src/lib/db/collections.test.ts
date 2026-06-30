@@ -34,6 +34,7 @@ import {
   getDashboardCollections,
   getPaginatedCollections,
   getSelectableCollections,
+  setCollectionFavorite,
   updateCollection,
 } from "@/lib/db/collections";
 import { COLLECTIONS_PER_PAGE, ITEMS_PER_PAGE } from "@/lib/pagination";
@@ -481,5 +482,49 @@ describe("getPaginatedCollections", () => {
       expect.objectContaining({ skip: COLLECTIONS_PER_PAGE }),
     );
     expect(result).toMatchObject({ page: 2, totalPages: 2, totalCount: 22 });
+  });
+});
+
+describe("setCollectionFavorite", () => {
+  it("returns false when there is no user (no write)", async () => {
+    getSessionUser.mockResolvedValue(null);
+
+    const result = await setCollectionFavorite("col_1", true);
+
+    expect(result).toBe(false);
+    expect(collection.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("updates scoped to the user and returns true when a row changed", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    collection.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await setCollectionFavorite("col_1", true);
+
+    expect(collection.updateMany).toHaveBeenCalledWith({
+      where: { id: "col_1", userId: "user_1" },
+      data: { isFavorite: true },
+    });
+    expect(result).toBe(true);
+  });
+
+  it("passes the desired state through (unfavorite)", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    collection.updateMany.mockResolvedValue({ count: 1 });
+
+    await setCollectionFavorite("col_1", false);
+
+    expect(collection.updateMany.mock.calls[0][0].data).toEqual({
+      isFavorite: false,
+    });
+  });
+
+  it("returns false when no row matched (not owned / missing)", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    collection.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await setCollectionFavorite("col_x", true);
+
+    expect(result).toBe(false);
   });
 });

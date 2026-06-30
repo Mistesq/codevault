@@ -325,6 +325,27 @@ export async function updateCollection(
 }
 
 /**
+ * Toggle a collection's favorite flag, scoped to the signed-in user (ownership
+ * is the guard, matching updateCollection/deleteCollection). `updateMany` with
+ * the userId filter makes a non-owner / missing id a no-op — count 0 → false,
+ * which the action surfaces as not-found.
+ */
+export async function setCollectionFavorite(
+  id: string,
+  isFavorite: boolean,
+): Promise<boolean> {
+  const user = await getSessionUser();
+  if (!user) return false;
+
+  const { count } = await prisma.collection.updateMany({
+    where: { id, userId: user.id },
+    data: { isFavorite },
+  });
+
+  return count > 0;
+}
+
+/**
  * Delete a collection, scoped to the signed-in user. Only the collection row and
  * its ItemCollection membership rows go away (the join cascades) — the items
  * themselves are never touched. `deleteMany` with the userId filter makes a

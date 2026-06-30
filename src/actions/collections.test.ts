@@ -8,6 +8,7 @@ const {
   createCollectionQuery,
   updateCollectionQuery,
   deleteCollectionQuery,
+  setCollectionFavoriteQuery,
   PrismaClientKnownRequestError,
 } = vi.hoisted(() => {
   // A minimal stand-in matching the real error's shape: a `code` field and a
@@ -24,6 +25,7 @@ const {
     createCollectionQuery: vi.fn(),
     updateCollectionQuery: vi.fn(),
     deleteCollectionQuery: vi.fn(),
+    setCollectionFavoriteQuery: vi.fn(),
     PrismaClientKnownRequestError,
   };
 });
@@ -37,6 +39,8 @@ vi.mock("@/lib/db/collections", () => ({
   updateCollection: (id: string, data: unknown) =>
     updateCollectionQuery(id, data),
   deleteCollection: (id: string) => deleteCollectionQuery(id),
+  setCollectionFavorite: (id: string, isFavorite: boolean) =>
+    setCollectionFavoriteQuery(id, isFavorite),
 }));
 
 vi.mock("@/generated/prisma/client", () => ({
@@ -46,6 +50,7 @@ vi.mock("@/generated/prisma/client", () => ({
 import {
   createCollection,
   deleteCollection,
+  setCollectionFavorite,
   updateCollection,
 } from "@/actions/collections";
 
@@ -227,6 +232,60 @@ describe("deleteCollection action", () => {
     deleteCollectionQuery.mockRejectedValue(new Error("boom"));
 
     const result = await deleteCollection("col_1");
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+  });
+});
+
+describe("setCollectionFavorite action", () => {
+  it("rejects when there is no session (no query)", async () => {
+    auth.mockResolvedValue(null);
+
+    const result = await setCollectionFavorite("col_1", true);
+
+    expect(result).toEqual({ success: false, error: "You must be signed in." });
+    expect(setCollectionFavoriteQuery).not.toHaveBeenCalled();
+  });
+
+  it("passes the id + desired state to the query and returns the applied state", async () => {
+    auth.mockResolvedValue(signedIn);
+    setCollectionFavoriteQuery.mockResolvedValue(true);
+
+    const result = await setCollectionFavorite("col_1", true);
+
+    expect(setCollectionFavoriteQuery).toHaveBeenCalledWith("col_1", true);
+    expect(result).toEqual({ success: true, data: true });
+  });
+
+  it("rejects a non-boolean state without touching the query", async () => {
+    auth.mockResolvedValue(signedIn);
+
+    const result = await setCollectionFavorite(
+      "col_1",
+      "yes" as unknown as boolean,
+    );
+
+    expect(result).toEqual({ success: false, error: "Invalid request." });
+    expect(setCollectionFavoriteQuery).not.toHaveBeenCalled();
+  });
+
+  it("returns not-found when the query reports no row changed", async () => {
+    auth.mockResolvedValue(signedIn);
+    setCollectionFavoriteQuery.mockResolvedValue(false);
+
+    const result = await setCollectionFavorite("col_x", true);
+
+    expect(result).toEqual({ success: false, error: "Collection not found." });
+  });
+
+  it("returns a generic error for an unexpected failure", async () => {
+    auth.mockResolvedValue(signedIn);
+    setCollectionFavoriteQuery.mockRejectedValue(new Error("boom"));
+
+    const result = await setCollectionFavorite("col_1", false);
 
     expect(result).toEqual({
       success: false,
