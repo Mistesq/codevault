@@ -1,14 +1,24 @@
 "use client";
 
-import type { KeyboardEvent } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
-import { FolderOpen, Pin } from "lucide-react";
+import { ArrowDown, ArrowUp, FolderOpen, Pin } from "lucide-react";
 
 import { useItemDrawer } from "@/components/items/item-drawer-context";
 import { relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem } from "@/lib/db/items";
 import type { FavoriteCollection } from "@/lib/db/favorites";
+import {
+  DEFAULT_FAVORITE_SORT,
+  FAVORITE_SORT_OPTIONS,
+  defaultDirFor,
+  sortFavoriteCollections,
+  sortFavoriteItems,
+  type FavoriteSort,
+  type FavoriteSortKey,
+} from "@/lib/favorites-sort";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
+import { cn } from "@/lib/utils";
 
 // Shared row chrome: dense, monospace, subtle hover, clean dividers (no cards).
 const ROW_CLASS =
@@ -32,6 +42,53 @@ function SectionLabel({ title, count }: { title: string; count: number }) {
     <h2 className="px-2 pb-1 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
       {title} <span className="text-muted-foreground/60">· {count}</span>
     </h2>
+  );
+}
+
+// Compact, mono-styled sort control. Clicking the active key flips direction;
+// clicking another key switches to it at its natural default direction.
+function FavoritesSortControl({
+  sort,
+  onChange,
+}: {
+  sort: FavoriteSort;
+  onChange: (sort: FavoriteSort) => void;
+}) {
+  function selectKey(key: FavoriteSortKey) {
+    if (key === sort.key) {
+      onChange({ key, dir: sort.dir === "asc" ? "desc" : "asc" });
+    } else {
+      onChange({ key, dir: defaultDirFor(key) });
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+      <span className="pr-1">Sort</span>
+      {FAVORITE_SORT_OPTIONS.map((option) => {
+        const active = option.value === sort.key;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => selectKey(option.value)}
+            aria-pressed={active}
+            className={cn(
+              "flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              active ? "bg-accent text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {option.label}
+            {active &&
+              (sort.dir === "asc" ? (
+                <ArrowUp className="size-3" />
+              ) : (
+                <ArrowDown className="size-3" />
+              ))}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -103,24 +160,39 @@ export function FavoritesList({
   items: DashboardItem[];
   collections: FavoriteCollection[];
 }) {
+  const [sort, setSort] = useState<FavoriteSort>(DEFAULT_FAVORITE_SORT);
+
+  const sortedItems = useMemo(
+    () => sortFavoriteItems(items, sort),
+    [items, sort],
+  );
+  const sortedCollections = useMemo(
+    () => sortFavoriteCollections(collections, sort),
+    [collections, sort],
+  );
+
   return (
     <div className="flex flex-col gap-6">
-      {items.length > 0 && (
+      <div className="flex justify-end px-2">
+        <FavoritesSortControl sort={sort} onChange={setSort} />
+      </div>
+
+      {sortedItems.length > 0 && (
         <section>
-          <SectionLabel title="Items" count={items.length} />
+          <SectionLabel title="Items" count={sortedItems.length} />
           <div className="divide-y divide-border/60 border-y border-border/60">
-            {items.map((item) => (
+            {sortedItems.map((item) => (
               <ItemRow key={item.id} item={item} />
             ))}
           </div>
         </section>
       )}
 
-      {collections.length > 0 && (
+      {sortedCollections.length > 0 && (
         <section>
-          <SectionLabel title="Collections" count={collections.length} />
+          <SectionLabel title="Collections" count={sortedCollections.length} />
           <div className="divide-y divide-border/60 border-y border-border/60">
-            {collections.map((collection) => (
+            {sortedCollections.map((collection) => (
               <CollectionRow key={collection.id} collection={collection} />
             ))}
           </div>
