@@ -5,6 +5,7 @@ import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
   setItemFavorite as setItemFavoriteQuery,
+  setItemPinned as setItemPinnedQuery,
   updateItem as updateItemQuery,
 } from "@/lib/db/items";
 import type { ItemDetail } from "@/lib/db/items";
@@ -110,6 +111,37 @@ export async function setItemFavorite(
     return { success: true, data: isFavorite };
   } catch (error) {
     console.error("Toggle item favorite failed:", error);
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+}
+
+/**
+ * Toggle an item's pinned flag from the drawer. Requires a signed-in session,
+ * then delegates to the ownership-scoped query (which reports not-found for a
+ * missing / foreign id). Takes the desired new state so the operation is
+ * idempotent. Returns the applied state in `data`.
+ */
+export async function setItemPinned(
+  itemId: string,
+  isPinned: boolean,
+): Promise<ActionResult<boolean>> {
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: "You must be signed in." };
+  }
+
+  if (typeof isPinned !== "boolean") {
+    return { success: false, error: "Invalid request." };
+  }
+
+  try {
+    const updated = await setItemPinnedQuery(itemId, isPinned);
+    if (!updated) {
+      return { success: false, error: "Item not found." };
+    }
+    return { success: true, data: isPinned };
+  } catch (error) {
+    console.error("Toggle item pin failed:", error);
     return { success: false, error: "Something went wrong. Please try again." };
   }
 }

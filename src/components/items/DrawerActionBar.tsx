@@ -4,14 +4,16 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/items/CopyButton";
 import { DeleteItemDialog } from "@/components/items/DeleteItemDialog";
 import { useFavoriteToggle } from "@/components/favorites/use-favorite-toggle";
+import { usePinToggle } from "@/components/items/use-pin-toggle";
 import type { DashboardItem, ItemDetail } from "@/lib/db/items";
 import { cn } from "@/lib/utils";
 
 /**
  * The drawer's view-mode action bar: Copy is wired; Favorite toggles the item's
- * favorite flag; Pin reflects state but is display-only until that mutation
- * lands; Edit flips the drawer into edit mode (disabled until detail loads);
- * Delete is the confirmation dialog.
+ * favorite flag; Pin toggles the item's pinned flag (pinned items sort to the
+ * top of listings and show in the dashboard's pinned section); Edit flips the
+ * drawer into edit mode (disabled until detail loads); Delete is the
+ * confirmation dialog.
  */
 export function DrawerActionBar({
   item,
@@ -31,6 +33,11 @@ export function DrawerActionBar({
     item.id,
     item.isFavorite,
   );
+  const {
+    pinned,
+    pending: pinPending,
+    toggle: togglePin,
+  } = usePinToggle(item.id, item.isPinned);
 
   return (
     <div className="flex items-center gap-1">
@@ -53,11 +60,21 @@ export function DrawerActionBar({
           )}
         />
       </Button>
-      <Button type="button" variant="ghost" size="icon-sm" aria-label="Pin">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={pinned ? "Unpin" : "Pin"}
+        aria-pressed={pinned}
+        disabled={pinPending}
+        onClick={togglePin}
+      >
         <Pin
           className={cn(
             "size-4",
-            item.isPinned ? "text-foreground" : "text-muted-foreground",
+            pinned
+              ? "fill-foreground text-foreground"
+              : "text-muted-foreground",
           )}
         />
       </Button>
