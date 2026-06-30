@@ -3,13 +3,15 @@ import { Pencil, Pin, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/items/CopyButton";
 import { DeleteItemDialog } from "@/components/items/DeleteItemDialog";
+import { useFavoriteToggle } from "@/components/favorites/use-favorite-toggle";
 import type { DashboardItem, ItemDetail } from "@/lib/db/items";
 import { cn } from "@/lib/utils";
 
 /**
- * The drawer's view-mode action bar: Copy is wired; Favorite/Pin reflect state
- * but are display-only until those mutations land; Edit flips the drawer into
- * edit mode (disabled until detail loads); Delete is the confirmation dialog.
+ * The drawer's view-mode action bar: Copy is wired; Favorite toggles the item's
+ * favorite flag; Pin reflects state but is display-only until that mutation
+ * lands; Edit flips the drawer into edit mode (disabled until detail loads);
+ * Delete is the confirmation dialog.
  */
 export function DrawerActionBar({
   item,
@@ -24,14 +26,28 @@ export function DrawerActionBar({
   onEdit: () => void;
   onDeleted: () => void;
 }) {
+  const { favorite, pending, toggle } = useFavoriteToggle(
+    "item",
+    item.id,
+    item.isFavorite,
+  );
+
   return (
     <div className="flex items-center gap-1">
       <CopyButton text={copyText} />
-      <Button type="button" variant="ghost" size="icon-sm" aria-label="Favorite">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={favorite ? "Remove favorite" : "Favorite"}
+        aria-pressed={favorite}
+        disabled={pending}
+        onClick={toggle}
+      >
         <Star
           className={cn(
             "size-4",
-            item.isFavorite
+            favorite
               ? "fill-amber-400 text-amber-400"
               : "text-muted-foreground",
           )}

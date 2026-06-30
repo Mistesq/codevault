@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Star, Trash2 } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useFavoriteToggle } from "@/components/favorites/use-favorite-toggle";
 import { EditCollectionDialog } from "./EditCollectionDialog";
 import { DeleteCollectionDialog } from "./DeleteCollectionDialog";
 
@@ -13,12 +15,13 @@ interface HeaderCollection {
   id: string;
   name: string;
   description: string | null;
+  isFavorite: boolean;
 }
 
 /**
- * Favorite / Edit / Delete controls for the collection detail header. Favorite is
- * display-only for now. Deleting redirects back to /collections, since the page
- * it lived on no longer exists.
+ * Favorite / Edit / Delete controls for the collection detail header. Favorite
+ * toggles the collection's favorite flag. Deleting redirects back to
+ * /collections, since the page it lived on no longer exists.
  */
 export function CollectionHeaderActions({
   collection,
@@ -28,12 +31,28 @@ export function CollectionHeaderActions({
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const { favorite, pending, toggle } = useFavoriteToggle(
+    "collection",
+    collection.id,
+    collection.isFavorite,
+  );
 
   return (
     <div className="flex shrink-0 items-center gap-1">
-      {/* Favorite is display-only for now — no toggle behavior yet. */}
-      <Button variant="ghost" size="icon-sm" aria-label="Favorite">
-        <Star className="size-4" />
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={favorite ? "Remove favorite" : "Favorite"}
+        aria-pressed={favorite}
+        disabled={pending}
+        onClick={toggle}
+      >
+        <Star
+          className={cn(
+            "size-4",
+            favorite && "fill-amber-400 text-amber-400",
+          )}
+        />
       </Button>
       <Button
         variant="ghost"

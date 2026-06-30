@@ -2,14 +2,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Unit-test the action by mocking its collaborators: the auth session and the
 // db query. The Zod schema runs for real (it's the source of truth).
-const { auth, createItemQuery, updateItemQuery, deleteItemQuery } = vi.hoisted(
-  () => ({
-    auth: vi.fn(),
-    createItemQuery: vi.fn(),
-    updateItemQuery: vi.fn(),
-    deleteItemQuery: vi.fn(),
-  }),
-);
+const {
+  auth,
+  createItemQuery,
+  updateItemQuery,
+  deleteItemQuery,
+  setItemFavoriteQuery,
+} = vi.hoisted(() => ({
+  auth: vi.fn(),
+  createItemQuery: vi.fn(),
+  updateItemQuery: vi.fn(),
+  deleteItemQuery: vi.fn(),
+  setItemFavoriteQuery: vi.fn(),
+}));
 
 vi.mock("@/auth", () => ({
   auth: () => auth(),
@@ -19,9 +24,16 @@ vi.mock("@/lib/db/items", () => ({
   createItem: (data: unknown) => createItemQuery(data),
   updateItem: (id: string, data: unknown) => updateItemQuery(id, data),
   deleteItem: (id: string) => deleteItemQuery(id),
+  setItemFavorite: (id: string, isFavorite: boolean) =>
+    setItemFavoriteQuery(id, isFavorite),
 }));
 
-import { createItem, deleteItem, updateItem } from "@/actions/items";
+import {
+  createItem,
+  deleteItem,
+  setItemFavorite,
+  updateItem,
+} from "@/actions/items";
 
 const signedIn = { user: { id: "user_1" } };
 const validInput = {
@@ -181,5 +193,56 @@ describe("deleteItem action", () => {
     const result = await deleteItem("item_1");
 
     expect(result).toEqual({ success: false, error: "Item not found." });
+  });
+});
+
+describe("setItemFavorite action", () => {
+  it("rejects when there is no session (no query)", async () => {
+    auth.mockResolvedValue(null);
+
+    const result = await setItemFavorite("item_1", true);
+
+    expect(result).toEqual({ success: false, error: "You must be signed in." });
+    expect(setItemFavoriteQuery).not.toHaveBeenCalled();
+  });
+
+  it("passes the id + desired state to the query and returns the applied state", async () => {
+    auth.mockResolvedValue(signedIn);
+    setItemFavoriteQuery.mockResolvedValue(true);
+
+    const result = await setItemFavorite("item_1", true);
+
+    expect(setItemFavoriteQuery).toHaveBeenCalledWith("item_1", true);
+    expect(result).toEqual({ success: true, data: true });
+  });
+
+  it("rejects a non-boolean state without touching the query", async () => {
+    auth.mockResolvedValue(signedIn);
+
+    const result = await setItemFavorite("item_1", "yes" as unknown as boolean);
+
+    expect(result).toEqual({ success: false, error: "Invalid request." });
+    expect(setItemFavoriteQuery).not.toHaveBeenCalled();
+  });
+
+  it("returns not-found when the query reports no row changed", async () => {
+    auth.mockResolvedValue(signedIn);
+    setItemFavoriteQuery.mockResolvedValue(false);
+
+    const result = await setItemFavorite("item_x", true);
+
+    expect(result).toEqual({ success: false, error: "Item not found." });
+  });
+
+  it("returns a generic error for an unexpected failure", async () => {
+    auth.mockResolvedValue(signedIn);
+    setItemFavoriteQuery.mockRejectedValue(new Error("boom"));
+
+    const result = await setItemFavorite("item_1", false);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
   });
 });

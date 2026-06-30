@@ -11,6 +11,7 @@ const { item, itemType, itemTag, itemCollection, collection, tag, $transaction }
       findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
       deleteMany: vi.fn(),
       count: vi.fn(),
     };
@@ -64,6 +65,7 @@ import {
   getItemsByTypeSlug,
   linkCollections,
   linkTags,
+  setItemFavorite,
   updateItem,
 } from "@/lib/db/items";
 import { ITEMS_PER_PAGE } from "@/lib/pagination";
@@ -719,6 +721,48 @@ describe("deleteItem", () => {
     item.deleteMany.mockResolvedValue({ count: 0 });
 
     const result = await deleteItem("item_x");
+
+    expect(result).toBe(false);
+  });
+});
+
+describe("setItemFavorite", () => {
+  it("returns false when there is no user (no write)", async () => {
+    getSessionUser.mockResolvedValue(null);
+
+    const result = await setItemFavorite("item_1", true);
+
+    expect(result).toBe(false);
+    expect(item.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("updates scoped to the user and returns true when a row changed", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    item.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await setItemFavorite("item_1", true);
+
+    expect(item.updateMany).toHaveBeenCalledWith({
+      where: { id: "item_1", userId: "user_1" },
+      data: { isFavorite: true },
+    });
+    expect(result).toBe(true);
+  });
+
+  it("passes the desired state through (unfavorite)", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    item.updateMany.mockResolvedValue({ count: 1 });
+
+    await setItemFavorite("item_1", false);
+
+    expect(item.updateMany.mock.calls[0][0].data).toEqual({ isFavorite: false });
+  });
+
+  it("returns false when no row matched (not owned / missing)", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    item.updateMany.mockResolvedValue({ count: 0 });
+
+    const result = await setItemFavorite("item_x", true);
 
     expect(result).toBe(false);
   });

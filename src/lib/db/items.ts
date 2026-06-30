@@ -404,6 +404,27 @@ export async function deleteItem(id: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * Toggle an item's favorite flag, scoped to the signed-in user (ownership is the
+ * guard, matching updateItem/deleteItem). `updateMany` with the userId filter
+ * makes a non-owner / missing id a no-op — count 0 → false, which the action
+ * surfaces as not-found.
+ */
+export async function setItemFavorite(
+  id: string,
+  isFavorite: boolean,
+): Promise<boolean> {
+  const user = await getSessionUser();
+  if (!user) return false;
+
+  const { count } = await prisma.item.updateMany({
+    where: { id, userId: user.id },
+    data: { isFavorite },
+  });
+
+  return count > 0;
+}
+
 export interface ItemTypeView {
   id: string;
   name: string;

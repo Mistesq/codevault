@@ -64,6 +64,7 @@ export default async function CollectionDetailPage({
             id: collection.id,
             name: collection.name,
             description: collection.description,
+            isFavorite: collection.isFavorite,
           }}
         />
       </header>

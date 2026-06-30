@@ -1,16 +1,28 @@
-# Current Feature
+# Current Feature: Favorite Toggle
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Make the favorite (Star) control actually toggle `isFavorite`, replacing the current display-only behavior across all four surfaces:
+  - **Item drawer** action bar (`DrawerActionBar`) — Star toggles the item's favorite state.
+  - **Collection detail page** header (`CollectionHeaderActions`) — Star toggles the collection's favorite state.
+  - **Item cards** (`ItemCard`) — Star becomes an interactive toggle (currently a static indicator); click must not open the drawer.
+  - **Collection cards** (`CollectionActions` 3-dots menu) — Favorite/Unfavorite item toggles the collection's favorite state.
+- Add ownership-scoped server actions + queries to flip `Item.isFavorite` and `Collection.isFavorite`.
+- UI reflects the new state immediately and stays in sync (toast + refresh, or optimistic update).
+- Favorited items/collections show up on the existing `/favorites` page.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- `isFavorite` columns already exist on both `Item` and `Collection`; this is wiring behavior, not a schema change.
+- Existing controls are explicitly marked "display-only for now" in: `DrawerActionBar.tsx`, `CollectionHeaderActions.tsx`, `CollectionActions.tsx`. `ItemCard.tsx` renders a non-interactive Star.
+- Follow existing mutation patterns: ownership-scoped `updateMany` (count > 0) queries in `src/lib/db/*`, `{ success, data, error }` server actions in `src/actions/*`, toast + `router.refresh()`.
+- Star toggles on cards must `stopPropagation` so they don't trigger card navigation / drawer open.
+- Add Vitest unit tests for the new server actions / queries (server-action + utility scope only).
+- Reuse the amber fill styling already used for the favorited Star (`fill-amber-400 text-amber-400`).
 
 ## History
 

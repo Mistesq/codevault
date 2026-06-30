@@ -6,6 +6,7 @@ import {
   createCollection as createCollectionQuery,
   updateCollection as updateCollectionQuery,
   deleteCollection as deleteCollectionQuery,
+  setCollectionFavorite as setCollectionFavoriteQuery,
 } from "@/lib/db/collections";
 import type { DashboardCollection } from "@/lib/db/collections";
 import {
@@ -102,6 +103,37 @@ export async function updateCollection(
       };
     }
     console.error("Update collection failed:", error);
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+}
+
+/**
+ * Toggle a collection's favorite flag from a card / the detail header. Requires
+ * a session, then delegates to the ownership-scoped query (which reports
+ * not-found for a missing / foreign id). Takes the desired new state so the
+ * operation is idempotent. Returns the applied state in `data`.
+ */
+export async function setCollectionFavorite(
+  id: string,
+  isFavorite: boolean,
+): Promise<ActionResult<boolean>> {
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: "You must be signed in." };
+  }
+
+  if (typeof isFavorite !== "boolean") {
+    return { success: false, error: "Invalid request." };
+  }
+
+  try {
+    const updated = await setCollectionFavoriteQuery(id, isFavorite);
+    if (!updated) {
+      return { success: false, error: "Collection not found." };
+    }
+    return { success: true, data: isFavorite };
+  } catch (error) {
+    console.error("Toggle collection favorite failed:", error);
     return { success: false, error: "Something went wrong. Please try again." };
   }
 }

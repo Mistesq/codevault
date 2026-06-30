@@ -14,14 +14,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { DashboardCollection } from "@/lib/db/collections";
+import { useFavoriteToggle } from "@/components/favorites/use-favorite-toggle";
 import { EditCollectionDialog } from "./EditCollectionDialog";
 import { DeleteCollectionDialog } from "./DeleteCollectionDialog";
 
 /**
  * The 3-dots actions menu shown on a collection card. Edit and Delete open their
- * (controlled) dialogs; Favorite is display-only for now. The trigger lives above
- * the card's navigation overlay (z-index + a real button), so opening the menu
- * never navigates to the collection page.
+ * (controlled) dialogs; Favorite toggles the collection's favorite flag. The
+ * trigger lives above the card's navigation overlay (z-index + a real button),
+ * so opening the menu never navigates to the collection page.
  */
 export function CollectionActions({
   collection,
@@ -33,6 +34,11 @@ export function CollectionActions({
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const { favorite, pending, toggle } = useFavoriteToggle(
+    "collection",
+    collection.id,
+    collection.isFavorite,
+  );
 
   return (
     <>
@@ -54,10 +60,9 @@ export function CollectionActions({
             <Pencil />
             Edit
           </DropdownMenuItem>
-          {/* Favorite is display-only for now — no toggle behavior yet. */}
-          <DropdownMenuItem>
-            <Star />
-            Favorite
+          <DropdownMenuItem disabled={pending} onClick={toggle}>
+            <Star className={cn(favorite && "fill-amber-400 text-amber-400")} />
+            {favorite ? "Unfavorite" : "Favorite"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
