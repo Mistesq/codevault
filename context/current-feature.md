@@ -1,47 +1,16 @@
-# Current Feature — Homepage Marketing Mockup
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Build a static marketing homepage prototype at `prototypes/homepage/` (`index.html`, `styles.css`, `script.js`).
-- Visually match the REAL CodeVault dashboard: layered near-black surfaces, neutral chrome, thin item-type color accents. Human-designed feel, not generic AI marketing.
-- Single brand accent = **Blue `#3b82f6`** for marketing chrome (CTA, one highlight per section, interactive states). No gradients anywhere.
-- Item-type colors (from `prisma/seed.ts`) used ONLY inside product UI (dashboard preview, item cards, tag demo) as thin left-border stripes + tinted leading lucide icons — never as generic marketing decoration.
-- Sections: fixed Nav, asymmetric Hero (chaos → arrow → dashboard preview), 6 Feature cards, AI section (2-col, code-editor tag demo), Pricing (Free vs Pro, monthly/yearly toggle), CTA, Footer.
-- Hero keeps the bespoke chaos animation: 8 scattered-knowledge icons floating/bouncing/pulsing + repelling from mouse cursor (requestAnimationFrame).
-- Responsive: hero + grids collapse cleanly to single column; arrow rotates 90° on mobile.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-**Item-type palette (match exactly, source = `prisma/seed.ts`), sidebar order snippet → prompt → command → note → file → image → url; singular labels; File & Image carry a PRO badge:**
-
-| Type | Icon | Hex |
-| --- | --- | --- |
-| Snippet | `Code` | `#3b82f6` blue |
-| Prompt | `Sparkles` | `#8b5cf6` violet |
-| Command | `Terminal` | `#f97316` orange |
-| Note | `StickyNote` | `#fde047` yellow |
-| File | `File` | `#6b7280` gray |
-| Image | `Image` | `#ec4899` pink |
-| URL | `Link` | `#10b981` green |
-
-**Anti-Generic Constraints (highest priority — override section descriptions on conflict):**
-
-1. Match the product, don't invent (palette, radii, spacing, typography, left-border stripe accent).
-2. One accent (blue), not a rainbow. Item-type color only inside product UI.
-3. No gradient text anywhere — solid headline colors.
-4. No decorative all-caps kickers/eyebrows; no ★ emoji badges. Quiet neutral labels only.
-5. No glow/halo/neon bloom on buttons, cards, or CTA. Flat and confident.
-6. Break section rhythm — left-align ≥1 heading; use text-left/visual-right composition (AI section is the reference).
-7. Real content over skeletons — realistic items/tags/types in hero dashboard.
-8. Typography with character — match product UI font; confident grotesk display face for headings, tight negative letter-spacing, consistent scale. Avoid default Inter look.
-
-**Reference:** dashboard screenshots in `context/screenshots/`. Feature cards use single neutral border differentiated by icon/copy (reuse real lucide icons where a card maps to a type). AI capabilities = Auto-tagging, AI summaries, Explain Code, Prompt optimization (small cards / clean two-line, NOT checkmark+bold+em-dash list). Pricing: Free $0 / 50 items / 3 collections vs Pro $8/mo ($72/yr) unlimited + AI; "Most Popular" badge, no glow.
-
-Full spec: `context/features/homepage-mockup-spec.md`.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -99,3 +68,4 @@ Full spec: `context/features/homepage-mockup-spec.md`.
 - All Items Route - protected /items route (uses existing items/layout AppShell, force-dynamic) listing every item the user owns regardless of type in the dashboard ItemCard 3-col grid → shared ItemDrawer; new getAllItemsPaginated(page) query (ownership-scoped, pinned-first then updatedAt desc, server-side count + skip/take, page clamped), Pagination, empty state; sidebar "All Items" row already pointed here; 4 tests (Completed)
 - Recently Used Page - protected /recent route (AppShell, force-dynamic) with Recent Items (ItemCard 3-col) + Recent Collections (CollectionCard 4-col) sections, each paginated independently; generalized getAllItemsPaginated with a {pinnedFirst} option (pure recency for /recent, pinned-first stays default for /items), reused getPaginatedCollections; Pagination gains pageParam/extraParams so ?itemsPage/?collectionsPage coexist and preserve each other; section-hide + global empty state; 1 test (Completed)
 - Pinned & Favorites/Recent Pagination - /pinned paginated by generalizing getAllItemsPaginated with a pinnedOnly filter (count + page both scoped to pinned); /favorites & /recent converted from stacked sections + dual pagers to Items/Collections underline tabs (new ui/tab-nav.tsx) with one URL-driven pager per active tab (?tab/?page); favorites sort moved server-side via ?sort applied across the whole set and preserved across tab+page links; new pure helpers paginateArray + lib/list-tabs.ts parseListTab + favorites-sort URL parse/serialize + getFavoritesPage(sort,tab,page); restyled favorites sort control (label vs options); 269 tests (Completed)
+- Homepage Marketing Mockup - static prototype at prototypes/homepage/ (index.html/styles.css/script.js, no build step) mirroring dashboard chrome (near-black oklch ramp→hex, Geist, blue accent, Vault brand mark); nav (opacity-on-scroll), asymmetric chaos→arrow→dashboard hero with requestAnimationFrame chaos animation (drift/wall-bounce/cursor-repel/pulse) + faithful dashboard preview (type-color stripes + tinted icons + PRO badges), colored feature-icon cards, AI tag demo, pricing monthly/yearly toggle, CTA, footer; responsive (arrow rotates 90° on mobile) + prefers-reduced-motion; verified via Playwright (Completed)
