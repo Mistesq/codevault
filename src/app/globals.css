@@ -4,6 +4,55 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Homepage (marketing "/") design tokens — the prototype's near-black chrome
+ * ramp + single blue marketing accent, exposed as Tailwind color utilities
+ * (bg-h-*, text-h-*, border-h-*) so the components don't hardcode hex. Item-type
+ * colors stay per-card via an inline `--c` custom property (see components/home).
+ */
+@theme {
+  --color-h-bg: #0a0a0a;
+  --color-h-surface-1: #121212;
+  --color-h-surface-2: #171717;
+  --color-h-surface-3: #1f1f1f;
+  --color-h-code: #0c0c0c;
+  --color-h-border: rgba(255, 255, 255, 0.08);
+  --color-h-border-strong: rgba(255, 255, 255, 0.14);
+  --color-h-text: #fafafa;
+  --color-h-muted: #a1a1a1;
+  --color-h-dim: #6f6f6f;
+  --color-h-accent: #3b82f6;
+  --color-h-accent-hover: #2f6fe0;
+  --color-h-accent-soft: rgba(59, 130, 246, 0.12);
+  --color-h-brand: oklch(0.488 0.243 264.376);
+
+  --animate-home-arrow: home-arrow-pulse 2.2s ease-in-out infinite;
+  --animate-home-tag: home-tag-in 0.4s ease forwards;
+}
+
+@keyframes home-arrow-pulse {
+  0%,
+  100% {
+    transform: translateX(0);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translateX(6px);
+    opacity: 1;
+  }
+}
+
+@keyframes home-tag-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* smooth in-page anchor scrolling only while the homepage is mounted */
+html:has(.home) {
+  scroll-behavior: smooth;
+}
+
 @theme inline {
 
     --font-heading: var(--font-geist-sans);
