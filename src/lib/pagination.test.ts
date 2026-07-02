@@ -4,6 +4,7 @@ import {
   clampPage,
   getPageRange,
   pageOffset,
+  paginateArray,
   parsePageParam,
   totalPagesFor,
 } from "@/lib/pagination";
@@ -57,6 +58,41 @@ describe("pageOffset", () => {
     expect(pageOffset(1, 21)).toBe(0);
     expect(pageOffset(2, 21)).toBe(21);
     expect(pageOffset(3, 21)).toBe(42);
+  });
+});
+
+describe("paginateArray", () => {
+  const rows = Array.from({ length: 25 }, (_, i) => i + 1);
+
+  it("returns the first page slice and metadata", () => {
+    const result = paginateArray(rows, 1, 10);
+    expect(result.items).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(result).toMatchObject({ page: 1, totalPages: 3, totalCount: 25 });
+  });
+
+  it("returns a middle page slice", () => {
+    expect(paginateArray(rows, 2, 10).items).toEqual([
+      11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+    ]);
+  });
+
+  it("returns the partial final page", () => {
+    expect(paginateArray(rows, 3, 10).items).toEqual([21, 22, 23, 24, 25]);
+  });
+
+  it("clamps a too-high page onto the last page", () => {
+    const result = paginateArray(rows, 99, 10);
+    expect(result.page).toBe(3);
+    expect(result.items).toEqual([21, 22, 23, 24, 25]);
+  });
+
+  it("handles an empty array as a single empty page", () => {
+    expect(paginateArray([], 1, 10)).toEqual({
+      items: [],
+      page: 1,
+      totalPages: 1,
+      totalCount: 0,
+    });
   });
 });
 

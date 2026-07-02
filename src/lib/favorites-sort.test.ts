@@ -5,6 +5,9 @@ import type { FavoriteCollection } from "@/lib/db/favorites";
 import {
   DEFAULT_FAVORITE_SORT,
   defaultDirFor,
+  isDefaultFavoriteSort,
+  parseFavoriteSort,
+  serializeFavoriteSort,
   sortFavoriteCollections,
   sortFavoriteItems,
 } from "@/lib/favorites-sort";
@@ -59,6 +62,45 @@ describe("defaultDirFor", () => {
 
   it("DEFAULT_FAVORITE_SORT is date-descending", () => {
     expect(DEFAULT_FAVORITE_SORT).toEqual({ key: "date", dir: "desc" });
+  });
+});
+
+describe("serializeFavoriteSort", () => {
+  it("joins key and dir with a hyphen", () => {
+    expect(serializeFavoriteSort({ key: "name", dir: "asc" })).toBe("name-asc");
+    expect(serializeFavoriteSort({ key: "date", dir: "desc" })).toBe(
+      "date-desc",
+    );
+  });
+});
+
+describe("parseFavoriteSort", () => {
+  it("round-trips a valid serialized sort", () => {
+    expect(parseFavoriteSort("name-asc")).toEqual({ key: "name", dir: "asc" });
+    expect(parseFavoriteSort("type-desc")).toEqual({ key: "type", dir: "desc" });
+  });
+
+  it("falls back to the default for missing / malformed / unknown values", () => {
+    expect(parseFavoriteSort(undefined)).toEqual(DEFAULT_FAVORITE_SORT);
+    expect(parseFavoriteSort("")).toEqual(DEFAULT_FAVORITE_SORT);
+    expect(parseFavoriteSort("name")).toEqual(DEFAULT_FAVORITE_SORT);
+    expect(parseFavoriteSort("bogus-asc")).toEqual(DEFAULT_FAVORITE_SORT);
+    expect(parseFavoriteSort("name-sideways")).toEqual(DEFAULT_FAVORITE_SORT);
+  });
+
+  it("uses the first entry of a repeated param", () => {
+    expect(parseFavoriteSort(["type-desc", "name-asc"])).toEqual({
+      key: "type",
+      dir: "desc",
+    });
+  });
+});
+
+describe("isDefaultFavoriteSort", () => {
+  it("is true only for date-desc", () => {
+    expect(isDefaultFavoriteSort({ key: "date", dir: "desc" })).toBe(true);
+    expect(isDefaultFavoriteSort({ key: "date", dir: "asc" })).toBe(false);
+    expect(isDefaultFavoriteSort({ key: "name", dir: "asc" })).toBe(false);
   });
 });
 

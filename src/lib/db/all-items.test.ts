@@ -68,6 +68,25 @@ describe("getAllItemsPaginated", () => {
     );
   });
 
+  it("filters to pinned-only when pinnedOnly is set (drives the /pinned page)", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    item.count.mockResolvedValue(1);
+    item.findMany.mockResolvedValue([]);
+
+    await getAllItemsPaginated(1, { pinnedOnly: true, pinnedFirst: false });
+
+    // Both the count and the page query must carry the pinned filter so the
+    // total (and thus the pager) reflects only pinned items.
+    const pinnedWhere = { userId: "user_1", isPinned: true };
+    expect(item.count).toHaveBeenCalledWith({ where: pinnedWhere });
+    expect(item.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: pinnedWhere,
+        orderBy: { updatedAt: "desc" },
+      }),
+    );
+  });
+
   it("clamps a too-high page to the last page", async () => {
     getSessionUser.mockResolvedValue({ id: "user_1" });
     item.count.mockResolvedValue(5); // one page

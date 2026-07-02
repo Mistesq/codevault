@@ -47,6 +47,29 @@ export function pageOffset(page: number, perPage: number): number {
   return (page - 1) * perPage;
 }
 
+/**
+ * Slice an already-loaded array into a single page's worth of rows. For lists
+ * that are fetched in full and ordered in memory (e.g. Favorites, whose sort
+ * tie-breaks are shared with the client), then paginated. The requested page is
+ * clamped into range so a too-high page lands on the last page.
+ */
+export function paginateArray<T>(
+  all: T[],
+  page: number,
+  perPage: number,
+): Paginated<T> {
+  const totalCount = all.length;
+  const totalPages = totalPagesFor(totalCount, perPage);
+  const current = clampPage(page, totalPages);
+  const start = pageOffset(current, perPage);
+  return {
+    items: all.slice(start, start + perPage),
+    page: current,
+    totalPages,
+    totalCount,
+  };
+}
+
 export type PageToken = number | "ellipsis";
 
 /**

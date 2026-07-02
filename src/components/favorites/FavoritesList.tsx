@@ -1,22 +1,24 @@
 "use client";
 
-import { useMemo, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, FolderOpen, Pin } from "lucide-react";
+import { type KeyboardEvent } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown, FolderOpen, Pin } from "lucide-react";
 
 import { useItemDrawer } from "@/components/items/item-drawer-context";
+import { Pagination } from "@/components/ui/pagination";
+import { TabNav } from "@/components/ui/tab-nav";
 import { relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem } from "@/lib/db/items";
 import type { FavoriteCollection } from "@/lib/db/favorites";
 import {
-  DEFAULT_FAVORITE_SORT,
-  FAVORITE_SORT_OPTIONS,
   defaultDirFor,
-  sortFavoriteCollections,
-  sortFavoriteItems,
+  FAVORITE_SORT_OPTIONS,
+  isDefaultFavoriteSort,
+  serializeFavoriteSort,
   type FavoriteSort,
-  type FavoriteSortKey,
 } from "@/lib/favorites-sort";
+import type { ListTab } from "@/lib/list-tabs";
+import type { Paginated } from "@/lib/pagination";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import { cn } from "@/lib/utils";
 
@@ -36,58 +38,87 @@ function Badge({ label, color }: { label: string; color?: string | null }) {
   );
 }
 
-// A section heading like "ITEMS · 12" in the dense, mono style.
-function SectionLabel({ title, count }: { title: string; count: number }) {
-  return (
-    <h2 className="px-2 pb-1 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-      {title} <span className="text-muted-foreground/60">· {count}</span>
-    </h2>
-  );
+// Build a /favorites href, omitting defaults (items tab, default sort, page 1)
+// so the common URLs stay clean.
+function favoritesHref({
+  tab,
+  sort,
+  page,
+}: {
+  tab: ListTab;
+  sort: FavoriteSort;
+  page?: number;
+}): string {
+  const params = new URLSearchParams();
+  if (tab === "collections") params.set("tab", "collections");
+  if (!isDefaultFavoriteSort(sort)) {
+    params.set("sort", serializeFavoriteSort(sort));
+  }
+  if (page && page > 1) params.set("page", String(page));
+  const qs = params.toString();
+  return qs ? `/favorites?${qs}` : "/favorites";
 }
 
-// Compact, mono-styled sort control. Clicking the active key flips direction;
-// clicking another key switches to it at its natural default direction.
-function FavoritesSortControl({
-  sort,
-  onChange,
-}: {
-  sort: FavoriteSort;
-  onChange: (sort: FavoriteSort) => void;
-}) {
-  function selectKey(key: FavoriteSortKey) {
-    if (key === sort.key) {
-      onChange({ key, dir: sort.dir === "asc" ? "desc" : "asc" });
-    } else {
-      onChange({ key, dir: defaultDirFor(key) });
-    }
+// Params (minus page) a pager must preserve on every page link.
+function pagerExtraParams(
+  tab: ListTab,
+  sort: FavoriteSort,
+): Record<string, string> {
+  const extra: Record<string, string> = {};
+  if (tab === "collections") extra.tab = "collections";
+  if (!isDefaultFavoriteSort(sort)) {
+    extra.sort = serializeFavoriteSort(sort);
   }
+  return extra;
+}
 
+// Compact, mono-styled sort control rendered as navigation links. Clicking the
+// active key flips direction; clicking another key switches to it at its natural
+// default direction. Sort stays on the active tab and resets pagination. The
+// leading icon + "Sort" label reads as a label (not another option); the active
+// key is shown by brighter text plus its direction arrow — no button-like fill.
+function FavoritesSortControl({
+  tab,
+  sort,
+}: {
+  tab: ListTab;
+  sort: FavoriteSort;
+}) {
   return (
-    <div className="flex items-center gap-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-      <span className="pr-1">Sort</span>
-      {FAVORITE_SORT_OPTIONS.map((option) => {
-        const active = option.value === sort.key;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => selectKey(option.value)}
-            aria-pressed={active}
-            className={cn(
-              "flex items-center gap-1 rounded px-1.5 py-0.5 transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-              active ? "bg-accent text-foreground" : "text-muted-foreground",
-            )}
-          >
-            {option.label}
-            {active &&
-              (sort.dir === "asc" ? (
-                <ArrowUp className="size-3" />
-              ) : (
-                <ArrowDown className="size-3" />
-              ))}
-          </button>
-        );
-      })}
+    <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-wider">
+      <span className="flex items-center gap-1 text-muted-foreground/50">
+        <ArrowUpDown className="size-3" />
+        Sort
+      </span>
+      <div className="flex items-center gap-3">
+        {FAVORITE_SORT_OPTIONS.map((option) => {
+          const active = option.value === sort.key;
+          const next: FavoriteSort = active
+            ? { key: option.value, dir: sort.dir === "asc" ? "desc" : "asc" }
+            : { key: option.value, dir: defaultDirFor(option.value) };
+          return (
+            <Link
+              key={option.value}
+              href={favoritesHref({ tab, sort: next })}
+              aria-pressed={active}
+              className={cn(
+                "flex items-center gap-1 rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                active
+                  ? "font-medium text-foreground"
+                  : "text-muted-foreground/60 hover:text-foreground",
+              )}
+            >
+              {option.label}
+              {active &&
+                (sort.dir === "asc" ? (
+                  <ArrowUp className="size-3" />
+                ) : (
+                  <ArrowDown className="size-3" />
+                ))}
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -147,56 +178,93 @@ function CollectionRow({ collection }: { collection: FavoriteCollection }) {
   );
 }
 
+// Empty-tab note (the whole-page empty state is handled by the page).
+function EmptyTab({ label }: { label: string }) {
+  return (
+    <p className="px-2 py-6 text-center font-mono text-xs text-muted-foreground">
+      No favorited {label} yet.
+    </p>
+  );
+}
+
 /**
- * The favorites page body: a compact, dev-focused list of favorited items and
- * collections in separate sections. Item rows open the shared ItemDrawer;
- * collection rows navigate to the collection page. Rendered only when there is
- * at least one favorite (the page handles the empty state).
+ * The favorites page body: an Items / Collections tab split. Only one list shows
+ * at a time; sorting and pagination are URL-driven (server-sorted,
+ * server-paginated). Item rows open the shared ItemDrawer; collection rows
+ * navigate to the collection page. Rendered only when there is at least one
+ * favorite (the page handles the global empty state).
  */
 export function FavoritesList({
+  activeTab,
   items,
   collections,
+  sort,
 }: {
-  items: DashboardItem[];
-  collections: FavoriteCollection[];
+  activeTab: ListTab;
+  items: Paginated<DashboardItem>;
+  collections: Paginated<FavoriteCollection>;
+  sort: FavoriteSort;
 }) {
-  const [sort, setSort] = useState<FavoriteSort>(DEFAULT_FAVORITE_SORT);
-
-  const sortedItems = useMemo(
-    () => sortFavoriteItems(items, sort),
-    [items, sort],
-  );
-  const sortedCollections = useMemo(
-    () => sortFavoriteCollections(collections, sort),
-    [collections, sort],
-  );
-
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex justify-end px-2">
-        <FavoritesSortControl sort={sort} onChange={setSort} />
+    <div className="flex flex-col gap-4">
+      <div className="flex items-end justify-between gap-4">
+        <TabNav
+          items={[
+            {
+              label: "Items",
+              href: favoritesHref({ tab: "items", sort }),
+              count: items.totalCount,
+              active: activeTab === "items",
+            },
+            {
+              label: "Collections",
+              href: favoritesHref({ tab: "collections", sort }),
+              count: collections.totalCount,
+              active: activeTab === "collections",
+            },
+          ]}
+        />
+        <div className="pb-2">
+          <FavoritesSortControl tab={activeTab} sort={sort} />
+        </div>
       </div>
 
-      {sortedItems.length > 0 && (
+      {activeTab === "items" ? (
+        items.totalCount > 0 ? (
+          <section>
+            <div className="divide-y divide-border/60 border-y border-border/60">
+              {items.items.map((item) => (
+                <ItemRow key={item.id} item={item} />
+              ))}
+            </div>
+            <Pagination
+              page={items.page}
+              totalPages={items.totalPages}
+              baseHref="/favorites"
+              pageParam="page"
+              extraParams={pagerExtraParams("items", sort)}
+            />
+          </section>
+        ) : (
+          <EmptyTab label="items" />
+        )
+      ) : collections.totalCount > 0 ? (
         <section>
-          <SectionLabel title="Items" count={sortedItems.length} />
           <div className="divide-y divide-border/60 border-y border-border/60">
-            {sortedItems.map((item) => (
-              <ItemRow key={item.id} item={item} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {sortedCollections.length > 0 && (
-        <section>
-          <SectionLabel title="Collections" count={sortedCollections.length} />
-          <div className="divide-y divide-border/60 border-y border-border/60">
-            {sortedCollections.map((collection) => (
+            {collections.items.map((collection) => (
               <CollectionRow key={collection.id} collection={collection} />
             ))}
           </div>
+          <Pagination
+            page={collections.page}
+            totalPages={collections.totalPages}
+            baseHref="/favorites"
+            pageParam="page"
+            extraParams={pagerExtraParams("collections", sort)}
+          />
         </section>
+      ) : (
+        <EmptyTab label="collections" />
       )}
     </div>
   );
