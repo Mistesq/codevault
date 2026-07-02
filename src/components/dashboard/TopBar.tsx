@@ -60,21 +60,26 @@ export function TopBar({
       </div>
 
       {/* Right section: mobile menu + search + actions. */}
-      <div className="flex flex-1 items-center gap-4 px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-2 px-4 sm:gap-4">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
           aria-label="Open sidebar"
-          className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+          className="shrink-0 cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
         >
           <Menu className="size-5" />
         </button>
 
+        {/* On mobile the search pill is dropped in favour of a compact icon
+            button; the spacer pushes it and the actions to the right. */}
+        <div className="flex-1 sm:hidden" />
+
+        {/* Full search pill (>= sm): opens the command palette. */}
         <button
           type="button"
           onClick={openPalette}
           aria-label="Search items and collections"
-          className="relative mx-auto flex h-9 w-full max-w-2xl cursor-pointer items-center rounded-md border border-input bg-transparent pl-9 pr-12 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="relative mx-auto hidden h-9 w-full min-w-0 max-w-2xl cursor-pointer items-center rounded-md border border-input bg-transparent pl-9 pr-12 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex"
         >
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <span className="truncate">Search snippets, prompts, commands…</span>
@@ -83,11 +88,23 @@ export function TopBar({
           </kbd>
         </button>
 
+        {/* Compact search icon (mobile only). */}
+        <button
+          type="button"
+          onClick={openPalette}
+          aria-label="Search items and collections"
+          className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:hidden"
+        >
+          <Search className="size-4" />
+        </button>
+
+        {/* Pinned & Favorites also have dedicated sidebar links, so the top-bar
+            shortcuts are hidden on mobile to save room. */}
         <Link
           href="/pinned"
           aria-label="Pinned"
           title="Pinned"
-          className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex"
         >
           <Pin className="size-4" />
         </Link>
@@ -96,13 +113,13 @@ export function TopBar({
           href="/favorites"
           aria-label="Favorites"
           title="Favorites"
-          className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex"
         >
           <Star className="size-4" />
         </Link>
 
-        <NewCollectionDialog />
-        <NewItemDialog collections={collections} />
+        <NewCollectionDialog compactOnMobile />
+        <NewItemDialog collections={collections} compactOnMobile />
       </div>
     </header>
   );

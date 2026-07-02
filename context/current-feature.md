@@ -2,11 +2,18 @@
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Fix the dashboard TopBar overflowing horizontally on small screens (~798px of
+  content in a ~360px bar, forcing a page-wide horizontal scroll).
+- Search collapses to an icon button on mobile (opens the same command palette),
+  full search pill returns at `sm:`.
+- "New Item" / "New Collection" triggers become icon-only on mobile via an
+  opt-in `compactOnMobile` prop (full labels stay on the items/collections pages).
+- Pinned/Favorites top-bar icons hidden on mobile (both reachable from sidebar).
+- Add flex overflow protection (`min-w-0`) so nothing gets pushed off-screen.
 
 ## Notes
 
