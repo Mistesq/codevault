@@ -29,6 +29,46 @@
 - Otherwise, fetch data directly in server components
 - Dynamic routes for item/collection pages
 
+## Architecture & Separation of Responsibility
+
+Core rule: **one file, one responsibility**, and **components only render UI** — they do not "think."
+
+A component MUST NOT contain:
+
+- Database or API calls (Prisma, `fetch`, or calling a Server Action just to _load_ data)
+- Domain/business logic (plan gating, permission checks, derived domain values, dedupe rules)
+- Data transformations that reshape domain data (`.map`/`.filter`/`.reduce`/sort/group into a new shape)
+- Utilities (date formatting with `dayjs`, parsing, regex)
+
+A component MAY contain presentational logic: conditional class names, show/hide by prop, ternaries for display text, and event handlers.
+
+A component receives its data through props (from a Server Component, hook, or Server Action). It does not fetch its own data.
+
+Where extracted code goes:
+
+- Domain derivations & formatters → `src/lib/[feature]` (e.g. `getItemLabel`, `isItemLocked`, `formatItemDate`)
+- Validation schemas → `src/lib/validations`
+- Data access → `src/lib/db` (reads) and `src/actions` (mutations)
+- Reusable client logic → a custom hook (`use*`)
+
+**Any violation of separation of responsibility is an architecture error. Refactor it before continuing the task — do not defer it.**
+
+### Layer boundaries
+
+- `src/actions` and `src/lib/db` are **server-only**. Never import them into a `'use client'` component. Add `import "server-only"` to server-only modules to enforce this at build time.
+- `src/components/ui` holds **pure primitives** with no domain knowledge (buttons, inputs, dialogs). Feature/domain UI lives in `src/components/[feature]`.
+- Keep route files thin: `src/app/**/page.tsx` only composes the page and passes data down. Page assembly and orchestration live in components, not in the route file.
+
+### Separation review checklist
+
+Applied to every changed component — a "yes" to any item means refactor before continuing (also used as the `code-scanner` agent's modularity rubric):
+
+- Does it call the DB / an API / a data-loading action directly?
+- Does it compute a domain rule or a derived domain value?
+- Does it reshape domain data (map/sort/group into a new structure)?
+- Does it define a utility (formatting, parsing) inline instead of importing one?
+- Does the file do more than one thing?
+
 ## Tailwind CSS v4
 
 **CRITICAL**: We are using Tailwind CSS v4, which uses CSS-based configuration.
@@ -46,6 +86,7 @@ Example v4 configuration:
 @theme {
   --color-primary: oklch(50% 0.2 250);
 }
+```
 
 ## File Organization
 
@@ -94,4 +135,3 @@ Example v4 configuration:
 - No commented-out code unless specified
 - No unused imports or variables
 - Keep functions under 50 lines when possible
-```
