@@ -2,18 +2,11 @@
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Fix the dashboard TopBar overflowing horizontally on small screens (~798px of
-  content in a ~360px bar, forcing a page-wide horizontal scroll).
-- Search collapses to an icon button on mobile (opens the same command palette),
-  full search pill returns at `sm:`.
-- "New Item" / "New Collection" triggers become icon-only on mobile via an
-  opt-in `compactOnMobile` prop (full labels stay on the items/collections pages).
-- Pinned/Favorites top-bar icons hidden on mobile (both reachable from sidebar).
-- Add flex overflow protection (`min-w-0`) so nothing gets pushed off-screen.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
@@ -77,3 +70,4 @@ In Progress
 - Pinned & Favorites/Recent Pagination - /pinned paginated by generalizing getAllItemsPaginated with a pinnedOnly filter (count + page both scoped to pinned); /favorites & /recent converted from stacked sections + dual pagers to Items/Collections underline tabs (new ui/tab-nav.tsx) with one URL-driven pager per active tab (?tab/?page); favorites sort moved server-side via ?sort applied across the whole set and preserved across tab+page links; new pure helpers paginateArray + lib/list-tabs.ts parseListTab + favorites-sort URL parse/serialize + getFavoritesPage(sort,tab,page); restyled favorites sort control (label vs options); 269 tests (Completed)
 - Homepage Marketing Mockup - static prototype at prototypes/homepage/ (index.html/styles.css/script.js, no build step) mirroring dashboard chrome (near-black oklch ramp→hex, Geist, blue accent, Vault brand mark); nav (opacity-on-scroll), asymmetric chaos→arrow→dashboard hero with requestAnimationFrame chaos animation (drift/wall-bounce/cursor-repel/pulse) + faithful dashboard preview (type-color stripes + tinted icons + PRO badges), colored feature-icon cards, AI tag demo, pricing monthly/yearly toggle, CTA, footer; responsive (arrow rotates 90° on mobile) + prefers-reduced-motion; verified via Playwright (Completed)
 - Homepage (App) - prototype rebuilt as the real / route: server page.tsx calls auth() + composes sections under components/home/, client leaves only HomeNav (scroll)/ChaosField (rAF)/PricingToggle/reusable Reveal; Tailwind v4 + shadcn Button + lucide throughout, homepage tokens + arrow/tag keyframes in globals.css @theme, item-type colors via shared map + --c; session-aware nav (Dashboard vs Sign in/Get started), 7 faithful sections, responsive + reduced-motion; no new deps/actions/queries; build+lint clean, Playwright-verified (Completed)
+- Fix: TopBar Mobile Overflow - dashboard top bar (~798px of content in a ~360px bar) no longer forces a page-wide horizontal scroll; search collapses to an icon button below sm (mobile-only flex-1 spacer, full pill returns at sm), New Item/New Collection triggers go icon-only via opt-in compactOnMobile prop (aria-labels added, full labels kept on items/collections pages), Pinned/Favorites shortcuts hidden on mobile, min-w-0 + gap-2 sm:gap-4 overflow protection; Playwright-verified at 375/640/1280 (Completed)
