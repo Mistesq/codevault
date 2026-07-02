@@ -1,92 +1,16 @@
-# Current Feature: Pagination for Pinned & Favorites
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Add server-side pagination to `/pinned`, matching the pattern already used by
-  `/items`, `/collections`, and `/recent` (shared `lib/pagination.ts` +
-  `ui/pagination.tsx`, page-1 clean URL, page clamped server-side).
-- Give `/favorites` an Items/Collections split — but as **tabs, not two stacked
-  sections with two independent pagers**. One tab visible at a time, each with a
-  single pager. Server-rendered, tab state in the URL.
-- Convert `/recent` from its current two-stacked-sections + two-pagers layout to
-  the **same tabbed UX** (Recent Items / Recent Collections tabs, one pager).
-- Verify no other user-facing list route is missing pagination while we're here.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Current state (unpaginated):**
-  - `/pinned` (`src/app/pinned/page.tsx`) renders `getPinnedItems()` (all pinned
-    items, `updatedAt` desc) in the ItemCard 3-col grid.
-  - `/favorites` (`src/app/favorites/page.tsx`) renders `getFavorites()` (all
-    favorited items + collections) through the client `FavoritesList`.
-- **Pinned — reuse, don't fork:** `getAllItemsPaginated(page, opts)` already does
-  ownership-scoped count + skip/take + page clamp with a `pinnedFirst` option;
-  its only gap for `/pinned` is that its `where` is `{ userId }` (all items).
-  Generalize it with an optional pinned-only filter (e.g. add `isPinned?: boolean`
-  / `pinnedOnly` to the options so `where` becomes `{ userId, isPinned: true }`),
-  the same way `/recent` extended it with `pinnedFirst`. No new query function.
-  Then drop `<Pagination>` into the page. `ITEMS_PER_PAGE` (21).
-- **Favorites sort:** decided **server sort via URL** (`?sort=<key>-<dir>`,
-  default date-desc kept clean). Sort applies across the whole favorites set on
-  the server; it persists across tab + page links. The `favorites-sort.ts` URL
-  helpers (`parseFavoriteSort`/`serialize`/`isDefault`) already exist.
-- Reuse existing helpers — do not fork the pagination logic. Add unit tests for
-  any new server query/util per the project's test scope (server actions +
-  utilities only).
-
-## Tabs Design
-
-- **URL-driven tabs rendered as links** (no client tab state). Keeps the page
-  server-rendered and consistent with the existing link-based sort + pagination.
-  A small shared tab-bar component renders `<Link>`s styled as tabs; the active
-  tab is highlighted; each tab label carries its count (e.g. `Items 23`).
-- **Params:** `?tab=items|collections` selects the visible list. Only one list
-  shows at a time, so a **single `?page=`** param drives its pager (replaces the
-  old `itemsPage`/`collectionsPage` split). Default tab = items → clean URL when
-  omitted. Switching tabs resets to page 1 (drop `page`).
-- **Favorites extras:** the sort control stays and applies to whichever tab is
-  active; `?sort=` is preserved across tab switches and page links. Favorites
-  default tab could fall back to whichever section is non-empty if items is
-  empty (decide during impl; keep it simple).
-- **Empty handling:** if the whole page has nothing, show the existing global
-  empty state (no tabs). Otherwise both tabs render (an empty active tab shows a
-  small "nothing here" note).
-- **Pager wiring:** one `<Pagination baseHref=… pageParam="page" extraParams={{ tab, ...sort }} />`
-  per page. Query builder must carry `tab` (+ `sort` on favorites) on every link.
-
-### Already in place (reuse — pivot only touches the page/section UI)
-
-- `getAllItemsPaginated(page, { pinnedFirst, pinnedOnly })` — `pinnedOnly` added
-  for `/pinned` (done; `/pinned` paginates via `<Pagination baseHref="/pinned">`).
-- `getFavoritesPage(sort, itemsPage, collectionsPage)` — fetches the bounded
-  favorites set, sorts with shared `sortFavorite*`, slices each section with the
-  pure `paginateArray` util. **Signature may shrink to a single active
-  page/section** now that only one list paginates at a time.
-- Pure utils + tests: `paginateArray`, `parseFavoriteSort` & friends (263 tests
-  green; build passes). The two-pager `FavoritesList` and the two-pager `/recent`
-  page are the parts being **replaced** by the tabbed layout.
-
-### Done (tabbed layout implemented)
-
-- Shared underline tab-bar `ui/tab-nav.tsx` (link-styled, `role=tablist/tab`,
-  count per label, active accent underline) — used by `/favorites` and `/recent`.
-- Pure `parseListTab` + `ListTab` type in `lib/list-tabs.ts` (tests added).
-- `getFavoritesPage(sort, tab, page)` reshaped: paginates only the active tab to
-  `page`, slices the other to page 1 just for its badge count; returns
-  `activeTab` + both `Paginated` sections. `FavoritesList` is now a tabbed client
-  component (TabNav + single `<Pagination pageParam="page">`, sort control scoped
-  to the active tab). Favorites page picks the default tab (items, falling back to
-  collections when items is empty).
-- `/recent` rewritten to the same tabs (Recent Items / Recent Collections), single
-  `?page=` pager, `?tab=` selection; only the active tab's DB query uses `page`.
-- Params: `?tab=items|collections` (items omitted = clean URL), single `?page=`,
-  `?sort=` on favorites — all preserved across tab + page links; switching tabs
-  resets page. 268 tests green, `npm run build` clean, browser-verified on
-  `/favorites` and `/recent` (tab switch, per-tab pager, sort within tab).
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -143,3 +67,4 @@ In Progress
 - Pinned Page - protected /pinned route (AppShell, force-dynamic) listing all pinned items in the dashboard's ItemCard 3-col grid; reuses existing getPinnedItems() (ownership-scoped, updatedAt desc), click opens shared ItemDrawer, empty state, Pin icon button added to TopBar; pure reuse (no new server actions/utils → no new tests) (Completed)
 - All Items Route - protected /items route (uses existing items/layout AppShell, force-dynamic) listing every item the user owns regardless of type in the dashboard ItemCard 3-col grid → shared ItemDrawer; new getAllItemsPaginated(page) query (ownership-scoped, pinned-first then updatedAt desc, server-side count + skip/take, page clamped), Pagination, empty state; sidebar "All Items" row already pointed here; 4 tests (Completed)
 - Recently Used Page - protected /recent route (AppShell, force-dynamic) with Recent Items (ItemCard 3-col) + Recent Collections (CollectionCard 4-col) sections, each paginated independently; generalized getAllItemsPaginated with a {pinnedFirst} option (pure recency for /recent, pinned-first stays default for /items), reused getPaginatedCollections; Pagination gains pageParam/extraParams so ?itemsPage/?collectionsPage coexist and preserve each other; section-hide + global empty state; 1 test (Completed)
+- Pinned & Favorites/Recent Pagination - /pinned paginated by generalizing getAllItemsPaginated with a pinnedOnly filter (count + page both scoped to pinned); /favorites & /recent converted from stacked sections + dual pagers to Items/Collections underline tabs (new ui/tab-nav.tsx) with one URL-driven pager per active tab (?tab/?page); favorites sort moved server-side via ?sort applied across the whole set and preserved across tab+page links; new pure helpers paginateArray + lib/list-tabs.ts parseListTab + favorites-sort URL parse/serialize + getFavoritesPage(sort,tab,page); restyled favorites sort control (label vs options); 269 tests (Completed)
