@@ -157,14 +157,16 @@ export async function getAllItems(): Promise<DashboardItem[]> {
 }
 
 /**
- * A single page of every item the signed-in user owns, regardless of type, for
- * the All Items route. Pinned items surface first, then most recently updated.
- * Only the requested page is fetched (count + skip/take); the requested page is
+ * A single page of every item the signed-in user owns, regardless of type — the
+ * source data for the All Items route (`pinnedFirst`, the default) and the
+ * Recently Used page's items section (`pinnedFirst: false`, pure recency). Only
+ * the requested page is fetched (count + skip/take); the requested page is
  * clamped into range so a too-high `?page=` lands on the last page. Returns an
  * empty page when signed out.
  */
 export async function getAllItemsPaginated(
   page = 1,
+  { pinnedFirst = true }: { pinnedFirst?: boolean } = {},
 ): Promise<Paginated<DashboardItem>> {
   const user = await getSessionUser();
   if (!user) return { items: [], page: 1, totalPages: 1, totalCount: 0 };
@@ -176,8 +178,10 @@ export async function getAllItemsPaginated(
 
   const rows = await prisma.item.findMany({
     where,
-    // Pinned items surface at the top of the listing, then most recent first.
-    orderBy: [{ isPinned: "desc" }, { updatedAt: "desc" }],
+    // All Items surfaces pinned items first; Recently Used wants pure recency.
+    orderBy: pinnedFirst
+      ? [{ isPinned: "desc" }, { updatedAt: "desc" }]
+      : { updatedAt: "desc" },
     skip: pageOffset(current, ITEMS_PER_PAGE),
     take: ITEMS_PER_PAGE,
     select: itemSelect,

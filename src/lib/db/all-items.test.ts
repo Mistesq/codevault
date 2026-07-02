@@ -53,6 +53,21 @@ describe("getAllItemsPaginated", () => {
     expect(result.totalCount).toBe(ITEMS_PER_PAGE * 2 + 1);
   });
 
+  it("orders by pure recency (no pinned-first) when pinnedFirst is false", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1" });
+    item.count.mockResolvedValue(1);
+    item.findMany.mockResolvedValue([]);
+
+    await getAllItemsPaginated(1, { pinnedFirst: false });
+
+    expect(item.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user_1" },
+        orderBy: { updatedAt: "desc" },
+      }),
+    );
+  });
+
   it("clamps a too-high page to the last page", async () => {
     getSessionUser.mockResolvedValue({ id: "user_1" });
     item.count.mockResolvedValue(5); // one page
