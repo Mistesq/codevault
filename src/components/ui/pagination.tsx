@@ -9,6 +9,12 @@ interface PaginationProps {
   totalPages: number;
   // Base path without a query string, e.g. "/items/snippets" or "/collections".
   baseHref: string;
+  // Query param carrying the page number. Defaults to "page"; override when a
+  // route has more than one independent pager (e.g. "itemsPage").
+  pageParam?: string;
+  // Other query params to preserve on every link — lets a second pager on the
+  // same route keep its position while this one navigates.
+  extraParams?: Record<string, string | number>;
 }
 
 const cellBase =
@@ -20,10 +26,25 @@ const cellBase =
  * nothing when there's a single page. Designed for server components — page
  * navigation is plain links carrying `?page=N` (page 1 stays a clean URL).
  */
-export function Pagination({ page, totalPages, baseHref }: PaginationProps) {
+export function Pagination({
+  page,
+  totalPages,
+  baseHref,
+  pageParam = "page",
+  extraParams,
+}: PaginationProps) {
   if (totalPages <= 1) return null;
 
-  const hrefFor = (p: number) => (p <= 1 ? baseHref : `${baseHref}?page=${p}`);
+  const hrefFor = (p: number) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(extraParams ?? {})) {
+      params.set(key, String(value));
+    }
+    // Page 1 stays a clean URL for this param (it's just omitted).
+    if (p > 1) params.set(pageParam, String(p));
+    const qs = params.toString();
+    return qs ? `${baseHref}?${qs}` : baseHref;
+  };
   const tokens = getPageRange(page, totalPages);
 
   return (
