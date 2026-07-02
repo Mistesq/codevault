@@ -157,21 +157,26 @@ export async function getAllItems(): Promise<DashboardItem[]> {
 }
 
 /**
- * A single page of every item the signed-in user owns, regardless of type — the
- * source data for the All Items route (`pinnedFirst`, the default) and the
- * Recently Used page's items section (`pinnedFirst: false`, pure recency). Only
- * the requested page is fetched (count + skip/take); the requested page is
- * clamped into range so a too-high `?page=` lands on the last page. Returns an
- * empty page when signed out.
+ * A single page of the signed-in user's items — the source data for the All
+ * Items route (`pinnedFirst`, the default), the Recently Used page's items
+ * section (`pinnedFirst: false`, pure recency), and the Pinned page
+ * (`pinnedOnly: true`, only pinned items). Only the requested page is fetched
+ * (count + skip/take); the requested page is clamped into range so a too-high
+ * `?page=` lands on the last page. Returns an empty page when signed out.
  */
 export async function getAllItemsPaginated(
   page = 1,
-  { pinnedFirst = true }: { pinnedFirst?: boolean } = {},
+  {
+    pinnedFirst = true,
+    pinnedOnly = false,
+  }: { pinnedFirst?: boolean; pinnedOnly?: boolean } = {},
 ): Promise<Paginated<DashboardItem>> {
   const user = await getSessionUser();
   if (!user) return { items: [], page: 1, totalPages: 1, totalCount: 0 };
 
-  const where = { userId: user.id };
+  const where = pinnedOnly
+    ? { userId: user.id, isPinned: true }
+    : { userId: user.id };
   const totalCount = await prisma.item.count({ where });
   const totalPages = totalPagesFor(totalCount, ITEMS_PER_PAGE);
   const current = clampPage(page, totalPages);

@@ -31,6 +31,43 @@ export function defaultDirFor(key: FavoriteSortKey): FavoriteSortDir {
   return key === "date" ? "desc" : "asc";
 }
 
+const SORT_KEYS: FavoriteSortKey[] = ["name", "date", "type"];
+
+/**
+ * Serialize a sort into the `?sort=` URL value, e.g. `{ key: "name", dir:
+ * "asc" }` → `"name-asc"`.
+ */
+export function serializeFavoriteSort(sort: FavoriteSort): string {
+  return `${sort.key}-${sort.dir}`;
+}
+
+/**
+ * Parse a `?sort=` value (e.g. `"name-asc"`) back into a FavoriteSort. Anything
+ * malformed, unknown, or missing (including arrays) falls back to the default
+ * sort, so the page always has a valid ordering.
+ */
+export function parseFavoriteSort(
+  value: string | string[] | undefined,
+): FavoriteSort {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const [key, dir] = (raw ?? "").split("-");
+  if (
+    SORT_KEYS.includes(key as FavoriteSortKey) &&
+    (dir === "asc" || dir === "desc")
+  ) {
+    return { key: key as FavoriteSortKey, dir };
+  }
+  return DEFAULT_FAVORITE_SORT;
+}
+
+/** Whether a sort is the default (date desc) — used to keep URLs clean. */
+export function isDefaultFavoriteSort(sort: FavoriteSort): boolean {
+  return (
+    sort.key === DEFAULT_FAVORITE_SORT.key &&
+    sort.dir === DEFAULT_FAVORITE_SORT.dir
+  );
+}
+
 // Case-insensitive name compare.
 function byName(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: "base" });
