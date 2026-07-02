@@ -1,16 +1,24 @@
-# Current Feature
+# Current Feature: Homepage (App)
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Replace the placeholder `/` route (`src/app/page.tsx`) with the real marketing homepage, rebuilding the static `prototypes/homepage/` prototype as React components (Tailwind v4 + shadcn + lucide-react), faithful to its layout, copy, spacing, and animations.
+- Rebuild all 7 sections in order: Nav, Hero (chaos → arrow → dashboard visual), Features (6 cards), AI (2-col demo), Pricing (Free/Pro + Monthly/Yearly toggle), CTA, Footer.
+- Preserve prototype behavior: chaos rAF animation (drift/wall-bounce/cursor-repel/pulse, pauses off-screen), arrow pulse, scroll-reveal (IntersectionObserver), navbar opacity-on-scroll, pricing toggle, footer year, full `prefers-reduced-motion` fallback, responsive stacking.
+- Server component page calls `auth()` and composes section components under `src/components/home/`; push `"use client"` down to only interactive leaves (`ChaosField`, `PricingToggle`, minimal scroll utility).
+- Wire all links: Sign in → `/sign-in`, Get started/Upgrade → `/register`, anchors to `#features`/`#ai`/`#pricing`; session-aware nav swaps Sign in + Get started for a single **Dashboard** button when `auth()` has a session.
+- Reuse existing tokens/helpers (`globals.css` tokens, `TypeIcon`/`getTypeIcon`, `--c` custom-property pattern); port only non-mappable CSS (keyframes, chaos/dashboard-replica classes) into a marked homepage section of `globals.css`. Set page `title`/`description`.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Prototype at `prototypes/homepage/` (index.html/styles.css/script.js) is the visual source of truth — keep it in place as reference.
+- **Constraints:** No new server actions, DB queries, or dependencies. Only data touch is `auth()`. No Stripe/upgrade flow (Pricing → `/register`). No new Resources/Company pages (footer placeholders stay `#`).
+- Item-type colors only in dashboard preview + type-icon accents — blue accent + neutrals for generic marketing chrome (anti-generic rule). Drive per-type color via shared map + `style={{ "--c": color }}`.
+- **Testing:** No new logic → no new unit tests. Verify visually vs prototype (desktop + mobile), confirm animations + reduced-motion, run `npm run build` + `npm run lint`.
 
 ## History
 
