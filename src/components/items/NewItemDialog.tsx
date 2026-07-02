@@ -72,10 +72,14 @@ export function NewItemDialog({
   collections = [],
   defaultType = DEFAULT_TYPE,
   triggerLabel = "New Item",
+  compactOnMobile = false,
 }: {
   collections?: SelectableCollection[];
   defaultType?: CreateItemType;
   triggerLabel?: string;
+  // When true, the text label is hidden below `sm` (icon-only), used in the
+  // space-constrained dashboard top bar.
+  compactOnMobile?: boolean;
 } = {}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -171,9 +175,13 @@ export function NewItemDialog({
         if (!next) reset();
       }}
     >
-      <DialogTrigger render={<Button className="shrink-0" />}>
+      <DialogTrigger
+        render={<Button className="shrink-0" aria-label={triggerLabel} />}
+      >
         <Plus className="size-4" />
-        {triggerLabel}
+        <span className={cn(compactOnMobile && "hidden sm:inline")}>
+          {triggerLabel}
+        </span>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>

@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { createCollection } from "@/actions/collections";
 
 /**
@@ -25,7 +26,13 @@ import { createCollection } from "@/actions/collections";
  * toasts, closes, resets, and refreshes so the dashboard cards and sidebar
  * counts pick up the new collection.
  */
-export function NewCollectionDialog() {
+export function NewCollectionDialog({
+  compactOnMobile = false,
+}: {
+  // When true, the text label is hidden below `sm` (icon-only), used in the
+  // space-constrained dashboard top bar.
+  compactOnMobile?: boolean;
+} = {}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -81,9 +88,19 @@ export function NewCollectionDialog() {
         if (!next) reset();
       }}
     >
-      <DialogTrigger render={<Button variant="outline" className="shrink-0" />}>
+      <DialogTrigger
+        render={
+          <Button
+            variant="outline"
+            className="shrink-0"
+            aria-label="New Collection"
+          />
+        }
+      >
         <FolderPlus className="size-4" />
-        New Collection
+        <span className={cn(compactOnMobile && "hidden sm:inline")}>
+          New Collection
+        </span>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
