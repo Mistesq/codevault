@@ -1,16 +1,47 @@
-# Current Feature
+# Current Feature — Homepage Marketing Mockup
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Build a static marketing homepage prototype at `prototypes/homepage/` (`index.html`, `styles.css`, `script.js`).
+- Visually match the REAL CodeVault dashboard: layered near-black surfaces, neutral chrome, thin item-type color accents. Human-designed feel, not generic AI marketing.
+- Single brand accent = **Blue `#3b82f6`** for marketing chrome (CTA, one highlight per section, interactive states). No gradients anywhere.
+- Item-type colors (from `prisma/seed.ts`) used ONLY inside product UI (dashboard preview, item cards, tag demo) as thin left-border stripes + tinted leading lucide icons — never as generic marketing decoration.
+- Sections: fixed Nav, asymmetric Hero (chaos → arrow → dashboard preview), 6 Feature cards, AI section (2-col, code-editor tag demo), Pricing (Free vs Pro, monthly/yearly toggle), CTA, Footer.
+- Hero keeps the bespoke chaos animation: 8 scattered-knowledge icons floating/bouncing/pulsing + repelling from mouse cursor (requestAnimationFrame).
+- Responsive: hero + grids collapse cleanly to single column; arrow rotates 90° on mobile.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+**Item-type palette (match exactly, source = `prisma/seed.ts`), sidebar order snippet → prompt → command → note → file → image → url; singular labels; File & Image carry a PRO badge:**
+
+| Type | Icon | Hex |
+| --- | --- | --- |
+| Snippet | `Code` | `#3b82f6` blue |
+| Prompt | `Sparkles` | `#8b5cf6` violet |
+| Command | `Terminal` | `#f97316` orange |
+| Note | `StickyNote` | `#fde047` yellow |
+| File | `File` | `#6b7280` gray |
+| Image | `Image` | `#ec4899` pink |
+| URL | `Link` | `#10b981` green |
+
+**Anti-Generic Constraints (highest priority — override section descriptions on conflict):**
+
+1. Match the product, don't invent (palette, radii, spacing, typography, left-border stripe accent).
+2. One accent (blue), not a rainbow. Item-type color only inside product UI.
+3. No gradient text anywhere — solid headline colors.
+4. No decorative all-caps kickers/eyebrows; no ★ emoji badges. Quiet neutral labels only.
+5. No glow/halo/neon bloom on buttons, cards, or CTA. Flat and confident.
+6. Break section rhythm — left-align ≥1 heading; use text-left/visual-right composition (AI section is the reference).
+7. Real content over skeletons — realistic items/tags/types in hero dashboard.
+8. Typography with character — match product UI font; confident grotesk display face for headings, tight negative letter-spacing, consistent scale. Avoid default Inter look.
+
+**Reference:** dashboard screenshots in `context/screenshots/`. Feature cards use single neutral border differentiated by icon/copy (reuse real lucide icons where a card maps to a type). AI capabilities = Auto-tagging, AI summaries, Explain Code, Prompt optimization (small cards / clean two-line, NOT checkmark+bold+em-dash list). Pricing: Free $0 / 50 items / 3 collections vs Pro $8/mo ($72/yr) unlimited + AI; "Most Popular" badge, no glow.
+
+Full spec: `context/features/homepage-mockup-spec.md`.
 
 ## History
 
