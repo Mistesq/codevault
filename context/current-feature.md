@@ -1,24 +1,16 @@
-# Current Feature: Homepage (App)
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Replace the placeholder `/` route (`src/app/page.tsx`) with the real marketing homepage, rebuilding the static `prototypes/homepage/` prototype as React components (Tailwind v4 + shadcn + lucide-react), faithful to its layout, copy, spacing, and animations.
-- Rebuild all 7 sections in order: Nav, Hero (chaos → arrow → dashboard visual), Features (6 cards), AI (2-col demo), Pricing (Free/Pro + Monthly/Yearly toggle), CTA, Footer.
-- Preserve prototype behavior: chaos rAF animation (drift/wall-bounce/cursor-repel/pulse, pauses off-screen), arrow pulse, scroll-reveal (IntersectionObserver), navbar opacity-on-scroll, pricing toggle, footer year, full `prefers-reduced-motion` fallback, responsive stacking.
-- Server component page calls `auth()` and composes section components under `src/components/home/`; push `"use client"` down to only interactive leaves (`ChaosField`, `PricingToggle`, minimal scroll utility).
-- Wire all links: Sign in → `/sign-in`, Get started/Upgrade → `/register`, anchors to `#features`/`#ai`/`#pricing`; session-aware nav swaps Sign in + Get started for a single **Dashboard** button when `auth()` has a session.
-- Reuse existing tokens/helpers (`globals.css` tokens, `TypeIcon`/`getTypeIcon`, `--c` custom-property pattern); port only non-mappable CSS (keyframes, chaos/dashboard-replica classes) into a marked homepage section of `globals.css`. Set page `title`/`description`.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Prototype at `prototypes/homepage/` (index.html/styles.css/script.js) is the visual source of truth — keep it in place as reference.
-- **Constraints:** No new server actions, DB queries, or dependencies. Only data touch is `auth()`. No Stripe/upgrade flow (Pricing → `/register`). No new Resources/Company pages (footer placeholders stay `#`).
-- Item-type colors only in dashboard preview + type-icon accents — blue accent + neutrals for generic marketing chrome (anti-generic rule). Drive per-type color via shared map + `style={{ "--c": color }}`.
-- **Testing:** No new logic → no new unit tests. Verify visually vs prototype (desktop + mobile), confirm animations + reduced-motion, run `npm run build` + `npm run lint`.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -77,3 +69,4 @@ In Progress
 - Recently Used Page - protected /recent route (AppShell, force-dynamic) with Recent Items (ItemCard 3-col) + Recent Collections (CollectionCard 4-col) sections, each paginated independently; generalized getAllItemsPaginated with a {pinnedFirst} option (pure recency for /recent, pinned-first stays default for /items), reused getPaginatedCollections; Pagination gains pageParam/extraParams so ?itemsPage/?collectionsPage coexist and preserve each other; section-hide + global empty state; 1 test (Completed)
 - Pinned & Favorites/Recent Pagination - /pinned paginated by generalizing getAllItemsPaginated with a pinnedOnly filter (count + page both scoped to pinned); /favorites & /recent converted from stacked sections + dual pagers to Items/Collections underline tabs (new ui/tab-nav.tsx) with one URL-driven pager per active tab (?tab/?page); favorites sort moved server-side via ?sort applied across the whole set and preserved across tab+page links; new pure helpers paginateArray + lib/list-tabs.ts parseListTab + favorites-sort URL parse/serialize + getFavoritesPage(sort,tab,page); restyled favorites sort control (label vs options); 269 tests (Completed)
 - Homepage Marketing Mockup - static prototype at prototypes/homepage/ (index.html/styles.css/script.js, no build step) mirroring dashboard chrome (near-black oklch ramp→hex, Geist, blue accent, Vault brand mark); nav (opacity-on-scroll), asymmetric chaos→arrow→dashboard hero with requestAnimationFrame chaos animation (drift/wall-bounce/cursor-repel/pulse) + faithful dashboard preview (type-color stripes + tinted icons + PRO badges), colored feature-icon cards, AI tag demo, pricing monthly/yearly toggle, CTA, footer; responsive (arrow rotates 90° on mobile) + prefers-reduced-motion; verified via Playwright (Completed)
+- Homepage (App) - prototype rebuilt as the real / route: server page.tsx calls auth() + composes sections under components/home/, client leaves only HomeNav (scroll)/ChaosField (rAF)/PricingToggle/reusable Reveal; Tailwind v4 + shadcn Button + lucide throughout, homepage tokens + arrow/tag keyframes in globals.css @theme, item-type colors via shared map + --c; session-aware nav (Dashboard vs Sign in/Get started), 7 faithful sections, responsive + reduced-motion; no new deps/actions/queries; build+lint clean, Playwright-verified (Completed)
