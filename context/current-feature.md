@@ -2,21 +2,13 @@
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Point the existing **"Upgrade to Pro"** sidebar button (Free users only) at a new **/upgrade** page instead of leaving it inert / going straight to Stripe checkout.
-- The /upgrade page presents a Free-vs-Pro plan comparison (inspired by the reference screenshot but using CodeVault's own tokens): Monthly/Yearly `Switch`, check/X feature lists, "Recommended" Pro card, bottom-aligned CTAs, and a live usage line.
-- User can pick **$8 / month** or **$72 / year**, then click one CTA to start Stripe checkout.
-- Pro users who reach /upgrade are redirected to /settings.
-- Free users visiting **/items/files** or **/items/images** are redirected to /upgrade (replaces the old `ProTypeUpsell` inline page, now deleted).
+<!-- Bullet points of what success looks like -->
 
 ## Notes
-
-- Reused the sidebar footer's existing `Sparkles` "Upgrade to Pro" button (SidebarNav) — made it a `Link` to `/upgrade` that closes the mobile drawer. No new top-bar button.
-- /upgrade lives inside the app shell (own `layout.tsx` wrapping AppShell) — use theme tokens, not homepage `h-*` tokens.
-- Reuse `createCheckoutSession` action; new `UpgradePlans` client leaf owns the monthly/yearly toggle + checkout redirect. Existing settings `BillingSection`/`UpgradeButtons` unchanged.
 
 <!-- Additional context, constraints, or details from spec -->
 
@@ -83,3 +75,4 @@ In Progress
 - Stripe Integration Phase 1 (Core Infrastructure) - server-side billing foundation (stripe SDK v22, no @stripe/stripe-js); server-only lazy getStripe() singleton + isStripeConfigured() guard (client.ts, mirrors r2/resend); usage-limits plan.ts (FREE_LIMITS, priceIdForInterval/intervalForPriceId env lookups, isAtItem/CollectionLimit predicates, shared PlanLimitError); checkoutSchema (Zod); createCheckoutSession/createPortalSession actions (auth + isStripeConfigured guards, reject already-Pro, reuse stripeCustomerId or customer_email, client_reference_id + subscription_data.metadata.userId, getAppUrl success/cancel urls); STRIPE_PRICE_MONTHLY/YEARLY env keys (aligned .env.example); webhooks/gating/UI deferred to Phase 2; 25 tests, 294 total, build+lint clean (Completed)
 - Stripe Integration Phase 2 (Webhooks, Gating & UI) - public POST /api/webhooks/stripe (Node runtime, raw-body constructEvent, 503/400 guards, handles checkout.session.completed + customer.subscription.*) → syncSubscriptionToUser reconciles User.isPro idempotently (resolve by stripeCustomerId, metadata.userId fallback, nulls sub id when inactive); Free-tier gating in createItem (50) / createCollection (3) via PlanLimitError + File-branch Pro gate (images free), actions map to PLAN_LIMIT_MESSAGES upgrade CTAs; /api/upload 402 for non-Pro file kind; Billing card on /settings (server BillingSection + client UpgradeButtons/ManageSubscriptionButton + CheckoutStatusToast); JWT jwt() re-reads isPro + Session/JWT type augmentation; 318 tests, build+lint clean (Completed)
 - Gate File & Image behind Pro - Free users hitting /items/files or /items/images now get a ProTypeUpsell upgrade page (isProItemType/PRO_ITEM_TYPES predicate in plan.ts, reuses UpgradeButtons); image uploads made Pro-only across the board (reverses "images free"): /api/upload 402s both kinds + createItem FILE/IMAGE branch throws new PlanLimitError("image"), billing/spec copy synced to "no uploads on Free"; 321 tests, build+lint clean (Completed)
+- Upgrade Page - new /upgrade route (own layout → AppShell, force-dynamic) with a Free-vs-Pro comparison: Monthly/Yearly Switch, check/X feature lists, "Recommended" Pro card, live usage line (getProfileData counts vs FREE_LIMITS), homepage-blue (h-accent) accents; UpgradePlans client leaf owns the toggle + createCheckoutSession redirect; wired the sidebar's existing "Upgrade to Pro" button to /upgrade (closes mobile drawer); Free users on /items/files & /items/images now redirect("/upgrade") (ProTypeUpsell deleted); Pro users on /upgrade redirect to /settings; 321 tests, build+lint clean (Completed)
