@@ -1,10 +1,9 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { ItemCard } from "@/components/dashboard/ItemCard";
 import { FileRow } from "@/components/items/FileRow";
 import { ImageCard } from "@/components/items/ImageCard";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
-import { ProTypeUpsell } from "@/components/items/ProTypeUpsell";
 import { Pagination } from "@/components/ui/pagination";
 import { isProItemType } from "@/lib/billing/plan";
 import { getItemsByTypeSlug } from "@/lib/db/items";
@@ -46,11 +45,9 @@ export default async function ItemsByTypePage({
 
   const { type, items, totalCount, totalPages } = result;
 
-  // File & Image listings are Pro-only — Free users get an upgrade page.
+  // File & Image listings are Pro-only — send Free users to the upgrade page.
   if (isProItemType(type.name) && !user?.isPro) {
-    return (
-      <ProTypeUpsell typeName={type.name} icon={type.icon} color={type.color} />
-    );
+    redirect("/upgrade");
   }
   // Pluralize the capitalized type label: "snippet" -> "Snippets", "URL" -> "URLs".
   const heading = `${typeLabel(type.name)}s`;

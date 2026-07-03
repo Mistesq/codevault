@@ -2,13 +2,21 @@
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Point the existing **"Upgrade to Pro"** sidebar button (Free users only) at a new **/upgrade** page instead of leaving it inert / going straight to Stripe checkout.
+- The /upgrade page presents a Free-vs-Pro plan comparison (inspired by the reference screenshot but using CodeVault's own tokens): Monthly/Yearly `Switch`, check/X feature lists, "Recommended" Pro card, bottom-aligned CTAs, and a live usage line.
+- User can pick **$8 / month** or **$72 / year**, then click one CTA to start Stripe checkout.
+- Pro users who reach /upgrade are redirected to /settings.
+- Free users visiting **/items/files** or **/items/images** are redirected to /upgrade (replaces the old `ProTypeUpsell` inline page, now deleted).
 
 ## Notes
+
+- Reused the sidebar footer's existing `Sparkles` "Upgrade to Pro" button (SidebarNav) — made it a `Link` to `/upgrade` that closes the mobile drawer. No new top-bar button.
+- /upgrade lives inside the app shell (own `layout.tsx` wrapping AppShell) — use theme tokens, not homepage `h-*` tokens.
+- Reuse `createCheckoutSession` action; new `UpgradePlans` client leaf owns the monthly/yearly toggle + checkout redirect. Existing settings `BillingSection`/`UpgradeButtons` unchanged.
 
 <!-- Additional context, constraints, or details from spec -->
 
