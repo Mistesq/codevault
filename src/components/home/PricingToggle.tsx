@@ -65,7 +65,7 @@ export function PricingToggle() {
               aria-selected={period === p}
               onClick={() => setPeriod(p)}
               className={cn(
-                "cursor-pointer rounded-full px-4 py-[0.45rem] text-[0.85rem] font-medium capitalize transition-colors",
+                "cursor-pointer rounded-full px-5 py-[0.6rem] text-[0.85rem] font-medium capitalize transition-colors",
                 period === p ? "bg-h-surface-3 text-h-text" : "text-h-muted",
               )}
             >
@@ -97,7 +97,7 @@ export function PricingToggle() {
 
         {/* Pro */}
         <article className="relative rounded-[1rem] border border-h-accent bg-h-surface-2 p-7">
-          <div className="absolute -top-[0.7rem] right-6 rounded-full bg-h-accent px-[0.7rem] py-1 text-[0.72rem] font-semibold text-white">
+          <div className="absolute -top-[0.7rem] right-6 rounded-full bg-h-accent-strong px-[0.7rem] py-1 text-[0.72rem] font-semibold text-white">
             Most popular
           </div>
           <div>

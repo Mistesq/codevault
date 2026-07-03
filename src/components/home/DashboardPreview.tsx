@@ -133,7 +133,7 @@ export function DashboardPreview() {
                 <span className="grid size-5 place-items-center rounded-[0.35rem] bg-[color-mix(in_srgb,var(--c)_15%,transparent)] text-[color:var(--c)]">
                   <TypeIcon name={card.icon} className="size-[12px]" />
                 </span>
-                <h4 className="flex-1 truncate text-[11px] font-semibold">{card.title}</h4>
+                <p className="flex-1 truncate text-[11px] font-semibold">{card.title}</p>
                 {card.fav && (
                   <Star
                     className="size-[12px]"

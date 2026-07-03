@@ -29,8 +29,8 @@ import { createCollection } from "@/actions/collections";
 export function NewCollectionDialog({
   compactOnMobile = false,
 }: {
-  // When true, the text label is hidden below `sm` (icon-only), used in the
-  // space-constrained dashboard top bar.
+  // When true, the text label is hidden below `lg` (icon-only), used in the
+  // space-constrained dashboard top bar (the md range shows the brand block).
   compactOnMobile?: boolean;
 } = {}) {
   const router = useRouter();
@@ -98,7 +98,7 @@ export function NewCollectionDialog({
         }
       >
         <FolderPlus className="size-4" />
-        <span className={cn(compactOnMobile && "hidden sm:inline")}>
+        <span className={cn(compactOnMobile && "hidden lg:inline")}>
           New Collection
         </span>
       </DialogTrigger>

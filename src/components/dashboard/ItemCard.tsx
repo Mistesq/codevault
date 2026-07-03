@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
+import type { CSSProperties, MouseEvent } from "react";
 import { useState } from "react";
 import { Check, Copy, ExternalLink, Pin, Star } from "lucide-react";
 
@@ -43,9 +43,9 @@ function QuickCopyButton({ item }: { item: DashboardItem }) {
       type="button"
       onClick={handleCopy}
       aria-label={copied ? "Copied" : "Copy"}
-      className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <Icon className={cn("size-3.5", copied && "text-emerald-500")} />
+      <Icon className={cn("size-4", copied && "text-emerald-500")} />
     </button>
   );
 }
@@ -70,7 +70,7 @@ function FavoriteButton({ item }: { item: DashboardItem }) {
       disabled={pending}
       aria-label={favorite ? "Remove favorite" : "Favorite"}
       aria-pressed={favorite}
-      className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <Star
         className={cn(
@@ -122,22 +122,23 @@ export function ItemCard({ item }: { item: DashboardItem }) {
     ? { borderColor: item.type.color }
     : undefined;
 
-  function handleKeyDown(e: KeyboardEvent<HTMLElement>) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      openItem(item);
-    }
-  }
-
+  // The card opens the item drawer via a full-bleed <button> overlay (absolute,
+  // covering the card) so clicking anywhere opens it — except the Copy/Favorite
+  // controls, which sit above the overlay (z-index) and handle their own clicks.
+  // This keeps those controls as siblings of the open-target rather than nested
+  // inside another interactive element (invalid, fails a11y `nested-interactive`).
   return (
     <article
       style={style}
-      role="button"
-      tabIndex={0}
-      onClick={() => openItem(item)}
-      onKeyDown={handleKeyDown}
-      className="flex cursor-pointer flex-col gap-3 rounded-xl border-l-2 border-border bg-card p-4 transition-colors hover:border-ring/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="group relative flex flex-col gap-3 rounded-xl border-l-2 border-border bg-card p-4 transition-colors hover:border-ring/40 focus-within:ring-2 focus-within:ring-ring"
     >
+      <button
+        type="button"
+        onClick={() => openItem(item)}
+        aria-label={`Open ${item.title}`}
+        className="absolute inset-0 z-0 cursor-pointer rounded-xl focus-visible:outline-none"
+      />
+
       <div className="flex items-start gap-3">
         {/* Inline color is data-driven (per item type) so it can't be a static class. */}
         <span
@@ -149,7 +150,7 @@ export function ItemCard({ item }: { item: DashboardItem }) {
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <h3 className="truncate text-sm font-semibold">{item.title}</h3>
+            <p className="truncate text-sm font-semibold">{item.title}</p>
             {item.isPinned && (
               <Pin className="size-3.5 shrink-0 text-muted-foreground" />
             )}
@@ -161,7 +162,7 @@ export function ItemCard({ item }: { item: DashboardItem }) {
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="relative z-10 flex shrink-0 items-center gap-1">
           <QuickCopyButton item={item} />
           <FavoriteButton item={item} />
         </div>

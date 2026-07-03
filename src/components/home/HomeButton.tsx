@@ -12,7 +12,7 @@ type HomeButtonVariant = "primary" | "outline" | "ghost";
 type HomeButtonSize = "md" | "lg";
 
 const VARIANTS: Record<HomeButtonVariant, string> = {
-  primary: "bg-h-accent text-white hover:bg-h-accent-hover",
+  primary: "bg-h-accent-strong text-white hover:bg-h-accent-strong-hover",
   outline:
     "border-h-border-strong bg-transparent text-h-text hover:border-h-dim hover:bg-h-surface-2",
   ghost: "bg-transparent text-h-muted hover:bg-h-surface-2 hover:text-h-text",

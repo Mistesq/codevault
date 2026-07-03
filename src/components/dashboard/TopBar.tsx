@@ -65,7 +65,7 @@ export function TopBar({
           type="button"
           onClick={() => setMobileOpen(true)}
           aria-label="Open sidebar"
-          className="shrink-0 cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+          className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
         >
           <Menu className="size-5" />
         </button>
@@ -99,12 +99,13 @@ export function TopBar({
         </button>
 
         {/* Pinned & Favorites also have dedicated sidebar links, so the top-bar
-            shortcuts are hidden on mobile to save room. */}
+            shortcuts stay hidden until lg — through the md range the 256px brand
+            block appears and would otherwise crush the search field. */}
         <Link
           href="/pinned"
           aria-label="Pinned"
           title="Pinned"
-          className="hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex"
+          className="hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex"
         >
           <Pin className="size-4" />
         </Link>
@@ -113,7 +114,7 @@ export function TopBar({
           href="/favorites"
           aria-label="Favorites"
           title="Favorites"
-          className="hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex"
+          className="hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex"
         >
           <Star className="size-4" />
         </Link>

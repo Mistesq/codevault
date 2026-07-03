@@ -77,8 +77,8 @@ export function NewItemDialog({
   collections?: SelectableCollection[];
   defaultType?: CreateItemType;
   triggerLabel?: string;
-  // When true, the text label is hidden below `sm` (icon-only), used in the
-  // space-constrained dashboard top bar.
+  // When true, the text label is hidden below `lg` (icon-only), used in the
+  // space-constrained dashboard top bar (the md range shows the brand block).
   compactOnMobile?: boolean;
 } = {}) {
   const router = useRouter();
@@ -179,7 +179,7 @@ export function NewItemDialog({
         render={<Button className="shrink-0" aria-label={triggerLabel} />}
       >
         <Plus className="size-4" />
-        <span className={cn(compactOnMobile && "hidden sm:inline")}>
+        <span className={cn(compactOnMobile && "hidden lg:inline")}>
           {triggerLabel}
         </span>
       </DialogTrigger>

@@ -46,7 +46,7 @@ export function AiSection() {
                 <Icon className="size-[17px]" />
               </span>
               <div>
-                <h4 className="mb-[0.15rem] text-[0.95rem]">{title}</h4>
+                <p className="mb-[0.15rem] text-[0.95rem] font-semibold">{title}</p>
                 <p className="text-[0.85rem] leading-[1.45] text-h-muted">{desc}</p>
               </div>
             </div>

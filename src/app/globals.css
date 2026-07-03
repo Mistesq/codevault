@@ -19,9 +19,14 @@
   --color-h-border-strong: rgba(255, 255, 255, 0.14);
   --color-h-text: #fafafa;
   --color-h-muted: #a1a1a1;
-  --color-h-dim: #6f6f6f;
+  --color-h-dim: #8a8a8a;
   --color-h-accent: #3b82f6;
   --color-h-accent-hover: #2f6fe0;
+  /* Deeper blue for surfaces that carry white text (buttons, badges): white on
+   * #3b82f6 is only 3.67:1, below AA — these clear 4.5:1. The lighter --color-h-accent
+   * stays for accent text/icons/borders, where it passes as text on the dark chrome. */
+  --color-h-accent-strong: #2563eb;
+  --color-h-accent-strong-hover: #1d4ed8;
   --color-h-accent-soft: rgba(59, 130, 246, 0.12);
   --color-h-brand: oklch(0.488 0.243 264.376);
 
