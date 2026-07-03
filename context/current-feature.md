@@ -2,13 +2,28 @@
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Free (non-Pro) users who visit `/items/files` or `/items/images` see a Pro
+  upgrade page instead of the item listing.
+- Pro users see the normal listing unchanged.
+- Image uploads are now Pro-only across the board (reverses the earlier
+  "images are free" decision): the `/items/images` & `/items/files` listings,
+  the `POST /api/upload` guard, and the `createItem` FILE/IMAGE branch all gate
+  on `isPro`.
 
 ## Notes
+
+- Domain predicate `isProItemType(name)` + `PRO_ITEM_TYPES` in
+  `src/lib/billing/plan.ts`; new `image` `PlanLimitResource` + CTA message.
+- `ProTypeUpsell` component (reuses `UpgradeButtons`) rendered from
+  `src/app/items/[type]/page.tsx` when `isProItemType(type.name) && !isPro`.
+- Upload gating: `POST /api/upload` now 402s both `file` and `image` kinds for
+  Free users; `createItem` throws `PlanLimitError` for both.
+- Copy synced: `BillingSection` free-plan blurb + `project-overview.md`
+  monetization table (Free = no uploads, Pro = file & image uploads).
 
 <!-- Additional context, constraints, or details from spec -->
 

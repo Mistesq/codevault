@@ -276,8 +276,8 @@ erDiagram
 
 | Plan    | Price           | Limits                  | Features                                        |
 | ------- | --------------- | ----------------------- | ----------------------------------------------- |
-| 🆓 Free | $0              | 50 items, 3 collections | Basic search, image uploads, no AI              |
-| ⭐ Pro  | $8/mo or $72/yr | Unlimited               | File uploads, custom types, AI features, export |
+| 🆓 Free | $0              | 50 items, 3 collections | Basic search, no uploads, no AI                 |
+| ⭐ Pro  | $8/mo or $72/yr | Unlimited               | File & image uploads, custom types, AI, export  |
 
 > Billing via [Stripe](https://stripe.com) subscriptions, with webhooks syncing plan state back to the `User` model.
 

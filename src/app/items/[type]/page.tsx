@@ -4,9 +4,12 @@ import { ItemCard } from "@/components/dashboard/ItemCard";
 import { FileRow } from "@/components/items/FileRow";
 import { ImageCard } from "@/components/items/ImageCard";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
+import { ProTypeUpsell } from "@/components/items/ProTypeUpsell";
 import { Pagination } from "@/components/ui/pagination";
+import { isProItemType } from "@/lib/billing/plan";
 import { getItemsByTypeSlug } from "@/lib/db/items";
 import { getSelectableCollections } from "@/lib/db/collections";
+import { getSessionUser } from "@/lib/db/user";
 import { parsePageParam } from "@/lib/pagination";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import { CREATE_ITEM_TYPES, type CreateItemType } from "@/lib/validations/items";
@@ -34,13 +37,21 @@ export default async function ItemsByTypePage({
   const { type: slug } = await params;
   const page = parsePageParam((await searchParams).page);
 
-  const [result, collections] = await Promise.all([
+  const [result, collections, user] = await Promise.all([
     getItemsByTypeSlug(slug, page),
     getSelectableCollections(),
+    getSessionUser(),
   ]);
   if (!result) notFound();
 
   const { type, items, totalCount, totalPages } = result;
+
+  // File & Image listings are Pro-only — Free users get an upgrade page.
+  if (isProItemType(type.name) && !user?.isPro) {
+    return (
+      <ProTypeUpsell typeName={type.name} icon={type.icon} color={type.color} />
+    );
+  }
   // Pluralize the capitalized type label: "snippet" -> "Snippets", "URL" -> "URLs".
   const heading = `${typeLabel(type.name)}s`;
   const createType = toCreateType(type.name);

@@ -36,19 +36,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid upload kind." }, { status: 400 });
   }
 
-  // File uploads are a Pro feature; image uploads stay free (per spec). The
-  // createItem FILE branch enforces the same rule as a second layer.
-  if (kind === "file") {
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { isPro: true },
-    });
-    if (!user?.isPro) {
-      return NextResponse.json(
-        { error: "File uploads are a Pro feature." },
-        { status: 402 },
-      );
-    }
+  // File & image uploads are a Pro feature. The createItem FILE/IMAGE branch
+  // enforces the same rule as a second layer.
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { isPro: true },
+  });
+  if (!user?.isPro) {
+    return NextResponse.json(
+      { error: `${kind === "image" ? "Image" : "File"} uploads are a Pro feature.` },
+      { status: 402 },
+    );
   }
 
   const file = formData.get("file");

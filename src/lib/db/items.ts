@@ -340,10 +340,10 @@ export async function createItem(
 
   const isFile = FILE_TYPE_NAMES.has(data.type);
 
-  // File uploads are Pro-only (images stay free). Mirrors the /api/upload guard
-  // so a forged createItem call can't bypass the route.
-  if (data.type === "file" && !user.isPro) {
-    throw new PlanLimitError("file");
+  // File & image uploads are Pro-only. Mirrors the /api/upload guard so a forged
+  // createItem call can't bypass the route.
+  if (isFile && !user.isPro) {
+    throw new PlanLimitError(data.type === "image" ? "image" : "file");
   }
 
   const created = await prisma.$transaction(async (tx) => {

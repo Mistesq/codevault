@@ -7,6 +7,17 @@ import "server-only";
 /** Free-tier caps from the project spec. Pro is unlimited. */
 export const FREE_LIMITS = { items: 50, collections: 3 } as const;
 
+/**
+ * System item types whose listing pages and uploads are Pro-only. Free users
+ * get an upgrade page instead of the `/items/files` and `/items/images` lists.
+ */
+export const PRO_ITEM_TYPES = ["file", "image"] as const;
+
+/** True when a system item type (by name) is gated behind Pro. */
+export function isProItemType(typeName: string): boolean {
+  return (PRO_ITEM_TYPES as readonly string[]).includes(typeName.toLowerCase());
+}
+
 export type BillingInterval = "monthly" | "yearly";
 
 /** Resolve the configured Stripe price id for a checkout interval, or null. */
@@ -41,11 +52,11 @@ export function isAtCollectionLimit(isPro: boolean, count: number): boolean {
 }
 
 /** What a PlanLimitError was raised for — drives the upgrade CTA message. */
-export type PlanLimitResource = "item" | "collection" | "file";
+export type PlanLimitResource = "item" | "collection" | "file" | "image";
 
 /**
- * Thrown by Phase 2 plan gating (createItem / createCollection / the Pro-only
- * FILE branch) when a Free user hits a cap or a Pro-only surface, so the calling
+ * Thrown by plan gating (createItem / createCollection / the Pro-only FILE &
+ * IMAGE branch) when a Free user hits a cap or a Pro-only surface, so the calling
  * action can map it to an "Upgrade to Pro" message distinct from other failures.
  * Defined here so both phases share one type.
  */
@@ -63,4 +74,5 @@ export const PLAN_LIMIT_MESSAGES: Record<PlanLimitResource, string> = {
   collection:
     "You've reached the Free plan's 3-collection limit. Upgrade to Pro for unlimited collections.",
   file: "File uploads are a Pro feature. Upgrade to Pro to attach files.",
+  image: "Image uploads are a Pro feature. Upgrade to Pro to upload images.",
 };

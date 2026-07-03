@@ -4,6 +4,7 @@ import {
   intervalForPriceId,
   isAtCollectionLimit,
   isAtItemLimit,
+  isProItemType,
   PLAN_LIMIT_MESSAGES,
   PlanLimitError,
   priceIdForInterval,
@@ -87,8 +88,23 @@ describe("PlanLimitError", () => {
   });
 
   it("has an upgrade CTA message for every gated resource", () => {
-    for (const resource of ["item", "collection", "file"] as const) {
+    for (const resource of ["item", "collection", "file", "image"] as const) {
       expect(PLAN_LIMIT_MESSAGES[resource]).toMatch(/pro/i);
+    }
+  });
+});
+
+describe("isProItemType", () => {
+  it("gates file and image types (case-insensitive)", () => {
+    expect(isProItemType("file")).toBe(true);
+    expect(isProItemType("image")).toBe(true);
+    expect(isProItemType("File")).toBe(true);
+    expect(isProItemType("IMAGE")).toBe(true);
+  });
+
+  it("does not gate the free text-based types", () => {
+    for (const name of ["snippet", "prompt", "note", "command", "URL"]) {
+      expect(isProItemType(name)).toBe(false);
     }
   });
 });
