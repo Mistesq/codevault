@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { buildObjectKey, isR2Configured, uploadToR2 } from "@/lib/r2";
 import { UPLOAD_CONSTRAINTS, validateUpload } from "@/lib/validations/file";
 import type { UploadKind } from "@/lib/validations/file";
@@ -33,6 +34,21 @@ export async function POST(request: Request) {
   const kind = kindRaw === "image" ? "image" : kindRaw === "file" ? "file" : null;
   if (!kind) {
     return NextResponse.json({ error: "Invalid upload kind." }, { status: 400 });
+  }
+
+  // File uploads are a Pro feature; image uploads stay free (per spec). The
+  // createItem FILE branch enforces the same rule as a second layer.
+  if (kind === "file") {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { isPro: true },
+    });
+    if (!user?.isPro) {
+      return NextResponse.json(
+        { error: "File uploads are a Pro feature." },
+        { status: 402 },
+      );
+    }
   }
 
   const file = formData.get("file");

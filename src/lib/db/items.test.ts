@@ -70,6 +70,7 @@ import {
   updateItem,
 } from "@/lib/db/items";
 import { ITEMS_PER_PAGE } from "@/lib/pagination";
+import { FREE_LIMITS, PlanLimitError } from "@/lib/billing/plan";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -661,6 +662,180 @@ describe("createItem", () => {
     });
     expect(result?.contentType).toBe("FILE");
     expect(result?.fileName).toBe("logo.png");
+  });
+});
+
+describe("createItem plan gating", () => {
+  const data = {
+    type: "snippet",
+    title: "New snippet",
+    description: null,
+    content: "x",
+    url: null,
+    language: null,
+    fileUrl: null,
+    fileName: null,
+    fileSize: null,
+    tags: [],
+    collectionIds: [],
+  };
+
+  it("throws PlanLimitError('item') when a Free user is at the item cap", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1", isPro: false });
+    itemType.findFirst.mockResolvedValue({ id: "type_snippet" });
+    item.count.mockResolvedValue(FREE_LIMITS.items);
+
+    await expect(createItem(data)).rejects.toBeInstanceOf(PlanLimitError);
+    // Gated before any write.
+    expect($transaction).not.toHaveBeenCalled();
+    expect(item.count).toHaveBeenCalledWith({ where: { userId: "user_1" } });
+  });
+
+  it("does not gate a Pro user at (or over) the item cap", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1", isPro: true });
+    itemType.findFirst.mockResolvedValue({ id: "type_snippet" });
+    item.count.mockResolvedValue(FREE_LIMITS.items + 5);
+    item.create.mockResolvedValue({ id: "item_new" });
+    item.findFirst.mockResolvedValue({
+      id: "item_new",
+      title: "New snippet",
+      description: null,
+      contentType: "TEXT",
+      content: "x",
+      fileName: null,
+      fileSize: null,
+      url: null,
+      isFavorite: false,
+      isPinned: false,
+      updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      language: null,
+      type: { name: "snippet", icon: "Code", color: null },
+      collections: [],
+      tags: [],
+    });
+
+    const result = await createItem(data);
+
+    expect(result?.id).toBe("item_new");
+    expect($transaction).toHaveBeenCalled();
+  });
+
+  it("lets a Free user under the cap create an item", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1", isPro: false });
+    itemType.findFirst.mockResolvedValue({ id: "type_snippet" });
+    item.count.mockResolvedValue(FREE_LIMITS.items - 1);
+    item.create.mockResolvedValue({ id: "item_new" });
+    item.findFirst.mockResolvedValue({
+      id: "item_new",
+      title: "New snippet",
+      description: null,
+      contentType: "TEXT",
+      content: "x",
+      fileName: null,
+      fileSize: null,
+      url: null,
+      isFavorite: false,
+      isPinned: false,
+      updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      language: null,
+      type: { name: "snippet", icon: "Code", color: null },
+      collections: [],
+      tags: [],
+    });
+
+    const result = await createItem(data);
+
+    expect(result?.id).toBe("item_new");
+  });
+
+  it("throws PlanLimitError('file') when a Free user creates a File item", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1", isPro: false });
+    itemType.findFirst.mockResolvedValue({ id: "type_file" });
+    item.count.mockResolvedValue(0);
+
+    await expect(
+      createItem({
+        ...data,
+        type: "file",
+        fileUrl: "https://pub-test.r2.dev/uploads/user_1/file/doc.pdf",
+        fileName: "doc.pdf",
+        fileSize: 1024,
+      }),
+    ).rejects.toBeInstanceOf(PlanLimitError);
+    expect($transaction).not.toHaveBeenCalled();
+  });
+
+  it("lets a Pro user create a File item", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1", isPro: true });
+    itemType.findFirst.mockResolvedValue({ id: "type_file" });
+    item.count.mockResolvedValue(0);
+    item.create.mockResolvedValue({ id: "item_file" });
+    item.findFirst.mockResolvedValue({
+      id: "item_file",
+      title: "Doc",
+      description: null,
+      contentType: "FILE",
+      content: null,
+      fileName: "doc.pdf",
+      fileSize: 1024,
+      url: null,
+      isFavorite: false,
+      isPinned: false,
+      updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      language: null,
+      type: { name: "file", icon: "File", color: null },
+      collections: [],
+      tags: [],
+    });
+
+    const result = await createItem({
+      ...data,
+      type: "file",
+      fileUrl: "https://pub-test.r2.dev/uploads/user_1/file/doc.pdf",
+      fileName: "doc.pdf",
+      fileSize: 1024,
+    });
+
+    expect(result?.id).toBe("item_file");
+    expect($transaction).toHaveBeenCalled();
+  });
+
+  it("lets a Free user create an Image item (images stay free)", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1", isPro: false });
+    itemType.findFirst.mockResolvedValue({ id: "type_image" });
+    item.count.mockResolvedValue(0);
+    item.create.mockResolvedValue({ id: "item_img" });
+    item.findFirst.mockResolvedValue({
+      id: "item_img",
+      title: "Logo",
+      description: null,
+      contentType: "FILE",
+      content: null,
+      fileName: "logo.png",
+      fileSize: 2048,
+      url: null,
+      isFavorite: false,
+      isPinned: false,
+      updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      language: null,
+      type: { name: "image", icon: "Image", color: null },
+      collections: [],
+      tags: [],
+    });
+
+    const result = await createItem({
+      ...data,
+      type: "image",
+      fileUrl: "https://pub-test.r2.dev/uploads/user_1/image/logo.png",
+      fileName: "logo.png",
+      fileSize: 2048,
+    });
+
+    expect(result?.id).toBe("item_img");
   });
 });
 

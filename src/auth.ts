@@ -93,11 +93,28 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     });
   }),
   callbacks: {
+    // Re-read isPro from the DB on every token pass so the client
+    // `useSession().data.user.isPro` reflects webhook-driven plan changes after a
+    // plain reload. Server-side gating already reads live isPro via
+    // getSessionUser(); this keeps the client session in sync.
+    async jwt({ token, user }) {
+      // On sign-in `user` is present; afterward rely on the persisted `sub`.
+      if (user?.id) token.sub = user.id;
+      if (token.sub) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { isPro: true },
+        });
+        token.isPro = dbUser?.isPro ?? false;
+      }
+      return token;
+    },
     session({ session, token }) {
       // Under the JWT strategy the user id lives in the standard `sub` claim.
       if (token.sub) {
         session.user.id = token.sub;
       }
+      session.user.isPro = Boolean(token.isPro);
       return session;
     },
   },

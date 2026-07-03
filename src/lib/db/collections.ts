@@ -6,6 +6,7 @@ import {
   toDashboardItem,
   type DashboardItem,
 } from "@/lib/db/items";
+import { isAtCollectionLimit, PlanLimitError } from "@/lib/billing/plan";
 import {
   clampPage,
   COLLECTIONS_PER_PAGE,
@@ -276,6 +277,13 @@ export async function createCollection(
 ): Promise<DashboardCollection | null> {
   const user = await getSessionUser();
   if (!user) return null;
+
+  // Free-tier gating (Pro is unlimited). Enforced here — where the session user
+  // (with isPro) is already resolved — so it can't be bypassed by any caller.
+  const count = await prisma.collection.count({ where: { userId: user.id } });
+  if (isAtCollectionLimit(user.isPro, count)) {
+    throw new PlanLimitError("collection");
+  }
 
   const created = await prisma.collection.create({
     data: {

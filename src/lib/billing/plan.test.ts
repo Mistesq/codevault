@@ -4,6 +4,8 @@ import {
   intervalForPriceId,
   isAtCollectionLimit,
   isAtItemLimit,
+  PLAN_LIMIT_MESSAGES,
+  PlanLimitError,
   priceIdForInterval,
 } from "@/lib/billing/plan";
 
@@ -74,6 +76,20 @@ describe("priceIdForInterval", () => {
   it("returns null when the interval's env var is missing", () => {
     delete process.env.STRIPE_PRICE_MONTHLY;
     expect(priceIdForInterval("monthly")).toBeNull();
+  });
+});
+
+describe("PlanLimitError", () => {
+  it("carries the resource it was raised for", () => {
+    expect(new PlanLimitError("item").resource).toBe("item");
+    expect(new PlanLimitError("collection").resource).toBe("collection");
+    expect(new PlanLimitError("file").resource).toBe("file");
+  });
+
+  it("has an upgrade CTA message for every gated resource", () => {
+    for (const resource of ["item", "collection", "file"] as const) {
+      expect(PLAN_LIMIT_MESSAGES[resource]).toMatch(/pro/i);
+    }
   });
 });
 

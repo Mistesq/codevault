@@ -39,6 +39,9 @@ import {
   setItemPinned,
   updateItem,
 } from "@/actions/items";
+// Real (unmocked) so `instanceof` in the action's catch works and the messages
+// come from the single source of truth.
+import { PLAN_LIMIT_MESSAGES, PlanLimitError } from "@/lib/billing/plan";
 
 const signedIn = { user: { id: "user_1" } };
 const validInput = {
@@ -115,6 +118,42 @@ describe("createItem action", () => {
     const result = await createItem(createInput);
 
     expect(result).toEqual({ success: false, error: "Could not create item." });
+  });
+
+  it("maps a PlanLimitError('item') to the item upgrade CTA", async () => {
+    auth.mockResolvedValue(signedIn);
+    createItemQuery.mockRejectedValue(new PlanLimitError("item"));
+
+    const result = await createItem(createInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: PLAN_LIMIT_MESSAGES.item,
+    });
+  });
+
+  it("maps a PlanLimitError('file') to the file upgrade CTA", async () => {
+    auth.mockResolvedValue(signedIn);
+    createItemQuery.mockRejectedValue(new PlanLimitError("file"));
+
+    const result = await createItem(createInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: PLAN_LIMIT_MESSAGES.file,
+    });
+  });
+
+  it("returns a generic error for an unexpected failure", async () => {
+    auth.mockResolvedValue(signedIn);
+    createItemQuery.mockRejectedValue(new Error("boom"));
+
+    const result = await createItem(createInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
   });
 });
 

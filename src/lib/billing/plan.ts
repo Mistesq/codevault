@@ -40,14 +40,27 @@ export function isAtCollectionLimit(isPro: boolean, count: number): boolean {
   return !isPro && count >= FREE_LIMITS.collections;
 }
 
+/** What a PlanLimitError was raised for — drives the upgrade CTA message. */
+export type PlanLimitResource = "item" | "collection" | "file";
+
 /**
- * Thrown by Phase 2 plan gating (createItem / createCollection) when a Free user
- * hits a cap, so the calling action can map it to an "Upgrade to Pro" message
- * distinct from other failures. Defined here so both phases share one type.
+ * Thrown by Phase 2 plan gating (createItem / createCollection / the Pro-only
+ * FILE branch) when a Free user hits a cap or a Pro-only surface, so the calling
+ * action can map it to an "Upgrade to Pro" message distinct from other failures.
+ * Defined here so both phases share one type.
  */
 export class PlanLimitError extends Error {
-  constructor(public readonly resource: "item" | "collection") {
+  constructor(public readonly resource: PlanLimitResource) {
     super(`Free plan limit reached for ${resource}.`);
     this.name = "PlanLimitError";
   }
 }
+
+/** User-facing upgrade CTA copy for each gated resource. */
+export const PLAN_LIMIT_MESSAGES: Record<PlanLimitResource, string> = {
+  item:
+    "You've reached the Free plan's 50-item limit. Upgrade to Pro for unlimited items.",
+  collection:
+    "You've reached the Free plan's 3-collection limit. Upgrade to Pro for unlimited collections.",
+  file: "File uploads are a Pro feature. Upgrade to Pro to attach files.",
+};

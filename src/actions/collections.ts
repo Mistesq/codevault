@@ -9,6 +9,7 @@ import {
   setCollectionFavorite as setCollectionFavoriteQuery,
 } from "@/lib/db/collections";
 import type { DashboardCollection } from "@/lib/db/collections";
+import { PLAN_LIMIT_MESSAGES, PlanLimitError } from "@/lib/billing/plan";
 import {
   createCollectionSchema,
   updateCollectionSchema,
@@ -49,6 +50,10 @@ export async function createCollection(
     }
     return { success: true, data: created };
   } catch (error) {
+    // Free-tier cap → surface the upgrade CTA distinctly.
+    if (error instanceof PlanLimitError) {
+      return { success: false, error: PLAN_LIMIT_MESSAGES[error.resource] };
+    }
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"

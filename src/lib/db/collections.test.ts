@@ -38,6 +38,7 @@ import {
   updateCollection,
 } from "@/lib/db/collections";
 import { COLLECTIONS_PER_PAGE, ITEMS_PER_PAGE } from "@/lib/pagination";
+import { FREE_LIMITS, PlanLimitError } from "@/lib/billing/plan";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -99,6 +100,49 @@ describe("createCollection", () => {
 
     expect(collection.create.mock.calls[0][0].data.description).toBeNull();
     expect(result?.description).toBeNull();
+  });
+
+  it("throws PlanLimitError('collection') when a Free user is at the cap", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1", isPro: false });
+    collection.count.mockResolvedValue(FREE_LIMITS.collections);
+
+    await expect(createCollection(data)).rejects.toBeInstanceOf(PlanLimitError);
+    // Gated before any write.
+    expect(collection.create).not.toHaveBeenCalled();
+    expect(collection.count).toHaveBeenCalledWith({
+      where: { userId: "user_1" },
+    });
+  });
+
+  it("does not gate a Pro user at (or over) the collection cap", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1", isPro: true });
+    collection.count.mockResolvedValue(FREE_LIMITS.collections + 2);
+    collection.create.mockResolvedValue({
+      id: "col_new",
+      name: "React Patterns",
+      description: "Hooks & co.",
+      isFavorite: false,
+    });
+
+    const result = await createCollection(data);
+
+    expect(result?.id).toBe("col_new");
+    expect(collection.create).toHaveBeenCalled();
+  });
+
+  it("lets a Free user under the cap create a collection", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1", isPro: false });
+    collection.count.mockResolvedValue(FREE_LIMITS.collections - 1);
+    collection.create.mockResolvedValue({
+      id: "col_new",
+      name: "React Patterns",
+      description: "Hooks & co.",
+      isFavorite: false,
+    });
+
+    const result = await createCollection(data);
+
+    expect(result?.id).toBe("col_new");
   });
 });
 
