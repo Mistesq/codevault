@@ -1,37 +1,16 @@
-# Current Feature: Stripe Integration Phase 1 — Core Infrastructure
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Install the `stripe` Node SDK (v19.x) only — no `@stripe/stripe-js` (Stripe-hosted Checkout/Portal).
-- `src/lib/stripe/client.ts` — lazy `getStripe()` singleton (throws when secret key missing) + `isStripeConfigured()` (true only when secret key **and** both price ids set); `import "server-only"`, mirrors `r2.ts`/`resend.ts`.
-- `src/lib/billing/plan.ts` (server-only usage-limits module):
-  - `FREE_LIMITS = { items: 50, collections: 3 }`
-  - `BillingInterval` type (`"monthly" | "yearly"`)
-  - `priceIdForInterval(interval)` + `intervalForPriceId(priceId)` (env-driven, reverse lookup for the webhook)
-  - `isAtItemLimit(isPro, count)` / `isAtCollectionLimit(isPro, count)` — pure `!isPro && count >= cap`
-  - `PlanLimitError` class (shared with Phase 2 gating)
-- `src/lib/validations/billing.ts` — `checkoutSchema` (`z.enum(["monthly","yearly"])`) + `CheckoutInput` type.
-- `src/actions/billing.ts` — `createCheckoutSession(input)` + `createPortalSession()` following `{ success, data?, error? }`:
-  - `auth()` guard → error when unsigned; `isStripeConfigured()` guard.
-  - Checkout: validate, resolve price id, reject already-Pro, `mode: "subscription"`, reuse `stripeCustomerId` or `customer_email`, set `client_reference_id: userId` + `subscription_data.metadata.userId`, `success_url`/`cancel_url` off `getAppUrl()` (`/settings?checkout=success|cancelled`) → `{ url }`.
-  - Portal: require `stripeCustomerId`, `return_url` → `/settings` → `{ url }`.
-- Add `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_YEARLY` to `context/project-overview.md` env block.
-- Unit tests: `plan.test.ts` (limits + price-id lookups) and `billing.test.ts` (unauth / not-configured / already-Pro / happy path / portal without customer id) with mocked Prisma/auth/Stripe.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Everything this phase is unit-testable with mocked collaborators — **no Stripe CLI or live webhook**. Webhooks, feature gating, and UI are Phase 2.
-- Read `process.env.*` directly — there is **no** central env module in this repo.
-- `getStripe()` must throw (not no-op) when `STRIPE_SECRET_KEY` is missing; `isStripeConfigured()` is the soft guard the actions branch on.
-- Omit `apiVersion` to pin the SDK default (or set explicitly to the dashboard version once live).
-- Server-only modules (`client.ts`, `plan.ts`) start with `import "server-only"`; never import into a `'use client'` component.
-- The client redirect (`window.location.href = data.url`) is Phase 2 wiring.
-- Full code samples + rationale: [docs/stripe-integration-plan.md](../../docs/stripe-integration-plan.md) §4.1–§4.6, §6, §9. Spec: [context/features/stripe-phase-1-spec.md](features/stripe-phase-1-spec.md).
-- Patterns to mirror: `src/lib/r2.ts`, `src/lib/email/resend.ts` (client singleton + `getAppUrl()`), `isR2Configured()`/`isEmailVerificationEnabled()` (config flags).
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -93,3 +72,4 @@ In Progress
 - Homepage (App) - prototype rebuilt as the real / route: server page.tsx calls auth() + composes sections under components/home/, client leaves only HomeNav (scroll)/ChaosField (rAF)/PricingToggle/reusable Reveal; Tailwind v4 + shadcn Button + lucide throughout, homepage tokens + arrow/tag keyframes in globals.css @theme, item-type colors via shared map + --c; session-aware nav (Dashboard vs Sign in/Get started), 7 faithful sections, responsive + reduced-motion; no new deps/actions/queries; build+lint clean, Playwright-verified (Completed)
 - Fix: TopBar Mobile Overflow - dashboard top bar (~798px of content in a ~360px bar) no longer forces a page-wide horizontal scroll; search collapses to an icon button below sm (mobile-only flex-1 spacer, full pill returns at sm), New Item/New Collection triggers go icon-only via opt-in compactOnMobile prop (aria-labels added, full labels kept on items/collections pages), Pinned/Favorites shortcuts hidden on mobile, min-w-0 + gap-2 sm:gap-4 overflow protection; Playwright-verified at 375/640/1280 (Completed)
 - Homepage Nav on Auth Pages - HomeNav mounted once in the async (auth) layout (reads auth() → isAuthed) so all auth pages (sign-in, register, forgot/reset password, verify/check email) carry the marketing nav; new sectionBase prop prefixes section anchors (→ /#features/#ai/#pricing) and retargets brand (→ /), homepage passes nothing so it's unchanged; dropped redundant centered Brand, pt-24 clears the fixed header; Playwright-verified at 1280/375, build+lint+269 tests clean (Completed)
+- Stripe Integration Phase 1 (Core Infrastructure) - server-side billing foundation (stripe SDK v22, no @stripe/stripe-js); server-only lazy getStripe() singleton + isStripeConfigured() guard (client.ts, mirrors r2/resend); usage-limits plan.ts (FREE_LIMITS, priceIdForInterval/intervalForPriceId env lookups, isAtItem/CollectionLimit predicates, shared PlanLimitError); checkoutSchema (Zod); createCheckoutSession/createPortalSession actions (auth + isStripeConfigured guards, reject already-Pro, reuse stripeCustomerId or customer_email, client_reference_id + subscription_data.metadata.userId, getAppUrl success/cancel urls); STRIPE_PRICE_MONTHLY/YEARLY env keys (aligned .env.example); webhooks/gating/UI deferred to Phase 2; 25 tests, 294 total, build+lint clean (Completed)
