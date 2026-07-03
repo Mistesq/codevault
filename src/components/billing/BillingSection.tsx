@@ -26,8 +26,8 @@ export function BillingSection({ isPro }: BillingSectionProps) {
 
       <p className="mt-1 text-sm text-muted-foreground">
         {isPro
-          ? "You're on CodeVault Pro — unlimited items, collections, file uploads, and more."
-          : "You're on the Free plan (50 items, 3 collections, images only). Upgrade to Pro for unlimited storage and file uploads."}
+          ? "You're on CodeVault Pro — unlimited items, collections, file & image uploads, and more."
+          : "You're on the Free plan (50 items, 3 collections, no file or image uploads). Upgrade to Pro for unlimited storage plus file & image uploads."}
       </p>
 
       <div className="mt-6 border-t border-border pt-6">

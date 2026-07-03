@@ -606,7 +606,7 @@ describe("createItem", () => {
   });
 
   it("creates a FILE item with the R2 metadata (no text fields)", async () => {
-    getSessionUser.mockResolvedValue({ id: "user_1" });
+    getSessionUser.mockResolvedValue({ id: "user_1", isPro: true });
     itemType.findFirst.mockResolvedValue({ id: "type_image" });
     item.create.mockResolvedValue({ id: "item_img" });
     item.findFirst.mockResolvedValue({
@@ -803,8 +803,25 @@ describe("createItem plan gating", () => {
     expect($transaction).toHaveBeenCalled();
   });
 
-  it("lets a Free user create an Image item (images stay free)", async () => {
+  it("throws PlanLimitError('image') when a Free user creates an Image item", async () => {
     getSessionUser.mockResolvedValue({ id: "user_1", isPro: false });
+    itemType.findFirst.mockResolvedValue({ id: "type_image" });
+    item.count.mockResolvedValue(0);
+
+    await expect(
+      createItem({
+        ...data,
+        type: "image",
+        fileUrl: "https://pub-test.r2.dev/uploads/user_1/image/logo.png",
+        fileName: "logo.png",
+        fileSize: 2048,
+      }),
+    ).rejects.toBeInstanceOf(PlanLimitError);
+    expect(item.create).not.toHaveBeenCalled();
+  });
+
+  it("lets a Pro user create an Image item", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1", isPro: true });
     itemType.findFirst.mockResolvedValue({ id: "type_image" });
     item.count.mockResolvedValue(0);
     item.create.mockResolvedValue({ id: "item_img" });
