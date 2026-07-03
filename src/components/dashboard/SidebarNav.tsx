@@ -244,6 +244,9 @@ export function SidebarNav({
         {!user.isPro && (
           <Button
             variant="secondary"
+            nativeButton={false}
+            render={<Link href="/upgrade" />}
+            onClick={() => setMobileOpen(false)}
             className={cn("mb-2 w-full", collapsed && "px-0")}
             title={collapsed ? "Upgrade to Pro" : undefined}
           >
