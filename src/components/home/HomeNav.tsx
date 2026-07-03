@@ -15,8 +15,19 @@ const NAV_LINKS = [
 // Fixed marketing nav. Background opacity + blur increase once the page is
 // scrolled. When a session exists the Sign in / Get started actions collapse
 // into a single Dashboard button.
-export function HomeNav({ isAuthed }: { isAuthed: boolean }) {
+//
+// `sectionBase` prefixes the in-page section anchors so the nav can live on
+// pages that don't contain those sections (e.g. the auth pages): pass "/" and
+// the anchors resolve to the homepage (`/#features`) and the brand links home.
+export function HomeNav({
+  isAuthed,
+  sectionBase = "",
+}: {
+  isAuthed: boolean;
+  sectionBase?: string;
+}) {
   const [scrolled, setScrolled] = useState(false);
+  const brandHref = sectionBase || "#top";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -35,7 +46,7 @@ export function HomeNav({ isAuthed }: { isAuthed: boolean }) {
       )}
     >
       <div className="mx-auto flex max-w-[1200px] items-center gap-6 px-6 py-[0.85rem]">
-        <a href="#top" aria-label="CodeVault home" className="inline-flex items-center gap-[0.6rem]">
+        <a href={brandHref} aria-label="CodeVault home" className="inline-flex items-center gap-[0.6rem]">
           <span className="grid size-8 place-items-center rounded-lg bg-h-brand text-white">
             <Vault className="size-4" />
           </span>
@@ -50,7 +61,11 @@ export function HomeNav({ isAuthed }: { isAuthed: boolean }) {
           className="ml-4 flex gap-6 text-[0.9rem] text-h-muted max-[620px]:hidden"
         >
           {NAV_LINKS.map((link) => (
-            <a key={link.href} href={link.href} className="transition-colors hover:text-h-text">
+            <a
+              key={link.href}
+              href={`${sectionBase}${link.href}`}
+              className="transition-colors hover:text-h-text"
+            >
               {link.label}
             </a>
           ))}

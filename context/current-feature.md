@@ -1,16 +1,29 @@
-# Current Feature
+# Current Feature: Homepage Top Nav on Auth Pages
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Add the homepage top navigation bar (`HomeNav`) to the sign-in (`/sign-in`) and sign-up (`/register`) pages.
+- The nav should sit at the top of these auth pages just like it does on the homepage, keeping the CodeVault brand and primary actions visible.
+- Preserve the existing auth-page card layout below the nav.
+
+## Decisions (locked at start)
+
+- Mount `HomeNav` once in the `(auth)` layout so it covers all auth pages (sign-in, register, forgot/reset password, verify/check email).
+- Point the nav's section anchors at the homepage (`/#features`, `/#ai`, `/#pricing`) and brand at `/`; keep the session-aware Sign in / Get started (or Dashboard) actions as-is.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Homepage nav lives at [src/components/home/HomeNav.tsx](src/components/home/HomeNav.tsx); it's a `'use client'` fixed header with brand, primary links (Features/AI/Pricing anchors), and session-aware actions (Dashboard vs Sign in / Get started).
+- Auth pages render through [src/app/(auth)/layout.tsx](src/app/(auth)/layout.tsx), which currently shows a centered `Brand` link above a card. Sign-in: [src/app/(auth)/sign-in/page.tsx](src/app/(auth)/sign-in/page.tsx); register: [src/app/(auth)/register/page.tsx](src/app/(auth)/register/page.tsx).
+- Decisions to settle before/at `start`:
+  - The nav's `#features` / `#ai` / `#pricing` anchor links won't resolve on auth pages — decide whether to keep, drop, or point them at the homepage.
+  - Sign-in page showing a "Sign in" nav action (and register showing "Get started") is redundant — confirm desired behavior.
+  - Whether to add the nav only to sign-in/register or share it via the `(auth)` layout (which also covers forgot-password, reset-password, verify-email, check-email).
+  - `HomeNav` is fixed and uses homepage theme tokens (`h-*`, near-black bg) — verify it looks right against the auth pages' `bg-background` and that the centered card isn't hidden under the fixed header (top padding).
 
 ## History
 
