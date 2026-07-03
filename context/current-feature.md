@@ -1,16 +1,37 @@
-# Current Feature
+# Current Feature: Stripe Integration Phase 1 — Core Infrastructure
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Install the `stripe` Node SDK (v19.x) only — no `@stripe/stripe-js` (Stripe-hosted Checkout/Portal).
+- `src/lib/stripe/client.ts` — lazy `getStripe()` singleton (throws when secret key missing) + `isStripeConfigured()` (true only when secret key **and** both price ids set); `import "server-only"`, mirrors `r2.ts`/`resend.ts`.
+- `src/lib/billing/plan.ts` (server-only usage-limits module):
+  - `FREE_LIMITS = { items: 50, collections: 3 }`
+  - `BillingInterval` type (`"monthly" | "yearly"`)
+  - `priceIdForInterval(interval)` + `intervalForPriceId(priceId)` (env-driven, reverse lookup for the webhook)
+  - `isAtItemLimit(isPro, count)` / `isAtCollectionLimit(isPro, count)` — pure `!isPro && count >= cap`
+  - `PlanLimitError` class (shared with Phase 2 gating)
+- `src/lib/validations/billing.ts` — `checkoutSchema` (`z.enum(["monthly","yearly"])`) + `CheckoutInput` type.
+- `src/actions/billing.ts` — `createCheckoutSession(input)` + `createPortalSession()` following `{ success, data?, error? }`:
+  - `auth()` guard → error when unsigned; `isStripeConfigured()` guard.
+  - Checkout: validate, resolve price id, reject already-Pro, `mode: "subscription"`, reuse `stripeCustomerId` or `customer_email`, set `client_reference_id: userId` + `subscription_data.metadata.userId`, `success_url`/`cancel_url` off `getAppUrl()` (`/settings?checkout=success|cancelled`) → `{ url }`.
+  - Portal: require `stripeCustomerId`, `return_url` → `/settings` → `{ url }`.
+- Add `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_YEARLY` to `context/project-overview.md` env block.
+- Unit tests: `plan.test.ts` (limits + price-id lookups) and `billing.test.ts` (unauth / not-configured / already-Pro / happy path / portal without customer id) with mocked Prisma/auth/Stripe.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Everything this phase is unit-testable with mocked collaborators — **no Stripe CLI or live webhook**. Webhooks, feature gating, and UI are Phase 2.
+- Read `process.env.*` directly — there is **no** central env module in this repo.
+- `getStripe()` must throw (not no-op) when `STRIPE_SECRET_KEY` is missing; `isStripeConfigured()` is the soft guard the actions branch on.
+- Omit `apiVersion` to pin the SDK default (or set explicitly to the dashboard version once live).
+- Server-only modules (`client.ts`, `plan.ts`) start with `import "server-only"`; never import into a `'use client'` component.
+- The client redirect (`window.location.href = data.url`) is Phase 2 wiring.
+- Full code samples + rationale: [docs/stripe-integration-plan.md](../../docs/stripe-integration-plan.md) §4.1–§4.6, §6, §9. Spec: [context/features/stripe-phase-1-spec.md](features/stripe-phase-1-spec.md).
+- Patterns to mirror: `src/lib/r2.ts`, `src/lib/email/resend.ts` (client singleton + `getAppUrl()`), `isR2Configured()`/`isEmailVerificationEnabled()` (config flags).
 
 ## History
 
