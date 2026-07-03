@@ -1,29 +1,16 @@
-# Current Feature: Homepage Top Nav on Auth Pages
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Add the homepage top navigation bar (`HomeNav`) to the sign-in (`/sign-in`) and sign-up (`/register`) pages.
-- The nav should sit at the top of these auth pages just like it does on the homepage, keeping the CodeVault brand and primary actions visible.
-- Preserve the existing auth-page card layout below the nav.
-
-## Decisions (locked at start)
-
-- Mount `HomeNav` once in the `(auth)` layout so it covers all auth pages (sign-in, register, forgot/reset password, verify/check email).
-- Point the nav's section anchors at the homepage (`/#features`, `/#ai`, `/#pricing`) and brand at `/`; keep the session-aware Sign in / Get started (or Dashboard) actions as-is.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Homepage nav lives at [src/components/home/HomeNav.tsx](src/components/home/HomeNav.tsx); it's a `'use client'` fixed header with brand, primary links (Features/AI/Pricing anchors), and session-aware actions (Dashboard vs Sign in / Get started).
-- Auth pages render through [src/app/(auth)/layout.tsx](src/app/(auth)/layout.tsx), which currently shows a centered `Brand` link above a card. Sign-in: [src/app/(auth)/sign-in/page.tsx](src/app/(auth)/sign-in/page.tsx); register: [src/app/(auth)/register/page.tsx](src/app/(auth)/register/page.tsx).
-- Decisions to settle before/at `start`:
-  - The nav's `#features` / `#ai` / `#pricing` anchor links won't resolve on auth pages — decide whether to keep, drop, or point them at the homepage.
-  - Sign-in page showing a "Sign in" nav action (and register showing "Get started") is redundant — confirm desired behavior.
-  - Whether to add the nav only to sign-in/register or share it via the `(auth)` layout (which also covers forgot-password, reset-password, verify-email, check-email).
-  - `HomeNav` is fixed and uses homepage theme tokens (`h-*`, near-black bg) — verify it looks right against the auth pages' `bg-background` and that the centered card isn't hidden under the fixed header (top padding).
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -84,3 +71,4 @@ In Progress
 - Homepage Marketing Mockup - static prototype at prototypes/homepage/ (index.html/styles.css/script.js, no build step) mirroring dashboard chrome (near-black oklch ramp→hex, Geist, blue accent, Vault brand mark); nav (opacity-on-scroll), asymmetric chaos→arrow→dashboard hero with requestAnimationFrame chaos animation (drift/wall-bounce/cursor-repel/pulse) + faithful dashboard preview (type-color stripes + tinted icons + PRO badges), colored feature-icon cards, AI tag demo, pricing monthly/yearly toggle, CTA, footer; responsive (arrow rotates 90° on mobile) + prefers-reduced-motion; verified via Playwright (Completed)
 - Homepage (App) - prototype rebuilt as the real / route: server page.tsx calls auth() + composes sections under components/home/, client leaves only HomeNav (scroll)/ChaosField (rAF)/PricingToggle/reusable Reveal; Tailwind v4 + shadcn Button + lucide throughout, homepage tokens + arrow/tag keyframes in globals.css @theme, item-type colors via shared map + --c; session-aware nav (Dashboard vs Sign in/Get started), 7 faithful sections, responsive + reduced-motion; no new deps/actions/queries; build+lint clean, Playwright-verified (Completed)
 - Fix: TopBar Mobile Overflow - dashboard top bar (~798px of content in a ~360px bar) no longer forces a page-wide horizontal scroll; search collapses to an icon button below sm (mobile-only flex-1 spacer, full pill returns at sm), New Item/New Collection triggers go icon-only via opt-in compactOnMobile prop (aria-labels added, full labels kept on items/collections pages), Pinned/Favorites shortcuts hidden on mobile, min-w-0 + gap-2 sm:gap-4 overflow protection; Playwright-verified at 375/640/1280 (Completed)
+- Homepage Nav on Auth Pages - HomeNav mounted once in the async (auth) layout (reads auth() → isAuthed) so all auth pages (sign-in, register, forgot/reset password, verify/check email) carry the marketing nav; new sectionBase prop prefixes section anchors (→ /#features/#ai/#pricing) and retargets brand (→ /), homepage passes nothing so it's unchanged; dropped redundant centered Brand, pt-24 clears the fixed header; Playwright-verified at 1280/375, build+lint+269 tests clean (Completed)
