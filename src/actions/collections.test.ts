@@ -53,6 +53,9 @@ import {
   setCollectionFavorite,
   updateCollection,
 } from "@/actions/collections";
+// Real (unmocked) so `instanceof` in the action's catch works and the message
+// comes from the single source of truth.
+import { PLAN_LIMIT_MESSAGES, PlanLimitError } from "@/lib/billing/plan";
 
 const signedIn = { user: { id: "user_1" } };
 
@@ -121,6 +124,18 @@ describe("createCollection action", () => {
     expect(result).toEqual({
       success: false,
       error: "A collection with that name already exists.",
+    });
+  });
+
+  it("maps a PlanLimitError('collection') to the collection upgrade CTA", async () => {
+    auth.mockResolvedValue(signedIn);
+    createCollectionQuery.mockRejectedValue(new PlanLimitError("collection"));
+
+    const result = await createCollection({ name: "X" });
+
+    expect(result).toEqual({
+      success: false,
+      error: PLAN_LIMIT_MESSAGES.collection,
     });
   });
 

@@ -2,6 +2,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/db/user";
 import { deleteFromR2, keyFromPublicUrl } from "@/lib/r2";
+import { isAtItemLimit, PlanLimitError } from "@/lib/billing/plan";
 import {
   clampPage,
   DASHBOARD_RECENT_ITEMS_LIMIT,
@@ -330,7 +331,20 @@ export async function createItem(
   });
   if (!type) return null;
 
+  // Free-tier gating (Pro is unlimited). Enforced here — where the session user
+  // (with isPro) is already resolved — so it can't be bypassed by any caller.
+  const count = await prisma.item.count({ where: { userId: user.id } });
+  if (isAtItemLimit(user.isPro, count)) {
+    throw new PlanLimitError("item");
+  }
+
   const isFile = FILE_TYPE_NAMES.has(data.type);
+
+  // File uploads are Pro-only (images stay free). Mirrors the /api/upload guard
+  // so a forged createItem call can't bypass the route.
+  if (data.type === "file" && !user.isPro) {
+    throw new PlanLimitError("file");
+  }
 
   const created = await prisma.$transaction(async (tx) => {
     const item = await tx.item.create({
