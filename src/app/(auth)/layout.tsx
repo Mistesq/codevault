@@ -1,16 +1,22 @@
-import Link from "next/link";
+import { auth } from "@/auth";
+import { HomeNav } from "@/components/home/HomeNav";
 
-import { Brand } from "@/components/dashboard/Brand";
+export default async function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await auth();
+  const isAuthed = Boolean(session?.user);
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-sm space-y-8">
-        <Link href="/" className="flex justify-center">
-          <Brand />
-        </Link>
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-          {children}
+    <div className="home flex min-h-screen flex-col bg-h-bg text-h-text">
+      <HomeNav isAuthed={isAuthed} sectionBase="/" />
+      <div className="flex flex-1 flex-col items-center justify-center px-4 pb-10 pt-24">
+        <div className="w-full max-w-sm">
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            {children}
+          </div>
         </div>
       </div>
     </div>
