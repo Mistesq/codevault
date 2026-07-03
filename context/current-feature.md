@@ -2,28 +2,13 @@
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Free (non-Pro) users who visit `/items/files` or `/items/images` see a Pro
-  upgrade page instead of the item listing.
-- Pro users see the normal listing unchanged.
-- Image uploads are now Pro-only across the board (reverses the earlier
-  "images are free" decision): the `/items/images` & `/items/files` listings,
-  the `POST /api/upload` guard, and the `createItem` FILE/IMAGE branch all gate
-  on `isPro`.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
-
-- Domain predicate `isProItemType(name)` + `PRO_ITEM_TYPES` in
-  `src/lib/billing/plan.ts`; new `image` `PlanLimitResource` + CTA message.
-- `ProTypeUpsell` component (reuses `UpgradeButtons`) rendered from
-  `src/app/items/[type]/page.tsx` when `isProItemType(type.name) && !isPro`.
-- Upload gating: `POST /api/upload` now 402s both `file` and `image` kinds for
-  Free users; `createItem` throws `PlanLimitError` for both.
-- Copy synced: `BillingSection` free-plan blurb + `project-overview.md`
-  monetization table (Free = no uploads, Pro = file & image uploads).
 
 <!-- Additional context, constraints, or details from spec -->
 
@@ -89,3 +74,4 @@ In Progress
 - Homepage Nav on Auth Pages - HomeNav mounted once in the async (auth) layout (reads auth() → isAuthed) so all auth pages (sign-in, register, forgot/reset password, verify/check email) carry the marketing nav; new sectionBase prop prefixes section anchors (→ /#features/#ai/#pricing) and retargets brand (→ /), homepage passes nothing so it's unchanged; dropped redundant centered Brand, pt-24 clears the fixed header; Playwright-verified at 1280/375, build+lint+269 tests clean (Completed)
 - Stripe Integration Phase 1 (Core Infrastructure) - server-side billing foundation (stripe SDK v22, no @stripe/stripe-js); server-only lazy getStripe() singleton + isStripeConfigured() guard (client.ts, mirrors r2/resend); usage-limits plan.ts (FREE_LIMITS, priceIdForInterval/intervalForPriceId env lookups, isAtItem/CollectionLimit predicates, shared PlanLimitError); checkoutSchema (Zod); createCheckoutSession/createPortalSession actions (auth + isStripeConfigured guards, reject already-Pro, reuse stripeCustomerId or customer_email, client_reference_id + subscription_data.metadata.userId, getAppUrl success/cancel urls); STRIPE_PRICE_MONTHLY/YEARLY env keys (aligned .env.example); webhooks/gating/UI deferred to Phase 2; 25 tests, 294 total, build+lint clean (Completed)
 - Stripe Integration Phase 2 (Webhooks, Gating & UI) - public POST /api/webhooks/stripe (Node runtime, raw-body constructEvent, 503/400 guards, handles checkout.session.completed + customer.subscription.*) → syncSubscriptionToUser reconciles User.isPro idempotently (resolve by stripeCustomerId, metadata.userId fallback, nulls sub id when inactive); Free-tier gating in createItem (50) / createCollection (3) via PlanLimitError + File-branch Pro gate (images free), actions map to PLAN_LIMIT_MESSAGES upgrade CTAs; /api/upload 402 for non-Pro file kind; Billing card on /settings (server BillingSection + client UpgradeButtons/ManageSubscriptionButton + CheckoutStatusToast); JWT jwt() re-reads isPro + Session/JWT type augmentation; 318 tests, build+lint clean (Completed)
+- Gate File & Image behind Pro - Free users hitting /items/files or /items/images now get a ProTypeUpsell upgrade page (isProItemType/PRO_ITEM_TYPES predicate in plan.ts, reuses UpgradeButtons); image uploads made Pro-only across the board (reverses "images free"): /api/upload 402s both kinds + createItem FILE/IMAGE branch throws new PlanLimitError("image"), billing/spec copy synced to "no uploads on Free"; 321 tests, build+lint clean (Completed)
