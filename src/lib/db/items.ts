@@ -346,6 +346,15 @@ export async function createItem(
     throw new PlanLimitError(data.type === "image" ? "image" : "file");
   }
 
+  // Never trust a client-supplied file URL: it must resolve to a key inside our
+  // own R2 bucket (keyFromPublicUrl returns null for anything else). This stops
+  // a forged createItem call from persisting an arbitrary external URL that the
+  // UI would later render via <img src>. Returning null → "Could not create
+  // item." in the action.
+  if (isFile && (!data.fileUrl || !keyFromPublicUrl(data.fileUrl))) {
+    return null;
+  }
+
   const created = await prisma.$transaction(async (tx) => {
     const item = await tx.item.create({
       data: {

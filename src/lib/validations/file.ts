@@ -21,14 +21,11 @@ export const UPLOAD_CONSTRAINTS: Record<UploadKind, UploadConstraints> = {
   image: {
     label: "Image",
     maxSize: 5 * MB,
-    extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg"],
-    mimeTypes: [
-      "image/png",
-      "image/jpeg",
-      "image/gif",
-      "image/webp",
-      "image/svg+xml",
-    ],
+    // SVG is intentionally excluded: it can carry inline <script>, which would
+    // execute if the raw R2 URL is opened directly (stored-XSS). Raster formats
+    // only.
+    extensions: ["png", "jpg", "jpeg", "gif", "webp"],
+    mimeTypes: ["image/png", "image/jpeg", "image/gif", "image/webp"],
   },
   file: {
     label: "File",

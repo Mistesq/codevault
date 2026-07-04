@@ -12,14 +12,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { ItemContentField } from "@/components/items/ItemContentField";
 import { CollectionMultiSelect } from "@/components/items/CollectionMultiSelect";
 import { updateItem } from "@/actions/items";
-import { CODE_CONTENT_TYPES } from "@/lib/item-content-types";
+import {
+  CODE_CONTENT_TYPES,
+  CONTENT_FIELD_TYPES,
+  LANGUAGE_FIELD_TYPES,
+} from "@/lib/item-content-types";
 import { buildItemFields } from "@/lib/item-form";
 import type { ItemDetail } from "@/lib/db/items";
 import type { SelectableCollection } from "@/lib/db/collections";
 
-// Which type-specific fields each system item type exposes in edit mode.
-const CONTENT_TYPES = new Set(["snippet", "prompt", "command", "note"]);
-const LANGUAGE_TYPES = new Set(["snippet", "command"]);
+// URL is the only field-visibility rule unique to this form (the create dialog
+// keys off its "URL" CreateItemType instead); content/language come from the
+// shared item-content-types sets.
 const URL_TYPES = new Set(["url"]);
 
 /**
@@ -41,9 +45,9 @@ export function ItemEditForm({
 }) {
   const router = useRouter();
   const typeName = detail.type.name.toLowerCase();
-  const showContent = CONTENT_TYPES.has(typeName);
+  const showContent = CONTENT_FIELD_TYPES.has(typeName);
   const isCodeContent = CODE_CONTENT_TYPES.has(typeName);
-  const showLanguage = LANGUAGE_TYPES.has(typeName);
+  const showLanguage = LANGUAGE_FIELD_TYPES.has(typeName);
   const showUrl = URL_TYPES.has(typeName);
 
   const [title, setTitle] = useState(detail.title);

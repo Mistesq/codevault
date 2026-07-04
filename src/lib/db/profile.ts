@@ -2,8 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { typeOrderIndex } from "@/lib/db/items";
 
-// Profile data is scoped to the signed-in user (session.user.id), unlike the
-// dashboard helpers which are still scoped to the seeded demo user.
+// Profile data is scoped to the signed-in user (session.user.id), matching the
+// rest of the domain layer (all queries resolve the user from the auth session).
 
 export interface ProfileTypeCount {
   name: string;

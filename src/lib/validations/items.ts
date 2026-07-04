@@ -103,6 +103,14 @@ export const createItemSchema = z
           path: ["fileUrl"],
           message: "Please upload a file.",
         });
+      } else if (!z.url().safeParse(data.fileUrl).success) {
+        // Must be a real URL. The server also verifies it points at our own R2
+        // bucket (see createItem) so a forged external URL can't be persisted.
+        ctx.addIssue({
+          code: "custom",
+          path: ["fileUrl"],
+          message: "Invalid file URL.",
+        });
       }
     }
   });

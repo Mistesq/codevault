@@ -16,7 +16,12 @@ describe("validateUpload — images", () => {
   });
 
   it("accepts when the browser omits the MIME type (relies on extension)", () => {
-    expect(validateUpload("image", "icon.svg", "", 500).ok).toBe(true);
+    expect(validateUpload("image", "icon.webp", "", 500).ok).toBe(true);
+  });
+
+  it("rejects SVG (excluded to avoid stored-XSS via inline script)", () => {
+    const result = validateUpload("image", "icon.svg", "image/svg+xml", 500);
+    expect(result.ok).toBe(false);
   });
 
   it("rejects a disallowed extension", () => {

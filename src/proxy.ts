@@ -17,6 +17,20 @@ export const proxy = auth((req) => {
   }
 });
 
+// Every route wrapped in the authenticated AppShell. AppShell's own `auth()`
+// check is the real guard (defense-in-depth); this matcher lets the edge proxy
+// redirect unauthenticated users before the page renders. Keep in sync with the
+// AppShell-wrapped routes under src/app.
 export const config = {
-  matcher: ["/dashboard/:path*", "/profile/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/profile/:path*",
+    "/settings/:path*",
+    "/favorites/:path*",
+    "/pinned/:path*",
+    "/recent/:path*",
+    "/items/:path*",
+    "/collections/:path*",
+    "/upgrade/:path*",
+  ],
 };

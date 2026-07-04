@@ -85,20 +85,13 @@ export async function getFavoriteCollections(): Promise<SidebarCollection[]> {
   }));
 }
 
-// Include that pulls each collection's items down to just their type metadata,
-// enough to derive the card's item count, type icons, and border accent.
+// Card include: the item count via `_count` (so we never transfer item rows just
+// to count them) plus each membership's item typeId only (a single cuid per
+// membership rather than the full type object). Type metadata (name/icon/color)
+// is resolved once per page in mapCollectionCards.
 const collectionCardInclude = {
-  items: {
-    select: {
-      item: {
-        select: {
-          type: {
-            select: { id: true, name: true, icon: true, color: true },
-          },
-        },
-      },
-    },
-  },
+  _count: { select: { items: true } },
+  items: { select: { item: { select: { typeId: true } } } },
 } as const;
 
 // Derived from the include so the row shape can't drift from the query.
@@ -106,34 +99,61 @@ type CollectionCardRow = Prisma.CollectionGetPayload<{
   include: typeof collectionCardInclude;
 }>;
 
-/** Map a collection row into the DashboardCollection shape used by the card. */
+/**
+ * Map a collection row into the DashboardCollection shape used by the card,
+ * resolving each membership's typeId against a shared type-metadata map (built
+ * once per page so this stays a pure, synchronous mapper).
+ */
 function toDashboardCollection(
   collection: CollectionCardRow,
+  typeMetaById: Map<string, CollectionType>,
 ): DashboardCollection {
-  // Count items per type and remember each type's metadata.
+  // Count items per type.
   const counts = new Map<string, number>();
-  const meta = new Map<string, CollectionType>();
   for (const { item } of collection.items) {
-    const { type } = item;
-    counts.set(type.id, (counts.get(type.id) ?? 0) + 1);
-    if (!meta.has(type.id)) meta.set(type.id, type);
+    counts.set(item.typeId, (counts.get(item.typeId) ?? 0) + 1);
   }
 
-  // Distinct types, most-used first.
+  // Distinct types, most-used first, resolved to their metadata.
   const types = [...counts.entries()]
     .sort((a, b) => b[1] - a[1])
-    .map(([typeId]) => meta.get(typeId)!)
-    .filter(Boolean);
+    .map(([typeId]) => typeMetaById.get(typeId))
+    .filter((t): t is CollectionType => Boolean(t));
 
   return {
     id: collection.id,
     name: collection.name,
     description: collection.description,
     isFavorite: collection.isFavorite,
-    itemCount: collection.items.length,
+    itemCount: collection._count.items,
     borderColor: types[0]?.color ?? null,
     types,
   };
+}
+
+/**
+ * Map a page of collection rows into DashboardCollections. Resolves the type
+ * metadata for every distinct type present in the page with a single query, so
+ * the card query itself only carries typeIds (not repeated name/icon/color per
+ * item membership).
+ */
+async function mapCollectionCards(
+  rows: CollectionCardRow[],
+): Promise<DashboardCollection[]> {
+  const typeIds = new Set<string>();
+  for (const row of rows) {
+    for (const { item } of row.items) typeIds.add(item.typeId);
+  }
+
+  const typeMeta = typeIds.size
+    ? await prisma.itemType.findMany({
+        where: { id: { in: [...typeIds] } },
+        select: { id: true, name: true, icon: true, color: true },
+      })
+    : [];
+  const typeMetaById = new Map(typeMeta.map((t) => [t.id, t]));
+
+  return rows.map((row) => toDashboardCollection(row, typeMetaById));
 }
 
 /**
@@ -154,7 +174,7 @@ export async function getDashboardCollections(
     include: collectionCardInclude,
   });
 
-  return collections.map(toDashboardCollection);
+  return mapCollectionCards(collections);
 }
 
 /**
@@ -171,7 +191,7 @@ export async function getAllCollections(): Promise<DashboardCollection[]> {
     include: collectionCardInclude,
   });
 
-  return collections.map(toDashboardCollection);
+  return mapCollectionCards(collections);
 }
 
 /**
@@ -200,7 +220,7 @@ export async function getPaginatedCollections(
   });
 
   return {
-    items: collections.map(toDashboardCollection),
+    items: await mapCollectionCards(collections),
     page: current,
     totalPages,
     totalCount,

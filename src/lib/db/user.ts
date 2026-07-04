@@ -35,12 +35,14 @@ export interface CurrentUser {
 
 /**
  * The signed-in user for the sidebar footer / profile, read from the auth
- * session. `isPro` is read fresh from the database (the JWT doesn't carry it).
- * Callers must guarantee an authenticated session (e.g. the dashboard layout's
- * `auth()` guard); a missing session is a bug, so we throw rather than silently
- * rendering a placeholder identity.
+ * session. `isPro` comes from the database (the JWT doesn't carry it), reusing
+ * getSessionUser's React-`cache()`d lookup so the app shell doesn't issue a
+ * second identical query. Callers must guarantee an authenticated session (e.g.
+ * the dashboard layout's `auth()` guard); a missing session is a bug, so we
+ * throw rather than silently rendering a placeholder identity. Wrapped in
+ * `cache()` so repeated calls within one request share the work.
  */
-export async function getCurrentUser(): Promise<CurrentUser> {
+export const getCurrentUser = cache(async (): Promise<CurrentUser> => {
   const session = await auth();
   const sessionUser = session?.user;
 
@@ -48,10 +50,7 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     throw new Error("getCurrentUser called without an authenticated session");
   }
 
-  const dbUser = await prisma.user.findUnique({
-    where: { id: sessionUser.id },
-    select: { isPro: true },
-  });
+  const dbUser = await getSessionUser();
 
   return {
     name: sessionUser.name ?? "User",
@@ -59,7 +58,7 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     image: sessionUser.image ?? null,
     isPro: dbUser?.isPro ?? false,
   };
-}
+});
 
 /**
  * The signed-in user's Monaco editor preferences, read from the JSON column and

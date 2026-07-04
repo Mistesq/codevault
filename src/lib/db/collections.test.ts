@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // test — no database. We assert the create is user-scoped and mapped into the
 // DashboardCollection shape. `vi.hoisted` lets the mocks exist before the
 // hoisted factories.
-const { collection, item } = vi.hoisted(() => ({
+const { collection, item, itemType } = vi.hoisted(() => ({
   collection: {
     create: vi.fn(),
     findMany: vi.fn(),
@@ -14,13 +14,14 @@ const { collection, item } = vi.hoisted(() => ({
     count: vi.fn(),
   },
   item: { findMany: vi.fn(), count: vi.fn() },
+  itemType: { findMany: vi.fn() },
 }));
 const { getSessionUser } = vi.hoisted(() => ({
   getSessionUser: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { collection, item },
+  prisma: { collection, item, itemType },
 }));
 vi.mock("@/lib/db/user", () => ({
   getSessionUser,
@@ -252,7 +253,7 @@ describe("getSelectableCollections", () => {
 });
 
 describe("getDashboardCollections", () => {
-  it("counts items via the join and derives the border from the most-used type", async () => {
+  it("counts items via _count and derives the border from the most-used type", async () => {
     getSessionUser.mockResolvedValue({ id: "user_1" });
     const snippet = { id: "t_snip", name: "snippet", icon: "Code", color: "#blue" };
     const note = { id: "t_note", name: "note", icon: "StickyNote", color: "#yellow" };
@@ -263,16 +264,23 @@ describe("getDashboardCollections", () => {
         name: "React Patterns",
         description: "Reusable bits",
         isFavorite: false,
+        _count: { items: 3 },
         items: [
-          { item: { type: snippet } },
-          { item: { type: snippet } },
-          { item: { type: note } },
+          { item: { typeId: "t_snip" } },
+          { item: { typeId: "t_snip" } },
+          { item: { typeId: "t_note" } },
         ],
       },
     ]);
+    // Type metadata is resolved in one query per page.
+    itemType.findMany.mockResolvedValue([snippet, note]);
 
     const result = await getDashboardCollections();
 
+    expect(itemType.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ["t_snip", "t_note"] } },
+      select: { id: true, name: true, icon: true, color: true },
+    });
     expect(result).toEqual([
       {
         id: "col_1",
@@ -320,9 +328,11 @@ describe("getAllCollections", () => {
         name: "Links",
         description: null,
         isFavorite: true,
-        items: [{ item: { type: url } }],
+        _count: { items: 1 },
+        items: [{ item: { typeId: "t_url" } }],
       },
     ]);
+    itemType.findMany.mockResolvedValue([url]);
 
     const result = await getAllCollections();
 
@@ -479,9 +489,11 @@ describe("getPaginatedCollections", () => {
         name: "Links",
         description: null,
         isFavorite: true,
-        items: [{ item: { type: url } }],
+        _count: { items: 1 },
+        items: [{ item: { typeId: "t_url" } }],
       },
     ]);
+    itemType.findMany.mockResolvedValue([url]);
 
     const result = await getPaginatedCollections(1);
 

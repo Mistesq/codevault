@@ -23,7 +23,7 @@ type ActionResult<T> =
 /**
  * Create a new collection from the New Collection dialog. Requires a signed-in
  * session, validates the payload with Zod (source of truth), then delegates to
- * the demo-user-scoped query. A duplicate name (the `@@unique([userId, name])`
+ * the session-user-scoped query. A duplicate name (the `@@unique([userId, name])`
  * constraint → Prisma P2002) surfaces as a friendly message rather than a raw
  * exception. Returns the created collection.
  */

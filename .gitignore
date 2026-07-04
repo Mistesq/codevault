@@ -48,5 +48,5 @@ next-env.d.ts
 .playwright-mcp/
 
 # Claude Code: version control the config, ignore auto-generated memory
-.claude/agent-memory/
+# .claude/agent-memory/
 .claude/settings.local.json
