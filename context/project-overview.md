@@ -75,7 +75,7 @@ Full-text search across **content, tags, titles, and types**.
 - Explain Code
 - Prompt optimization
 
-> AI powered by **OpenAI** (model: `gpt-5-nano`).
+> AI powered by **Google Gemini** (models: `gemini-2.5-flash-lite` / `gemini-2.5-flash`).
 
 ---
 
@@ -265,7 +265,7 @@ erDiagram
 | File Storage | [Cloudflare R2](https://developers.cloudflare.com/r2)                           |
 | CSS / UI     | [Tailwind CSS v4](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com) |
 | Auth         | [NextAuth v5 / Auth.js](https://authjs.dev) (email + GitHub)                    |
-| AI           | [OpenAI](https://platform.openai.com) (`gpt-5-nano`)                            |
+| AI           | [Google Gemini](https://ai.google.dev) (`gemini-2.5-flash-lite`)                |
 | Deployment   | [Vercel](https://vercel.com) (likely)                                           |
 | Monitoring   | [Sentry](https://sentry.io) (later)                                             |
 | Payments     | [Stripe](https://stripe.com)                                                    |
@@ -274,10 +274,10 @@ erDiagram
 
 ## 💰 Monetization
 
-| Plan    | Price           | Limits                  | Features                                        |
-| ------- | --------------- | ----------------------- | ----------------------------------------------- |
-| 🆓 Free | $0              | 50 items, 3 collections | Basic search, no uploads, no AI                 |
-| ⭐ Pro  | $8/mo or $72/yr | Unlimited               | File & image uploads, custom types, AI, export  |
+| Plan    | Price           | Limits                  | Features                                       |
+| ------- | --------------- | ----------------------- | ---------------------------------------------- |
+| 🆓 Free | $0              | 50 items, 3 collections | Basic search, no uploads, no AI                |
+| ⭐ Pro  | $8/mo or $72/yr | Unlimited               | File & image uploads, custom types, AI, export |
 
 > Billing via [Stripe](https://stripe.com) subscriptions, with webhooks syncing plan state back to the `User` model.
 
@@ -318,7 +318,7 @@ graph TD
   Client["Client (Next.js UI)"] <--> API["Next.js API / Server Actions"]
   API --> DB[("Neon PostgreSQL")]
   API --> R2[("Cloudflare R2")]
-  API --> AI["OpenAI API"]
+  API --> AI["Gemini API"]
   API --> Cache[("Redis (optional)")]
 ```
 
@@ -342,7 +342,7 @@ flowchart LR
 ```mermaid
 flowchart TD
   Content["Item Content"] --> API["Next.js API"]
-  API --> AI["OpenAI"]
+  API --> AI["Gemini"]
   AI --> Out{{"Tags / Summary / Explain Code"}}
   Out --> UI["UI Update"]
 ```
@@ -362,8 +362,8 @@ AUTH_SECRET=
 AUTH_GITHUB_ID=
 AUTH_GITHUB_SECRET=
 
-# OpenAI
-OPENAI_API_KEY=
+# Google Gemini (key from Google AI Studio)
+GEMINI_API_KEY=
 
 # Cloudflare R2
 R2_ACCOUNT_ID=
@@ -431,7 +431,7 @@ git switch -c lesson-01-setup
 - **Session strategy:** Credentials (email + password) forces the JWT strategy in Auth.js. Confirm it coexists cleanly with GitHub OAuth before building.
 - **Search engine:** Start with Postgres full-text search / `pg_trgm`, or reach for a dedicated search service early? Affects schema and indexing.
 - **Upload limits:** Define max file size and total storage per plan, enforced both client- and server-side.
-- **AI cost controls:** Per-user rate limiting / usage caps to keep OpenAI spend predictable.
+- **AI cost controls:** Per-user rate limiting / usage caps. On Gemini's free tier the binding constraint is request-rate (RPM/RPD), not spend — cap per-user usage so one user can't exhaust the shared daily quota, and handle `429` with backoff.
 - **Free-tier enforcement:** How do custom item types and the 50-item / 3-collection caps interact at the DB and UI layers?
 - **Deletes:** Soft delete (trash / restore) vs. hard delete — decide before items reference each other heavily.
 
