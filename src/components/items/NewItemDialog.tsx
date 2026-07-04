@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ItemContentField } from "@/components/items/ItemContentField";
+import { LanguageSelect } from "@/components/items/LanguageSelect";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { CollectionMultiSelect } from "@/components/items/CollectionMultiSelect";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
@@ -247,6 +248,17 @@ export function NewItemDialog({
             />
           </div>
 
+          {showLanguage && (
+            <div className="space-y-1.5">
+              <Label htmlFor="new-item-language">Language</Label>
+              <LanguageSelect
+                id="new-item-language"
+                value={language}
+                onChange={setLanguage}
+              />
+            </div>
+          )}
+
           {showContent && (
             <div className="space-y-1.5">
               <Label htmlFor="new-item-content">Content</Label>
@@ -255,18 +267,6 @@ export function NewItemDialog({
                 value={content}
                 onChange={setContent}
                 language={language}
-              />
-            </div>
-          )}
-
-          {showLanguage && (
-            <div className="space-y-1.5">
-              <Label htmlFor="new-item-language">Language</Label>
-              <Input
-                id="new-item-language"
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                placeholder="e.g. tsx, bash"
               />
             </div>
           )}

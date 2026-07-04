@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ItemContentField } from "@/components/items/ItemContentField";
+import { LanguageSelect } from "@/components/items/LanguageSelect";
 import { CollectionMultiSelect } from "@/components/items/CollectionMultiSelect";
 import { updateItem } from "@/actions/items";
 import {
@@ -124,6 +125,17 @@ export function ItemEditForm({
           />
         </div>
 
+        {showLanguage && (
+          <div className="space-y-1.5">
+            <Label htmlFor="item-language">Language</Label>
+            <LanguageSelect
+              id="item-language"
+              value={language}
+              onChange={setLanguage}
+            />
+          </div>
+        )}
+
         {showContent && (
           <div className="space-y-1.5">
             <Label htmlFor="item-content">Content</Label>
@@ -132,18 +144,6 @@ export function ItemEditForm({
               value={content}
               onChange={setContent}
               language={language}
-            />
-          </div>
-        )}
-
-        {showLanguage && (
-          <div className="space-y-1.5">
-            <Label htmlFor="item-language">Language</Label>
-            <Input
-              id="item-language"
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              placeholder="e.g. tsx, bash"
             />
           </div>
         )}
