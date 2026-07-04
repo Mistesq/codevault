@@ -1,24 +1,16 @@
-# Current Feature: AI Prompt Optimization
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Add an "Optimize" action for **Prompt** item types in the item drawer read view, placed in the header much like the "Explain" button on snippets and commands.
-- On click, send the current prompt content to Gemini, which reviews it and refines it if needed (clearer, more effective prompt).
-- Show the optimized prompt to the user and ask whether they want to use it (accept → replace the item's content, or reject/keep original).
-- Pro-only, mirroring the other AI features (auth + Pro + config guards, shared AI rate limit, graceful 429 handling); Free users get an upgrade CTA.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Mirror the AI Explain Code feature** (most recent completed feature) as the closest precedent: a Pro-only, streamed Gemini action surfaced from the item drawer read view, with a header slot on the content editor.
-- Explain Code lives across: `explainCode` action (returns `ReadableStream<string>`, auth+Pro+config+Zod+shared ai rate limit), pure `explain.ts` (`buildExplainPrompt` + system instruction, reuses tagging truncate/`isRateLimitError`), `explainCodeSchema`, and `CodeExplainer` UI (Sparkles button → Code/Explain tabs, progressive markdown, per-session cache). Reuse these patterns.
-- Prompts use the **Markdown editor** (`MarkdownEditor.tsx`), not the Monaco `CodeEditor`, so the "Optimize" header slot must be added where the prompt content renders in the read view (drawer content section), not on `CodeEditor`.
-- Unlike Explain (read-only output), Optimize needs an **accept flow** that writes the refined text back to the item — reuse the existing `updateItem` action/query to persist the accepted prompt content.
-- AI config: Gemini via `@google/genai` lazy singleton, `isGeminiConfigured`; reasoning tier `EXPLAIN_MODEL=gemini-2.5-flash` (flash-lite fallback) is a candidate model for the refinement task. Shared `ai` rate-limit bucket (20/hr) and `plan.ts` "ai" resource already exist.
-- Add unit tests for the new pure helper (prompt builder/parser) and the action guards, matching the testing conventions (server actions + utilities only).
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -89,3 +81,4 @@ In Progress
 - AI Auto-Tagging - Pro-only "Suggest Tags" (Sparkles ghost button) in New Item modal + drawer edit; Gemini foundation (@google/genai lazy singleton client.ts, AI_MODEL=gemini-2.5-flash-lite, isGeminiConfigured); pure tagging.ts (prompt builder + parser handling {"tags":[]}/[] shapes, lowercase/dedupe/cap 5, 2000-char truncate, isRateLimitError); generateAutoTags action (auth+Pro+config+Zod+per-user rate limit, graceful 429); rate-limit ai bucket 20/hr, plan.ts "ai" resource; SuggestTagsButton (accept/reject badges) + addTag helper; isPro threaded AppShell→TopBar/drawer chain; 29 tests, 353 total, build+lint clean (Completed)
 - AI Generate Description - Pro-only "Generate" (Wand2 ghost button) beside the Description label in New Item modal + drawer edit; builds a 1-2 sentence description from whatever's entered (title/content/type/url/language), no save needed; pure description.ts (buildDescriptionPrompt omits empty fields + reuses tagging truncate, parseDescription strips wrapping quotes/collapses whitespace/caps 2 sentences + 300 chars, re-exports isRateLimitError/MAX_CONTENT_CHARS); describeItemSchema (all-optional trimmed, superRefine requires >=1 of title/content/url); generateDescription action (auth+Pro+config+Zod+shared ai rate limit, graceful 429); GenerateDescriptionButton (disabled until signal, onGenerate replaces field); 22 tests, 375 total, build+lint clean (Completed)
 - AI Explain Code - Pro-only streamed markdown explanation of snippets/commands in the item drawer read view via Gemini reasoning tier (EXPLAIN_MODEL=gemini-2.5-flash, flash-lite fallback note); explainCode action returns a ReadableStream<string> (auth+Pro+config+Zod+shared ai rate limit, initial 429 → friendly message before stream opens, mid-stream errors close gracefully); pure explain.ts (buildExplainPrompt + system instruction, reuses tagging truncate/isRateLimitError) + explainCodeSchema; CodeEditor gains headerTabs/headerActions slots + body override (dots hide when tabs present so header can't overflow); CodeExplainer wraps read-only editor with Sparkles Explain → Code/Explain tabs, progressive markdown (Loader2 only until first token), icon-only Regenerate, per-session cache by item id; Free users get Crown button + tooltip toasting upgrade; isPro threaded ItemDrawer→DrawerContentSection→CodeExplainer; 14 tests, 389 total, build+lint clean (Completed)
+- AI Prompt Optimization - Pro-only "Optimize" affordance in the item drawer read view for Prompt items (mirrors AI Explain Code); optimizePrompt action (auth+Pro+config+Zod+shared ai rate limit, EXPLAIN_MODEL, non-streaming ActionResult<string>, graceful 429) returns a refined prompt; pure optimize.ts (buildOptimizePrompt + OPTIMIZE_SYSTEM_INSTRUCTION + parseOptimizedPrompt: trims, strips wrapping code fence, keeps quotes, reuses tagging truncate/isRateLimitError) + optimizePromptSchema; MarkdownEditor gains headerTabs/headerActions + body-override slots; PromptOptimizer wraps read-only editor with Original/Optimized tabs, Sparkles Optimize/Regenerate, accept flow (Use this → updateItem + router.refresh + onUpdated, Discard keeps original), per-session cache by item id, Free users get Crown upgrade toast; DrawerContentSection routes prompts to PromptOptimizer (notes stay plain) with onUpdated threaded; themed .drawer-scroll scrollbar on drawer read/edit scroll areas; 19 tests, 408 total, build+lint clean (Completed)
