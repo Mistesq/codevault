@@ -24,8 +24,10 @@ import type { SelectableCollection } from "@/lib/db/collections";
 // the user's collections for the assignment picker).
 export function TopBar({
   collections,
+  isPro,
 }: {
   collections: SelectableCollection[];
+  isPro: boolean;
 }) {
   const { collapsed, toggleCollapsed, setMobileOpen } = useSidebar();
   const { openPalette } = useCommandPalette();
@@ -120,7 +122,7 @@ export function TopBar({
         </Link>
 
         <NewCollectionDialog compactOnMobile />
-        <NewItemDialog collections={collections} compactOnMobile />
+        <NewItemDialog collections={collections} isPro={isPro} compactOnMobile />
       </div>
     </header>
   );

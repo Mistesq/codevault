@@ -22,6 +22,7 @@ import { ItemContentField } from "@/components/items/ItemContentField";
 import { LanguageSelect } from "@/components/items/LanguageSelect";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { CollectionMultiSelect } from "@/components/items/CollectionMultiSelect";
+import { SuggestTagsButton } from "@/components/items/SuggestTagsButton";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import {
   CODE_CONTENT_TYPES,
@@ -29,7 +30,7 @@ import {
   FILE_FIELD_TYPES,
   LANGUAGE_FIELD_TYPES,
 } from "@/lib/item-content-types";
-import { buildItemFields } from "@/lib/item-form";
+import { addTag, buildItemFields, parseTags } from "@/lib/item-form";
 import { createItem } from "@/actions/items";
 import type { CreateItemType } from "@/lib/validations/items";
 import type { SelectableCollection } from "@/lib/db/collections";
@@ -68,6 +69,7 @@ export function NewItemDialog({
   defaultType = DEFAULT_TYPE,
   triggerLabel = "New Item",
   compactOnMobile = false,
+  isPro = false,
 }: {
   collections?: SelectableCollection[];
   defaultType?: CreateItemType;
@@ -75,6 +77,8 @@ export function NewItemDialog({
   // When true, the text label is hidden below `lg` (icon-only), used in the
   // space-constrained dashboard top bar (the md range shows the brand block).
   compactOnMobile?: boolean;
+  // Gates the AI "Suggest Tags" affordance (Pro-only); server-side re-checks.
+  isPro?: boolean;
 } = {}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -305,6 +309,14 @@ export function NewItemDialog({
               onChange={(e) => setTags(e.target.value)}
               placeholder="Comma-separated, e.g. react, hooks"
             />
+            {isPro && (
+              <SuggestTagsButton
+                title={title}
+                content={content}
+                currentTags={parseTags(tags)}
+                onAdd={(tag) => setTags((prev) => addTag(prev, tag))}
+              />
+            )}
           </div>
 
           <div className="space-y-1.5">

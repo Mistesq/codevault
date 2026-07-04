@@ -27,6 +27,10 @@ export const RATE_LIMITS = {
   passwordResetRequest: { limit: 3, window: "1 h", prefix: "pw-reset-request" },
   passwordReset: { limit: 5, window: "15 m", prefix: "pw-reset" },
   resendVerification: { limit: 3, window: "15 m", prefix: "resend-verify" },
+  // AI features are keyed per-user (not per-IP). The Gemini free-tier RPM/RPD
+  // quota is shared per-project across all users, so this is a fairness guard to
+  // stop one account exhausting the shared daily budget — not the real ceiling.
+  ai: { limit: 20, window: "1 h", prefix: "ai" },
 } as const satisfies Record<
   string,
   { limit: number; window: `${number} ${"ms" | "s" | "m" | "h" | "d"}`; prefix: string }

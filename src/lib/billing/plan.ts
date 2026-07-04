@@ -52,7 +52,7 @@ export function isAtCollectionLimit(isPro: boolean, count: number): boolean {
 }
 
 /** What a PlanLimitError was raised for — drives the upgrade CTA message. */
-export type PlanLimitResource = "item" | "collection" | "file" | "image";
+export type PlanLimitResource = "item" | "collection" | "file" | "image" | "ai";
 
 /**
  * Thrown by plan gating (createItem / createCollection / the Pro-only FILE &
@@ -75,4 +75,5 @@ export const PLAN_LIMIT_MESSAGES: Record<PlanLimitResource, string> = {
     "You've reached the Free plan's 3-collection limit. Upgrade to Pro for unlimited collections.",
   file: "File uploads are a Pro feature. Upgrade to Pro to attach files.",
   image: "Image uploads are a Pro feature. Upgrade to Pro to upload images.",
+  ai: "AI features are a Pro feature. Upgrade to Pro to use AI auto-tagging.",
 };

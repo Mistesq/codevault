@@ -12,13 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { ItemContentField } from "@/components/items/ItemContentField";
 import { LanguageSelect } from "@/components/items/LanguageSelect";
 import { CollectionMultiSelect } from "@/components/items/CollectionMultiSelect";
+import { SuggestTagsButton } from "@/components/items/SuggestTagsButton";
 import { updateItem } from "@/actions/items";
 import {
   CODE_CONTENT_TYPES,
   CONTENT_FIELD_TYPES,
   LANGUAGE_FIELD_TYPES,
 } from "@/lib/item-content-types";
-import { buildItemFields } from "@/lib/item-form";
+import { addTag, buildItemFields, parseTags } from "@/lib/item-form";
 import type { ItemDetail } from "@/lib/db/items";
 import type { SelectableCollection } from "@/lib/db/collections";
 
@@ -36,11 +37,14 @@ const URL_TYPES = new Set(["url"]);
 export function ItemEditForm({
   detail,
   collections,
+  isPro = false,
   onCancel,
   onSaved,
 }: {
   detail: ItemDetail;
   collections: SelectableCollection[];
+  // Gates the AI "Suggest Tags" affordance (Pro-only); server-side re-checks.
+  isPro?: boolean;
   onCancel: () => void;
   onSaved: (updated: ItemDetail) => void;
 }) {
@@ -171,6 +175,14 @@ export function ItemEditForm({
             onChange={(e) => setTags(e.target.value)}
             placeholder="Comma-separated, e.g. react, hooks"
           />
+          {isPro && (
+            <SuggestTagsButton
+              title={title}
+              content={content}
+              currentTags={parseTags(tags)}
+              onAdd={(tag) => setTags((prev) => addTag(prev, tag))}
+            />
+          )}
         </div>
 
         <div className="space-y-1.5">

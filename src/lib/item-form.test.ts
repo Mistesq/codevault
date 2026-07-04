@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildItemFields, parseTags } from "@/lib/item-form";
+import { addTag, buildItemFields, parseTags } from "@/lib/item-form";
 
 describe("parseTags", () => {
   it("trims, drops blanks, and splits on commas", () => {
@@ -10,6 +10,26 @@ describe("parseTags", () => {
   it("returns an empty array for an empty / whitespace input", () => {
     expect(parseTags("")).toEqual([]);
     expect(parseTags("   ")).toEqual([]);
+  });
+});
+
+describe("addTag", () => {
+  it("appends a tag to an existing comma-separated list", () => {
+    expect(addTag("react, hooks", "state")).toBe("react, hooks, state");
+  });
+
+  it("adds the first tag to an empty input", () => {
+    expect(addTag("", "react")).toBe("react");
+    expect(addTag("   ", "react")).toBe("react");
+  });
+
+  it("ignores a duplicate that already exists in the list", () => {
+    expect(addTag("react, hooks", "react")).toBe("react, hooks");
+  });
+
+  it("trims the incoming tag and ignores a blank one", () => {
+    expect(addTag("react", "  hooks  ")).toBe("react, hooks");
+    expect(addTag("react", "   ")).toBe("react");
   });
 });
 
