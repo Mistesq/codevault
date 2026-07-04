@@ -6,37 +6,11 @@ Not Started
 
 ## Goals
 
-Audit Fixes (Batch 2) — address the code-scanner findings, everything except
-keeping `src/lib/mock-data.ts` and the non-atomic free-tier limit race.
-
-- **[High] Harden `fileUrl`:** `createItemSchema` now rejects a non-URL `fileUrl`
-  (`z.url()`), and `createItem` verifies the URL resolves to a key inside our own
-  R2 bucket (`keyFromPublicUrl`) — a forged/external URL returns null instead of
-  being persisted and rendered via `<img src>`.
-- **[Med] Dedup field-visibility Sets:** one source of truth in
-  `src/lib/item-content-types.ts` (`CONTENT_FIELD_TYPES`, `LANGUAGE_FIELD_TYPES`,
-  `FILE_FIELD_TYPES`); `NewItemDialog` and `ItemEditForm` import them (kills the
-  `"URL"` vs `"url"` drift).
-- **[Med] Collection-card over-fetch:** card query drops the per-membership type
-  object for `_count` (item count) + `typeId` only, resolving type metadata once
-  per page in `mapCollectionCards`.
-- **[Med] Dedup user lookups:** `getCurrentUser` wrapped in React `cache()` and
-  reuses `getSessionUser`'s cached lookup instead of its own `findUnique`.
-- **[Med] SVG uploads:** removed `svg` / `image/svg+xml` from the image allow-list
-  (closes stored-XSS via inline `<script>` on direct R2 URL access).
-- **[Low] Stale comments:** "demo-user-scoped" → "session-user-scoped" across
-  actions/db/api.
-- **[Low] Proxy matcher:** `src/proxy.ts` now covers all AppShell-protected routes
-  (`/settings`, `/favorites`, `/pinned`, `/recent`, `/items`, `/collections`,
-  `/upgrade`) — defense-in-depth; AppShell's `auth()` stays the real guard.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- OUT of scope by request: deleting `src/lib/mock-data.ts` (keep mock data), and
-  the non-atomic free-tier limit race in `createItem`/`createCollection`.
-- Tests: +2 (foreign-`fileUrl` guard, SVG rejection); collections/file tests
-  updated for the new query shape. `npm test` green (323), plus `npm run lint` +
-  `npm run build` before committing.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -102,3 +76,4 @@ keeping `src/lib/mock-data.ts` and the non-atomic free-tier limit race.
 - Stripe Integration Phase 2 (Webhooks, Gating & UI) - public POST /api/webhooks/stripe (Node runtime, raw-body constructEvent, 503/400 guards, handles checkout.session.completed + customer.subscription.*) → syncSubscriptionToUser reconciles User.isPro idempotently (resolve by stripeCustomerId, metadata.userId fallback, nulls sub id when inactive); Free-tier gating in createItem (50) / createCollection (3) via PlanLimitError + File-branch Pro gate (images free), actions map to PLAN_LIMIT_MESSAGES upgrade CTAs; /api/upload 402 for non-Pro file kind; Billing card on /settings (server BillingSection + client UpgradeButtons/ManageSubscriptionButton + CheckoutStatusToast); JWT jwt() re-reads isPro + Session/JWT type augmentation; 318 tests, build+lint clean (Completed)
 - Gate File & Image behind Pro - Free users hitting /items/files or /items/images now get a ProTypeUpsell upgrade page (isProItemType/PRO_ITEM_TYPES predicate in plan.ts, reuses UpgradeButtons); image uploads made Pro-only across the board (reverses "images free"): /api/upload 402s both kinds + createItem FILE/IMAGE branch throws new PlanLimitError("image"), billing/spec copy synced to "no uploads on Free"; 321 tests, build+lint clean (Completed)
 - Upgrade Page - new /upgrade route (own layout → AppShell, force-dynamic) with a Free-vs-Pro comparison: Monthly/Yearly Switch, check/X feature lists, "Recommended" Pro card, live usage line (getProfileData counts vs FREE_LIMITS), homepage-blue (h-accent) accents; UpgradePlans client leaf owns the toggle + createCheckoutSession redirect; wired the sidebar's existing "Upgrade to Pro" button to /upgrade (closes mobile drawer); Free users on /items/files & /items/images now redirect("/upgrade") (ProTypeUpsell deleted); Pro users on /upgrade redirect to /settings; 321 tests, build+lint clean (Completed)
+- Audit Fixes (Batch 2) - code-scanner findings (all except keeping mock-data + the free-tier race): [High] harden item fileUrl (z.url() + createItem verifies keyFromPublicUrl resolves to our own R2 bucket, forged/external URL → null); dropped SVG from image upload allow-list (stored-XSS); collection cards over-fetch fixed (_count + typeId-only projection, type metadata resolved once/page in mapCollectionCards); getCurrentUser wrapped in cache() + reuses getSessionUser; deduped item-type field-visibility Sets into item-content-types.ts; stale "demo-user-scoped" comments → "session-user-scoped"; proxy matcher extended to all AppShell routes; +3 tests, 324 total, build+lint clean (Completed)
