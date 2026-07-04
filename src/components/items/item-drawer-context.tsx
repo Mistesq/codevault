@@ -38,9 +38,11 @@ export function useItemDrawer(): ItemDrawerContextValue {
 export function ItemDrawerProvider({
   children,
   collections,
+  isPro,
 }: {
   children: React.ReactNode;
   collections: SelectableCollection[];
+  isPro: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [item, setItem] = useState<DashboardItem | null>(null);
@@ -99,6 +101,7 @@ export function ItemDrawerProvider({
         item={item}
         detail={detail}
         collections={collections}
+        isPro={isPro}
         loading={loading}
         error={error}
         onUpdated={applyUpdatedDetail}

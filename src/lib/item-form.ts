@@ -11,6 +11,17 @@ export function parseTags(input: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Append a tag to a comma-separated tag string, ignoring duplicates (used when
+ * accepting an AI suggestion). Returns the re-serialized `a, b, c` string.
+ */
+export function addTag(input: string, tag: string): string {
+  const list = parseTags(input);
+  const next = tag.trim();
+  if (next && !list.includes(next)) list.push(next);
+  return list.join(", ");
+}
+
 export interface ItemFieldInputs {
   title: string;
   description: string;

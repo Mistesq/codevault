@@ -65,13 +65,19 @@ export async function AppShell({
   return (
     <SidebarProvider>
       <EditorPreferencesProvider initial={editorPreferences}>
-        <ItemDrawerProvider collections={selectableCollections}>
+        <ItemDrawerProvider
+          collections={selectableCollections}
+          isPro={session.user.isPro}
+        >
           <CommandPaletteProvider
             items={searchData.items}
             collections={searchData.collections}
           >
             <div className="flex h-screen flex-col">
-              <TopBar collections={selectableCollections} />
+              <TopBar
+                collections={selectableCollections}
+                isPro={session.user.isPro}
+              />
               <div className="flex flex-1 overflow-hidden">
                 <Sidebar data={sidebarData} />
                 <main className="flex-1 overflow-auto p-6">{children}</main>

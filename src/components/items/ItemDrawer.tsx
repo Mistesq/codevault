@@ -35,6 +35,7 @@ export function ItemDrawer({
   item,
   detail,
   collections,
+  isPro,
   loading,
   error,
   onUpdated,
@@ -45,6 +46,7 @@ export function ItemDrawer({
   item: DashboardItem | null;
   detail: ItemDetail | null;
   collections: SelectableCollection[];
+  isPro: boolean;
   loading: boolean;
   error: boolean;
   onUpdated: (detail: ItemDetail) => void;
@@ -107,6 +109,7 @@ export function ItemDrawer({
               <ItemEditForm
                 detail={detail}
                 collections={collections}
+                isPro={isPro}
                 onCancel={() => setEditing(false)}
                 onSaved={(updated) => {
                   onUpdated(updated);

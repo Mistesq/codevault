@@ -78,6 +78,7 @@ export default async function ItemsByTypePage({
               collections={collections}
               defaultType={createType}
               triggerLabel={`New ${typeLabel(type.name)}`}
+              isPro={!!user?.isPro}
             />
           </div>
         )}

@@ -1,16 +1,34 @@
-# Current Feature
+# Current Feature: AI Auto-Tagging
 
 ## Status
 
-Not Started
+Complete
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- AI-powered "Suggest Tags" button (Sparkles icon, ghost variant) near the tags input in both the create-item dialog and item-drawer edit mode
+- Clicking it returns 3-5 freeform tag suggestions from Google Gemini (`gemini-2.5-flash-lite`) based on the item's title + content
+- Each suggestion renders as a badge with accept (check) / reject (X) controls; accepted tags join the item's tag list
+- Tags are freeform (not limited to existing DB tags), normalized to lowercase
+- Establish the Gemini foundation if not already present: client utility using the current `@google/genai` SDK with an `AI_MODEL` constant (`gemini-2.5-flash-lite`)
+- `generateAutoTags` server action with auth, Pro gating, Zod validation, rate limiting
+- Add AI rate-limit config (20 req/hour per user) to the existing rate-limit utility
+- Pro-only: hide the button for free users (UI gating) AND enforce server-side gating
+- Error handling via toast (Pro gating, rate limit, AI service errors)
+- Unit tests for the server action
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **SDK**: Use `@google/genai` (current), NOT the legacy `@google/generative-ai`. Pattern:
+  `new GoogleGenAI({ apiKey })` → `ai.models.generateContent({ model, contents, config: { systemInstruction, responseMimeType: "application/json" } })` → read `response.text` (accessor, **not** a method call).
+- Truncate content to 2000 chars before the API call.
+- Model may return `{"tags": [...]}` OR `[...]` — handle both. Always lowercase tags.
+- Handle `429 RESOURCE_EXHAUSTED` (Gemini free-tier quota is shared per-project across all users; per-user cap is a fairness guard, not the ceiling) — friendly toast, optional backoff+jitter, never crash the action.
+- `GEMINI_API_KEY` in `.env` — server-only (no `NEXT_PUBLIC_`); also add to Vercel env.
+- `isPro` is server-side via session but not passed to create/edit UI — pass it as a prop (or fetch client-side) for button visibility; rely on server-side gating for enforcement.
+- Verify exact model ID + current free-tier RPM/RPD in Google AI Studio before shipping.
+- Freeform tags → LLM call is correct. A future fixed taxonomy should switch to embeddings + cosine similarity instead.
+- Full architectural context: `docs/ai-integration-plan.md`.
 
 ## History
 
