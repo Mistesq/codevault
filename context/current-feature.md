@@ -1,28 +1,16 @@
-# Current Feature: AI Explain Code
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Add a Pro-only `explainCode` server action (auth, Pro gating, Zod validation, shared `ai` rate limit) that sends a snippet/command's content to Gemini and returns a concise (~200-300 word) markdown explanation of what the code does and key concepts.
-- Use the **reasoning tier** `gemini-2.5-flash` for this action (not the `flash-lite` default), falling back to `flash-lite` if the `flash` free-tier daily quota is too tight.
-- Stream the explanation (`generateContentStream`) and render markdown progressively; Loader2 spinner only for the initial connection / first token.
-- Add an "Explain" button (Sparkles icon) to the code editor window-controls header, next to Copy — shown only for snippet & command types in the item drawer read view (not create/edit forms).
-- After generating, show Code/Explain tabs in the editor header to toggle views; render the explanation as markdown in the same container space as the code editor.
-- Pro gating in UI: Crown icon + tooltip ("AI features require Pro subscription") for free users; `isPro` threaded as a prop to the drawer / code editor.
-- Graceful error handling via toast (Pro gating, rate limit, Gemini `429 RESOURCE_EXHAUSTED`, AI service errors).
-- Unit tests for the server action; reuse the Gemini client (`@google/genai`) and rate-limit config from auto-tagging.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Explanations are **not** saved to the DB — regenerated on each click. Optionally add a lightweight per-session in-memory cache keyed by item id so re-opening the same item doesn't re-call Gemini.
-- Every click is a fresh Gemini call against the shared per-project free-tier quota (RPM/RPD); the per-user rate limit is a fairness guard, not the real ceiling.
-- Output is plain markdown text — no JSON format config needed (unlike auto-tagging).
-- Free-tier privacy: the item's code/command content is sent to Google, which may use free-tier inputs/outputs to improve its models — acceptable here, but noted since real code is transmitted.
-- Only snippet & command types get this — other types are already human-readable or non-code.
-- See `docs/ai-integration-plan.md` for full architectural context.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -92,3 +80,4 @@ In Progress
 - Language Dropdown - free-text language input replaced by a searchable dropdown (LanguageSelect, Base UI single-select Combobox, portaled) moved above the Content editor in the New Item modal + drawer edit form, driving Monaco's live highlighting as you type; curated LANGUAGE_OPTIONS in lib/languages.ts (legacy/unknown values surfaced as their own option); no schema/action changes; build+lint+324 tests clean, Playwright-verified (Completed)
 - AI Auto-Tagging - Pro-only "Suggest Tags" (Sparkles ghost button) in New Item modal + drawer edit; Gemini foundation (@google/genai lazy singleton client.ts, AI_MODEL=gemini-2.5-flash-lite, isGeminiConfigured); pure tagging.ts (prompt builder + parser handling {"tags":[]}/[] shapes, lowercase/dedupe/cap 5, 2000-char truncate, isRateLimitError); generateAutoTags action (auth+Pro+config+Zod+per-user rate limit, graceful 429); rate-limit ai bucket 20/hr, plan.ts "ai" resource; SuggestTagsButton (accept/reject badges) + addTag helper; isPro threaded AppShell→TopBar/drawer chain; 29 tests, 353 total, build+lint clean (Completed)
 - AI Generate Description - Pro-only "Generate" (Wand2 ghost button) beside the Description label in New Item modal + drawer edit; builds a 1-2 sentence description from whatever's entered (title/content/type/url/language), no save needed; pure description.ts (buildDescriptionPrompt omits empty fields + reuses tagging truncate, parseDescription strips wrapping quotes/collapses whitespace/caps 2 sentences + 300 chars, re-exports isRateLimitError/MAX_CONTENT_CHARS); describeItemSchema (all-optional trimmed, superRefine requires >=1 of title/content/url); generateDescription action (auth+Pro+config+Zod+shared ai rate limit, graceful 429); GenerateDescriptionButton (disabled until signal, onGenerate replaces field); 22 tests, 375 total, build+lint clean (Completed)
+- AI Explain Code - Pro-only streamed markdown explanation of snippets/commands in the item drawer read view via Gemini reasoning tier (EXPLAIN_MODEL=gemini-2.5-flash, flash-lite fallback note); explainCode action returns a ReadableStream<string> (auth+Pro+config+Zod+shared ai rate limit, initial 429 → friendly message before stream opens, mid-stream errors close gracefully); pure explain.ts (buildExplainPrompt + system instruction, reuses tagging truncate/isRateLimitError) + explainCodeSchema; CodeEditor gains headerTabs/headerActions slots + body override (dots hide when tabs present so header can't overflow); CodeExplainer wraps read-only editor with Sparkles Explain → Code/Explain tabs, progressive markdown (Loader2 only until first token), icon-only Regenerate, per-session cache by item id; Free users get Crown button + tooltip toasting upgrade; isPro threaded ItemDrawer→DrawerContentSection→CodeExplainer; 14 tests, 389 total, build+lint clean (Completed)
