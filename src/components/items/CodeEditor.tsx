@@ -154,12 +154,21 @@ export function CodeEditor({
   language,
   readOnly = false,
   className,
+  headerTabs,
+  headerActions,
+  children,
 }: {
   value: string;
   onChange?: (value: string) => void;
   language?: string | null;
   readOnly?: boolean;
   className?: string;
+  /** Slot rendered in the header's left cluster (e.g. Code/Explain tabs). */
+  headerTabs?: React.ReactNode;
+  /** Slot rendered in the header's right cluster, before Copy (e.g. Explain). */
+  headerActions?: React.ReactNode;
+  /** When provided, replaces the Monaco body (e.g. a streamed explanation). */
+  children?: React.ReactNode;
 }) {
   const [height, setHeight] = useState(MIN_HEIGHT);
   const { preferences } = useEditorPreferences();
@@ -187,23 +196,33 @@ export function CodeEditor({
     >
       {/* macOS-style window header: traffic-light dots + language + copy. */}
       <div className="flex items-center justify-between border-b border-white/10 bg-white/5 px-3 py-2">
-        <div className="flex items-center gap-1.5" aria-hidden>
-          <span className="size-3 rounded-full bg-[#ff5f57]" />
-          <span className="size-3 rounded-full bg-[#febc2e]" />
-          <span className="size-3 rounded-full bg-[#28c840]" />
+        <div className="flex min-w-0 items-center gap-2.5">
+          {/* Decorative window dots — hidden when tabs occupy the same slot. */}
+          {!headerTabs && (
+            <div className="flex items-center gap-1.5" aria-hidden>
+              <span className="size-3 rounded-full bg-[#ff5f57]" />
+              <span className="size-3 rounded-full bg-[#febc2e]" />
+              <span className="size-3 rounded-full bg-[#28c840]" />
+            </div>
+          )}
+          {headerTabs}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {displayLanguage && (
             <span className="font-mono text-xs lowercase text-white/40">
               {displayLanguage}
             </span>
           )}
+          {headerActions}
           <CopyButton text={value} />
         </div>
       </div>
 
-      <div style={{ height }}>
-        <Editor
+      {children ? (
+        children
+      ) : (
+        <div style={{ height }}>
+          <Editor
           height="100%"
           theme={THEME_NAMES[preferences.theme]}
           language={toMonacoLanguage(language)}
@@ -244,8 +263,9 @@ export function CodeEditor({
             contextmenu: !readOnly,
             smoothScrolling: true,
           }}
-        />
-      </div>
+          />
+        </div>
+      )}
     </div>
   );
 }

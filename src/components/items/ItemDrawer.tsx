@@ -130,6 +130,7 @@ export function ItemDrawer({
                     loading={loading}
                     error={error}
                     copyText={copyText}
+                    isPro={isPro}
                   />
 
                   {item.tags.length > 0 && (

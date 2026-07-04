@@ -1,4 +1,4 @@
-import { CodeEditor } from "@/components/items/CodeEditor";
+import { CodeExplainer } from "@/components/items/CodeExplainer";
 import { CopyButton } from "@/components/items/CopyButton";
 import { ItemContentBody } from "@/components/items/ItemContentBody";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
@@ -22,11 +22,13 @@ export function DrawerContentSection({
   loading,
   error,
   copyText,
+  isPro,
 }: {
   detail: ItemDetail | null;
   loading: boolean;
   error: boolean;
   copyText: string;
+  isPro: boolean;
 }) {
   const typeName = detail?.type.name.toLowerCase();
   const showCodeEditor =
@@ -56,10 +58,12 @@ export function DrawerContentSection({
           </p>
         </div>
       ) : showCodeEditor && detail ? (
-        <CodeEditor
-          value={detail.content ?? ""}
+        <CodeExplainer
+          itemId={detail.id}
+          content={detail.content ?? ""}
           language={detail.language}
-          readOnly
+          typeLabel={detail.type.name}
+          isPro={isPro}
         />
       ) : showMarkdown && detail ? (
         <MarkdownEditor value={detail.content ?? ""} readOnly />
