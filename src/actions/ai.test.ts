@@ -3,21 +3,27 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Unit-test the action by mocking its collaborators: the auth session, the
 // Gemini client, and the rate limiter. No real session or network. `vi.hoisted`
 // makes the mocks available to the hoisted `vi.mock` factories.
-const { auth, generateContent, geminiConfigured, checkRateLimit } = vi.hoisted(
-  () => ({
-    auth: vi.fn(),
-    generateContent: vi.fn(),
-    geminiConfigured: vi.fn(),
-    checkRateLimit: vi.fn(),
-  }),
-);
+const {
+  auth,
+  generateContent,
+  generateContentStream,
+  geminiConfigured,
+  checkRateLimit,
+} = vi.hoisted(() => ({
+  auth: vi.fn(),
+  generateContent: vi.fn(),
+  generateContentStream: vi.fn(),
+  geminiConfigured: vi.fn(),
+  checkRateLimit: vi.fn(),
+}));
 
 vi.mock("@/auth", () => ({ auth: () => auth() }));
 
 vi.mock("@/lib/ai/client", () => ({
   AI_MODEL: "gemini-2.5-flash-lite",
+  EXPLAIN_MODEL: "gemini-2.5-flash",
   isGeminiConfigured: () => geminiConfigured(),
-  getGemini: () => ({ models: { generateContent } }),
+  getGemini: () => ({ models: { generateContent, generateContentStream } }),
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -26,7 +32,28 @@ vi.mock("@/lib/rate-limit", () => ({
   retryAfterMessage: () => "1 minute",
 }));
 
-import { generateAutoTags, generateDescription } from "@/actions/ai";
+import {
+  explainCode,
+  generateAutoTags,
+  generateDescription,
+} from "@/actions/ai";
+
+/** Build an async iterable of `{ text }` chunks to mock a Gemini stream. */
+async function* streamChunks(...texts: string[]) {
+  for (const text of texts) yield { text };
+}
+
+/** Drain a returned explanation stream into one string. */
+async function readStream(stream: ReadableStream<string>): Promise<string> {
+  const reader = stream.getReader();
+  let out = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    out += value;
+  }
+  return out;
+}
 
 const proSession = { user: { id: "user_1", isPro: true } };
 const freeSession = { user: { id: "user_2", isPro: false } };
@@ -241,6 +268,108 @@ describe("generateDescription", () => {
       success: false,
       error:
         "Something went wrong generating the description. Please try again.",
+    });
+    errorSpy.mockRestore();
+  });
+});
+
+describe("explainCode", () => {
+  it("rejects when there is no session", async () => {
+    auth.mockResolvedValue(null);
+
+    const result = await explainCode({ content: "console.log(1)" });
+
+    expect(result).toEqual({ success: false, error: "You must be signed in." });
+    expect(generateContentStream).not.toHaveBeenCalled();
+  });
+
+  it("rejects a Free user with the upgrade message", async () => {
+    auth.mockResolvedValue(freeSession);
+
+    const result = await explainCode({ content: "console.log(1)" });
+
+    expect(result.success).toBe(false);
+    expect(result).toMatchObject({ error: expect.stringContaining("Pro") });
+    expect(generateContentStream).not.toHaveBeenCalled();
+  });
+
+  it("rejects when Gemini is not configured", async () => {
+    auth.mockResolvedValue(proSession);
+    geminiConfigured.mockReturnValue(false);
+
+    const result = await explainCode({ content: "console.log(1)" });
+
+    expect(result).toEqual({ success: false, error: "AI is not configured." });
+    expect(generateContentStream).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty content (invalid input)", async () => {
+    auth.mockResolvedValue(proSession);
+
+    const result = await explainCode({ content: "   " });
+
+    expect(result.success).toBe(false);
+    expect(generateContentStream).not.toHaveBeenCalled();
+  });
+
+  it("returns a friendly error when rate limited", async () => {
+    auth.mockResolvedValue(proSession);
+    checkRateLimit.mockResolvedValue({ success: false, remaining: 0, reset: 0 });
+
+    const result = await explainCode({ content: "console.log(1)" });
+
+    expect(result.success).toBe(false);
+    expect(result).toMatchObject({ error: expect.stringContaining("1 minute") });
+    expect(generateContentStream).not.toHaveBeenCalled();
+  });
+
+  it("streams the explanation on the happy path using the reasoning model", async () => {
+    auth.mockResolvedValue(proSession);
+    generateContentStream.mockResolvedValue(
+      streamChunks("This code ", "logs a value."),
+    );
+
+    const result = await explainCode({
+      content: "console.log(1)",
+      language: "javascript",
+      type: "Snippet",
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error("expected success");
+    expect(await readStream(result.stream)).toBe("This code logs a value.");
+
+    const args = generateContentStream.mock.calls[0][0] as Record<
+      string,
+      unknown
+    >;
+    expect(args.model).toBe("gemini-2.5-flash");
+  });
+
+  it("maps an initial 429 / RESOURCE_EXHAUSTED to a friendly retry message", async () => {
+    auth.mockResolvedValue(proSession);
+    generateContentStream.mockRejectedValue(
+      new Error("429 RESOURCE_EXHAUSTED"),
+    );
+
+    const result = await explainCode({ content: "console.log(1)" });
+
+    expect(result).toEqual({
+      success: false,
+      error: "AI is busy right now. Please try again shortly.",
+    });
+  });
+
+  it("returns a generic error on other AI failures", async () => {
+    auth.mockResolvedValue(proSession);
+    generateContentStream.mockRejectedValue(new Error("network down"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await explainCode({ content: "console.log(1)" });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong explaining this code. Please try again.",
     });
     errorSpy.mockRestore();
   });

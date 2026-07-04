@@ -1,16 +1,28 @@
-# Current Feature
+# Current Feature: AI Explain Code
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Add a Pro-only `explainCode` server action (auth, Pro gating, Zod validation, shared `ai` rate limit) that sends a snippet/command's content to Gemini and returns a concise (~200-300 word) markdown explanation of what the code does and key concepts.
+- Use the **reasoning tier** `gemini-2.5-flash` for this action (not the `flash-lite` default), falling back to `flash-lite` if the `flash` free-tier daily quota is too tight.
+- Stream the explanation (`generateContentStream`) and render markdown progressively; Loader2 spinner only for the initial connection / first token.
+- Add an "Explain" button (Sparkles icon) to the code editor window-controls header, next to Copy — shown only for snippet & command types in the item drawer read view (not create/edit forms).
+- After generating, show Code/Explain tabs in the editor header to toggle views; render the explanation as markdown in the same container space as the code editor.
+- Pro gating in UI: Crown icon + tooltip ("AI features require Pro subscription") for free users; `isPro` threaded as a prop to the drawer / code editor.
+- Graceful error handling via toast (Pro gating, rate limit, Gemini `429 RESOURCE_EXHAUSTED`, AI service errors).
+- Unit tests for the server action; reuse the Gemini client (`@google/genai`) and rate-limit config from auto-tagging.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Explanations are **not** saved to the DB — regenerated on each click. Optionally add a lightweight per-session in-memory cache keyed by item id so re-opening the same item doesn't re-call Gemini.
+- Every click is a fresh Gemini call against the shared per-project free-tier quota (RPM/RPD); the per-user rate limit is a fairness guard, not the real ceiling.
+- Output is plain markdown text — no JSON format config needed (unlike auto-tagging).
+- Free-tier privacy: the item's code/command content is sent to Google, which may use free-tier inputs/outputs to improve its models — acceptable here, but noted since real code is transmitted.
+- Only snippet & command types get this — other types are already human-readable or non-code.
+- See `docs/ai-integration-plan.md` for full architectural context.
 
 ## History
 

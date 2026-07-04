@@ -10,6 +10,13 @@ import { GoogleGenAI } from "@google/genai";
 /** The model used for auto-tagging (and other lightweight AI features). */
 export const AI_MODEL = "gemini-2.5-flash-lite" as const;
 
+/**
+ * The reasoning-tier model used for code explanation. Stronger than the
+ * `flash-lite` default — explanation quality benefits from it. If the `flash`
+ * free-tier daily quota proves too tight, fall back to `AI_MODEL`.
+ */
+export const EXPLAIN_MODEL = "gemini-2.5-flash" as const;
+
 let cached: GoogleGenAI | null = null;
 
 /** True only when the API key is present, so callers can gate before invoking. */

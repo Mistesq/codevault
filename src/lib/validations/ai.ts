@@ -42,3 +42,13 @@ export const describeItemSchema = z
   });
 
 export type DescribeItemInput = z.infer<typeof describeItemSchema>;
+
+// Input payload for the AI code-explanation action. Content is required (it's
+// the code/command being explained); language/type add context but are optional.
+export const explainCodeSchema = z.object({
+  content: z.string().trim().min(1, "There's no code to explain."),
+  language: optionalTrimmed,
+  type: optionalTrimmed,
+});
+
+export type ExplainCodeInput = z.infer<typeof explainCodeSchema>;
