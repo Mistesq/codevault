@@ -1,34 +1,16 @@
-# Current Feature: AI Auto-Tagging
+# Current Feature
 
 ## Status
 
-Complete
+Not Started
 
 ## Goals
 
-- AI-powered "Suggest Tags" button (Sparkles icon, ghost variant) near the tags input in both the create-item dialog and item-drawer edit mode
-- Clicking it returns 3-5 freeform tag suggestions from Google Gemini (`gemini-2.5-flash-lite`) based on the item's title + content
-- Each suggestion renders as a badge with accept (check) / reject (X) controls; accepted tags join the item's tag list
-- Tags are freeform (not limited to existing DB tags), normalized to lowercase
-- Establish the Gemini foundation if not already present: client utility using the current `@google/genai` SDK with an `AI_MODEL` constant (`gemini-2.5-flash-lite`)
-- `generateAutoTags` server action with auth, Pro gating, Zod validation, rate limiting
-- Add AI rate-limit config (20 req/hour per user) to the existing rate-limit utility
-- Pro-only: hide the button for free users (UI gating) AND enforce server-side gating
-- Error handling via toast (Pro gating, rate limit, AI service errors)
-- Unit tests for the server action
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **SDK**: Use `@google/genai` (current), NOT the legacy `@google/generative-ai`. Pattern:
-  `new GoogleGenAI({ apiKey })` → `ai.models.generateContent({ model, contents, config: { systemInstruction, responseMimeType: "application/json" } })` → read `response.text` (accessor, **not** a method call).
-- Truncate content to 2000 chars before the API call.
-- Model may return `{"tags": [...]}` OR `[...]` — handle both. Always lowercase tags.
-- Handle `429 RESOURCE_EXHAUSTED` (Gemini free-tier quota is shared per-project across all users; per-user cap is a fairness guard, not the ceiling) — friendly toast, optional backoff+jitter, never crash the action.
-- `GEMINI_API_KEY` in `.env` — server-only (no `NEXT_PUBLIC_`); also add to Vercel env.
-- `isPro` is server-side via session but not passed to create/edit UI — pass it as a prop (or fetch client-side) for button visibility; rely on server-side gating for enforcement.
-- Verify exact model ID + current free-tier RPM/RPD in Google AI Studio before shipping.
-- Freeform tags → LLM call is correct. A future fixed taxonomy should switch to embeddings + cosine similarity instead.
-- Full architectural context: `docs/ai-integration-plan.md`.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -96,3 +78,4 @@ Complete
 - Upgrade Page - new /upgrade route (own layout → AppShell, force-dynamic) with a Free-vs-Pro comparison: Monthly/Yearly Switch, check/X feature lists, "Recommended" Pro card, live usage line (getProfileData counts vs FREE_LIMITS), homepage-blue (h-accent) accents; UpgradePlans client leaf owns the toggle + createCheckoutSession redirect; wired the sidebar's existing "Upgrade to Pro" button to /upgrade (closes mobile drawer); Free users on /items/files & /items/images now redirect("/upgrade") (ProTypeUpsell deleted); Pro users on /upgrade redirect to /settings; 321 tests, build+lint clean (Completed)
 - Audit Fixes (Batch 2) - code-scanner findings (all except keeping mock-data + the free-tier race): [High] harden item fileUrl (z.url() + createItem verifies keyFromPublicUrl resolves to our own R2 bucket, forged/external URL → null); dropped SVG from image upload allow-list (stored-XSS); collection cards over-fetch fixed (_count + typeId-only projection, type metadata resolved once/page in mapCollectionCards); getCurrentUser wrapped in cache() + reuses getSessionUser; deduped item-type field-visibility Sets into item-content-types.ts; stale "demo-user-scoped" comments → "session-user-scoped"; proxy matcher extended to all AppShell routes; +3 tests, 324 total, build+lint clean (Completed)
 - Language Dropdown - free-text language input replaced by a searchable dropdown (LanguageSelect, Base UI single-select Combobox, portaled) moved above the Content editor in the New Item modal + drawer edit form, driving Monaco's live highlighting as you type; curated LANGUAGE_OPTIONS in lib/languages.ts (legacy/unknown values surfaced as their own option); no schema/action changes; build+lint+324 tests clean, Playwright-verified (Completed)
+- AI Auto-Tagging - Pro-only "Suggest Tags" (Sparkles ghost button) in New Item modal + drawer edit; Gemini foundation (@google/genai lazy singleton client.ts, AI_MODEL=gemini-2.5-flash-lite, isGeminiConfigured); pure tagging.ts (prompt builder + parser handling {"tags":[]}/[] shapes, lowercase/dedupe/cap 5, 2000-char truncate, isRateLimitError); generateAutoTags action (auth+Pro+config+Zod+per-user rate limit, graceful 429); rate-limit ai bucket 20/hr, plan.ts "ai" resource; SuggestTagsButton (accept/reject badges) + addTag helper; isPro threaded AppShell→TopBar/drawer chain; 29 tests, 353 total, build+lint clean (Completed)
