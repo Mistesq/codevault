@@ -52,3 +52,11 @@ export const explainCodeSchema = z.object({
 });
 
 export type ExplainCodeInput = z.infer<typeof explainCodeSchema>;
+
+// Input payload for the AI prompt-optimization action. Content is required (it's
+// the prompt being refined); no other context is needed.
+export const optimizePromptSchema = z.object({
+  content: z.string().trim().min(1, "There's no prompt to optimize."),
+});
+
+export type OptimizePromptInput = z.infer<typeof optimizePromptSchema>;

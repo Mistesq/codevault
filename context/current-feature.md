@@ -1,16 +1,24 @@
-# Current Feature
+# Current Feature: AI Prompt Optimization
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Add an "Optimize" action for **Prompt** item types in the item drawer read view, placed in the header much like the "Explain" button on snippets and commands.
+- On click, send the current prompt content to Gemini, which reviews it and refines it if needed (clearer, more effective prompt).
+- Show the optimized prompt to the user and ask whether they want to use it (accept → replace the item's content, or reject/keep original).
+- Pro-only, mirroring the other AI features (auth + Pro + config guards, shared AI rate limit, graceful 429 handling); Free users get an upgrade CTA.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Mirror the AI Explain Code feature** (most recent completed feature) as the closest precedent: a Pro-only, streamed Gemini action surfaced from the item drawer read view, with a header slot on the content editor.
+- Explain Code lives across: `explainCode` action (returns `ReadableStream<string>`, auth+Pro+config+Zod+shared ai rate limit), pure `explain.ts` (`buildExplainPrompt` + system instruction, reuses tagging truncate/`isRateLimitError`), `explainCodeSchema`, and `CodeExplainer` UI (Sparkles button → Code/Explain tabs, progressive markdown, per-session cache). Reuse these patterns.
+- Prompts use the **Markdown editor** (`MarkdownEditor.tsx`), not the Monaco `CodeEditor`, so the "Optimize" header slot must be added where the prompt content renders in the read view (drawer content section), not on `CodeEditor`.
+- Unlike Explain (read-only output), Optimize needs an **accept flow** that writes the refined text back to the item — reuse the existing `updateItem` action/query to persist the accepted prompt content.
+- AI config: Gemini via `@google/genai` lazy singleton, `isGeminiConfigured`; reasoning tier `EXPLAIN_MODEL=gemini-2.5-flash` (flash-lite fallback) is a candidate model for the refinement task. Shared `ai` rate-limit bucket (20/hr) and `plan.ts` "ai" resource already exist.
+- Add unit tests for the new pure helper (prompt builder/parser) and the action guards, matching the testing conventions (server actions + utilities only).
 
 ## History
 
