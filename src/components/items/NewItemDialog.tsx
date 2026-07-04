@@ -22,7 +22,12 @@ import { ItemContentField } from "@/components/items/ItemContentField";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { CollectionMultiSelect } from "@/components/items/CollectionMultiSelect";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
-import { CODE_CONTENT_TYPES } from "@/lib/item-content-types";
+import {
+  CODE_CONTENT_TYPES,
+  CONTENT_FIELD_TYPES,
+  FILE_FIELD_TYPES,
+  LANGUAGE_FIELD_TYPES,
+} from "@/lib/item-content-types";
 import { buildItemFields } from "@/lib/item-form";
 import { createItem } from "@/actions/items";
 import type { CreateItemType } from "@/lib/validations/items";
@@ -45,17 +50,6 @@ const TYPE_OPTIONS: {
   { value: "file", icon: "File", color: "#6b7280", label: typeLabel("file") },
   { value: "image", icon: "Image", color: "#ec4899", label: typeLabel("image") },
 ];
-
-// Which type-specific fields each selectable type exposes (mirrors ItemEditForm).
-const CONTENT_TYPES = new Set<CreateItemType>([
-  "snippet",
-  "prompt",
-  "command",
-  "note",
-]);
-const LANGUAGE_TYPES = new Set<CreateItemType>(["snippet", "command"]);
-// File/image types swap the content fields for the R2 FileUpload picker.
-const FILE_TYPES = new Set<CreateItemType>(["file", "image"]);
 
 const DEFAULT_TYPE: CreateItemType = "snippet";
 
@@ -100,11 +94,11 @@ export function NewItemDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const showContent = CONTENT_TYPES.has(type);
+  const showContent = CONTENT_FIELD_TYPES.has(type);
   const isCodeContent = CODE_CONTENT_TYPES.has(type);
-  const showLanguage = LANGUAGE_TYPES.has(type);
+  const showLanguage = LANGUAGE_FIELD_TYPES.has(type);
   const showUrl = type === "URL";
-  const showFile = FILE_TYPES.has(type);
+  const showFile = FILE_FIELD_TYPES.has(type);
   const titleEmpty = title.trim().length === 0;
   // File/image items can't be created until their upload has finished.
   const fileMissing = showFile && !file;
@@ -205,7 +199,7 @@ export function NewItemDialog({
                     onClick={() => {
                       setType(opt.value);
                       // Clear any staged upload when leaving a file/image type.
-                      if (!FILE_TYPES.has(opt.value)) setFile(null);
+                      if (!FILE_FIELD_TYPES.has(opt.value)) setFile(null);
                       setError(null);
                     }}
                     aria-pressed={selected}

@@ -20,7 +20,7 @@ type ActionResult<T> =
 /**
  * Create a new item from the New Item dialog. Requires a signed-in session,
  * validates the payload with Zod (source of truth), then delegates to the
- * demo-user-scoped query. Returns the created ItemDetail.
+ * session-user-scoped query. Returns the created ItemDetail.
  */
 export async function createItem(
   input: unknown,
@@ -57,8 +57,8 @@ export async function createItem(
 /**
  * Update an item from the drawer's edit mode. Requires a signed-in session,
  * validates the payload with Zod (source of truth), then delegates to the
- * demo-user-scoped query (which also enforces ownership). Returns the refreshed
- * ItemDetail so the drawer can update without a second fetch.
+ * session-user-scoped query (which also enforces ownership). Returns the
+ * refreshed ItemDetail so the drawer can update without a second fetch.
  */
 export async function updateItem(
   itemId: string,
@@ -153,7 +153,7 @@ export async function setItemPinned(
 
 /**
  * Permanently delete an item from the drawer. Requires a signed-in session,
- * then delegates to the demo-user-scoped query (which enforces ownership and
+ * then delegates to the session-user-scoped query (which enforces ownership and
  * reports not-found). Returns the `{ success, error }` pattern.
  */
 export async function deleteItem(

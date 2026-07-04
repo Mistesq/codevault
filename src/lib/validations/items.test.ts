@@ -155,6 +155,22 @@ describe("createItemSchema", () => {
     expect(ok.success).toBe(true);
   });
 
+  it("rejects a file/image item whose fileUrl isn't a valid URL", () => {
+    // Metadata is present but fileUrl is malformed → the z.url() branch fires.
+    // (The server additionally verifies the URL points at our own R2 bucket.)
+    const bad = createItemSchema.safeParse({
+      ...base,
+      type: "image",
+      fileUrl: "not-a-url",
+      fileName: "a.png",
+      fileSize: 2048,
+    });
+    expect(bad.success).toBe(false);
+    if (!bad.success) {
+      expect(bad.error.issues[0]?.message).toMatch(/invalid file url/i);
+    }
+  });
+
   it("defaults collectionIds to an empty array and dedupes them", () => {
     expect(createItemSchema.parse(base).collectionIds).toEqual([]);
 

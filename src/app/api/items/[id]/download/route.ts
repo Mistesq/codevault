@@ -6,7 +6,7 @@ import { getFromR2, keyFromPublicUrl } from "@/lib/r2";
 // the browser as an attachment. Proxying through the app (rather than linking
 // the public R2 URL directly) keeps the download same-origin, avoids R2 CORS
 // issues, and lets us force a download with the original filename. Requires a
-// signed-in session; the item is demo-user scoped (like the drawer).
+// signed-in session; the item is scoped to the signed-in user (like the drawer).
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },

@@ -4,8 +4,8 @@ import { auth } from "@/auth";
 import { getItemDetail } from "@/lib/db/items";
 
 // GET /api/items/[id] — full item detail for the drawer, fetched on click.
-// Requires a signed-in session; the item itself is demo-user scoped (like the
-// cards), so an unknown/foreign id is a 404.
+// Requires a signed-in session; the item itself is scoped to the signed-in user
+// (like the cards), so an unknown/foreign id is a 404.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },

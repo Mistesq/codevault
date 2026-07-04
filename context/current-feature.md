@@ -6,11 +6,37 @@ Not Started
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Audit Fixes (Batch 2) — address the code-scanner findings, everything except
+keeping `src/lib/mock-data.ts` and the non-atomic free-tier limit race.
+
+- **[High] Harden `fileUrl`:** `createItemSchema` now rejects a non-URL `fileUrl`
+  (`z.url()`), and `createItem` verifies the URL resolves to a key inside our own
+  R2 bucket (`keyFromPublicUrl`) — a forged/external URL returns null instead of
+  being persisted and rendered via `<img src>`.
+- **[Med] Dedup field-visibility Sets:** one source of truth in
+  `src/lib/item-content-types.ts` (`CONTENT_FIELD_TYPES`, `LANGUAGE_FIELD_TYPES`,
+  `FILE_FIELD_TYPES`); `NewItemDialog` and `ItemEditForm` import them (kills the
+  `"URL"` vs `"url"` drift).
+- **[Med] Collection-card over-fetch:** card query drops the per-membership type
+  object for `_count` (item count) + `typeId` only, resolving type metadata once
+  per page in `mapCollectionCards`.
+- **[Med] Dedup user lookups:** `getCurrentUser` wrapped in React `cache()` and
+  reuses `getSessionUser`'s cached lookup instead of its own `findUnique`.
+- **[Med] SVG uploads:** removed `svg` / `image/svg+xml` from the image allow-list
+  (closes stored-XSS via inline `<script>` on direct R2 URL access).
+- **[Low] Stale comments:** "demo-user-scoped" → "session-user-scoped" across
+  actions/db/api.
+- **[Low] Proxy matcher:** `src/proxy.ts` now covers all AppShell-protected routes
+  (`/settings`, `/favorites`, `/pinned`, `/recent`, `/items`, `/collections`,
+  `/upgrade`) — defense-in-depth; AppShell's `auth()` stays the real guard.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- OUT of scope by request: deleting `src/lib/mock-data.ts` (keep mock data), and
+  the non-atomic free-tier limit race in `createItem`/`createCollection`.
+- Tests: +2 (foreign-`fileUrl` guard, SVG rejection); collections/file tests
+  updated for the new query shape. `npm test` green (323), plus `npm run lint` +
+  `npm run build` before committing.
 
 ## History
 

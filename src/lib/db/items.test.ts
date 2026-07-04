@@ -663,6 +663,33 @@ describe("createItem", () => {
     expect(result?.contentType).toBe("FILE");
     expect(result?.fileName).toBe("logo.png");
   });
+
+  it("returns null (no write) when a file item's fileUrl isn't in our R2 bucket", async () => {
+    getSessionUser.mockResolvedValue({ id: "user_1", isPro: true });
+    itemType.findFirst.mockResolvedValue({ id: "type_image" });
+
+    const result = await createItem({
+      type: "image",
+      title: "Forged",
+      description: null,
+      content: null,
+      url: null,
+      language: null,
+      // Attacker-controlled URL outside our bucket → keyFromPublicUrl returns null.
+      fileUrl: "https://evil.example.com/tracker.png",
+      fileName: "tracker.png",
+      fileSize: 2048,
+      tags: [],
+      collectionIds: [],
+    });
+
+    expect(result).toBeNull();
+    expect(keyFromPublicUrl).toHaveBeenCalledWith(
+      "https://evil.example.com/tracker.png",
+    );
+    expect(item.create).not.toHaveBeenCalled();
+    expect($transaction).not.toHaveBeenCalled();
+  });
 });
 
 describe("createItem plan gating", () => {
