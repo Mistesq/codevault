@@ -19,6 +19,11 @@ import {
   parseDescription,
 } from "@/lib/ai/description";
 import { buildExplainPrompt, EXPLAIN_SYSTEM_INSTRUCTION } from "@/lib/ai/explain";
+import {
+  buildOptimizePrompt,
+  OPTIMIZE_SYSTEM_INSTRUCTION,
+  parseOptimizedPrompt,
+} from "@/lib/ai/optimize";
 import { PLAN_LIMIT_MESSAGES } from "@/lib/billing/plan";
 import {
   checkRateLimit,
@@ -29,6 +34,7 @@ import {
   autoTagSchema,
   describeItemSchema,
   explainCodeSchema,
+  optimizePromptSchema,
 } from "@/lib/validations/ai";
 
 // Coding standards' action pattern: { success, data, error }.
@@ -292,6 +298,85 @@ export async function explainCode(input: unknown): Promise<StreamResult> {
     return {
       success: false,
       error: "Something went wrong explaining this code. Please try again.",
+    };
+  }
+}
+
+/**
+ * Refine a prompt item's content via Gemini, returning the improved prompt so the
+ * UI can show it and let the user accept (save) or discard it. Uses the
+ * reasoning-tier `EXPLAIN_MODEL` (refinement quality benefits from it). Mirrors
+ * the other AI actions' guards — Pro-only (server-side enforcement), rate-limited
+ * per user on the shared `ai` bucket, and Zod-validated. Never throws to the
+ * caller: provider quota errors (429 / RESOURCE_EXHAUSTED) and other AI failures
+ * map to a friendly message.
+ */
+export async function optimizePrompt(
+  input: unknown,
+): Promise<ActionResult<string>> {
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: "You must be signed in." };
+  }
+
+  // Pro gate — matches the UI gating; server-side is the real enforcement.
+  if (!session.user.isPro) {
+    return { success: false, error: PLAN_LIMIT_MESSAGES.ai };
+  }
+
+  if (!isGeminiConfigured()) {
+    return { success: false, error: "AI is not configured." };
+  }
+
+  const parsed = optimizePromptSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid details.",
+    };
+  }
+
+  // Per-user fairness guard on the shared project quota.
+  const limit = await checkRateLimit(RATE_LIMITS.ai, session.user.id);
+  if (!limit.success) {
+    return {
+      success: false,
+      error: `You've used your AI requests for now. Try again in ${retryAfterMessage(limit.reset)}.`,
+    };
+  }
+
+  try {
+    const response = await getGemini().models.generateContent({
+      model: EXPLAIN_MODEL,
+      contents: buildOptimizePrompt({ content: parsed.data.content }),
+      config: {
+        systemInstruction: OPTIMIZE_SYSTEM_INSTRUCTION,
+        // Thinking off keeps the refinement fast; the stronger base model still
+        // lifts quality.
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    });
+
+    const optimized = parseOptimizedPrompt(response.text);
+    if (!optimized) {
+      return {
+        success: false,
+        error: "Couldn't optimize this prompt. Please try again.",
+      };
+    }
+    return { success: true, data: optimized };
+  } catch (error) {
+    // Provider quota exhausted — surface a friendly, retryable message.
+    if (isRateLimitError(error)) {
+      return {
+        success: false,
+        error: "AI is busy right now. Please try again shortly.",
+      };
+    }
+    console.error("Optimize prompt failed:", error);
+    return {
+      success: false,
+      error: "Something went wrong optimizing this prompt. Please try again.",
     };
   }
 }

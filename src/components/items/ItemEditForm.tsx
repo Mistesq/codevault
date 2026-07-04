@@ -109,7 +109,7 @@ export function ItemEditForm({
       onSubmit={handleSubmit}
       className="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
+      <div className="drawer-scroll flex-1 space-y-4 overflow-y-auto p-4">
         <div className="space-y-1.5">
           <Label htmlFor="item-title">Title</Label>
           <Input

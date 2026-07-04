@@ -118,7 +118,7 @@ export function ItemDrawer({
               />
             ) : (
               <>
-                <div className="flex-1 space-y-6 overflow-y-auto p-4">
+                <div className="drawer-scroll flex-1 space-y-6 overflow-y-auto p-4">
                   {item.description && (
                     <SheetDescription className="text-sm text-foreground">
                       {item.description}
@@ -131,6 +131,7 @@ export function ItemDrawer({
                     error={error}
                     copyText={copyText}
                     isPro={isPro}
+                    onUpdated={onUpdated}
                   />
 
                   {item.tags.length > 0 && (

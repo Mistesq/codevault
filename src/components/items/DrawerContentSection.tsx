@@ -2,6 +2,7 @@ import { CodeExplainer } from "@/components/items/CodeExplainer";
 import { CopyButton } from "@/components/items/CopyButton";
 import { ItemContentBody } from "@/components/items/ItemContentBody";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
+import { PromptOptimizer } from "@/components/items/PromptOptimizer";
 import { SectionLabel } from "@/components/items/SectionLabel";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -14,8 +15,9 @@ import type { ItemDetail } from "@/lib/db/items";
  * The drawer's CONTENT section. Code types and notes/prompts display their
  * content in an editor whose own header carries the copy button — so the
  * section-level copy is hidden in those cases to avoid two copy controls.
- * Skeleton while loading, an error note on failure, otherwise the editor or the
- * plain content body.
+ * Prompts get an AI "Optimize" affordance (PromptOptimizer); other markdown
+ * types (notes) render in a plain read-only MarkdownEditor. Skeleton while
+ * loading, an error note on failure, otherwise the editor or the plain body.
  */
 export function DrawerContentSection({
   detail,
@@ -23,16 +25,20 @@ export function DrawerContentSection({
   error,
   copyText,
   isPro,
+  onUpdated,
 }: {
   detail: ItemDetail | null;
   loading: boolean;
   error: boolean;
   copyText: string;
   isPro: boolean;
+  onUpdated: (detail: ItemDetail) => void;
 }) {
   const typeName = detail?.type.name.toLowerCase();
   const showCodeEditor =
     !!detail && CODE_CONTENT_TYPES.has(typeName!) && !!detail.content;
+  const showPromptOptimizer =
+    !!detail && typeName === "prompt" && !!detail.content;
   const showMarkdown =
     !!detail && MARKDOWN_CONTENT_TYPES.has(typeName!) && !!detail.content;
   const showEditorHeader = showCodeEditor || showMarkdown;
@@ -65,6 +71,8 @@ export function DrawerContentSection({
           typeLabel={detail.type.name}
           isPro={isPro}
         />
+      ) : showPromptOptimizer && detail ? (
+        <PromptOptimizer detail={detail} isPro={isPro} onUpdated={onUpdated} />
       ) : showMarkdown && detail ? (
         <MarkdownEditor value={detail.content ?? ""} readOnly />
       ) : detail ? (

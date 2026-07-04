@@ -36,6 +36,7 @@ import {
   explainCode,
   generateAutoTags,
   generateDescription,
+  optimizePrompt,
 } from "@/actions/ai";
 
 /** Build an async iterable of `{ text }` chunks to mock a Gemini stream. */
@@ -370,6 +371,109 @@ describe("explainCode", () => {
     expect(result).toEqual({
       success: false,
       error: "Something went wrong explaining this code. Please try again.",
+    });
+    errorSpy.mockRestore();
+  });
+});
+
+describe("optimizePrompt", () => {
+  it("rejects when there is no session", async () => {
+    auth.mockResolvedValue(null);
+
+    const result = await optimizePrompt({ content: "Write a poem." });
+
+    expect(result).toEqual({ success: false, error: "You must be signed in." });
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
+  it("rejects a Free user with the upgrade message", async () => {
+    auth.mockResolvedValue(freeSession);
+
+    const result = await optimizePrompt({ content: "Write a poem." });
+
+    expect(result.success).toBe(false);
+    expect(result).toMatchObject({ error: expect.stringContaining("Pro") });
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
+  it("rejects when Gemini is not configured", async () => {
+    auth.mockResolvedValue(proSession);
+    geminiConfigured.mockReturnValue(false);
+
+    const result = await optimizePrompt({ content: "Write a poem." });
+
+    expect(result).toEqual({ success: false, error: "AI is not configured." });
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty content (invalid input)", async () => {
+    auth.mockResolvedValue(proSession);
+
+    const result = await optimizePrompt({ content: "   " });
+
+    expect(result.success).toBe(false);
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
+  it("returns a friendly error when rate limited", async () => {
+    auth.mockResolvedValue(proSession);
+    checkRateLimit.mockResolvedValue({ success: false, remaining: 0, reset: 0 });
+
+    const result = await optimizePrompt({ content: "Write a poem." });
+
+    expect(result.success).toBe(false);
+    expect(result).toMatchObject({ error: expect.stringContaining("1 minute") });
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
+  it("returns the normalized prompt on the happy path using the reasoning model", async () => {
+    auth.mockResolvedValue(proSession);
+    generateContent.mockResolvedValue({
+      text: "```text\nWrite a vivid four-line poem about the sea.\n```",
+    });
+
+    const result = await optimizePrompt({ content: "write a poem" });
+
+    expect(result).toEqual({
+      success: true,
+      data: "Write a vivid four-line poem about the sea.",
+    });
+    const args = generateContent.mock.calls[0][0] as Record<string, unknown>;
+    expect(args.model).toBe("gemini-2.5-flash");
+  });
+
+  it("errors when the model returns nothing usable", async () => {
+    auth.mockResolvedValue(proSession);
+    generateContent.mockResolvedValue({ text: "   " });
+
+    const result = await optimizePrompt({ content: "write a poem" });
+
+    expect(result.success).toBe(false);
+    expect(result).toMatchObject({ error: expect.stringContaining("optimize") });
+  });
+
+  it("maps a 429 / RESOURCE_EXHAUSTED to a friendly retry message", async () => {
+    auth.mockResolvedValue(proSession);
+    generateContent.mockRejectedValue(new Error("429 RESOURCE_EXHAUSTED"));
+
+    const result = await optimizePrompt({ content: "write a poem" });
+
+    expect(result).toEqual({
+      success: false,
+      error: "AI is busy right now. Please try again shortly.",
+    });
+  });
+
+  it("returns a generic error on other AI failures", async () => {
+    auth.mockResolvedValue(proSession);
+    generateContent.mockRejectedValue(new Error("network down"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await optimizePrompt({ content: "write a poem" });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong optimizing this prompt. Please try again.",
     });
     errorSpy.mockRestore();
   });

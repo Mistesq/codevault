@@ -84,11 +84,20 @@ export function MarkdownEditor({
   onChange,
   readOnly = false,
   className,
+  headerTabs,
+  headerActions,
+  children,
 }: {
   value: string;
   onChange?: (value: string) => void;
   readOnly?: boolean;
   className?: string;
+  /** Slot rendered in the header's left cluster, replacing the default tabs. */
+  headerTabs?: React.ReactNode;
+  /** Slot rendered in the header's right cluster, before Copy (e.g. Optimize). */
+  headerActions?: React.ReactNode;
+  /** When provided, replaces the editor body (e.g. an optimized-prompt view). */
+  children?: React.ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>(readOnly ? "preview" : "write");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -109,22 +118,35 @@ export function MarkdownEditor({
         className,
       )}
     >
-      {/* Header: Write/Preview tabs + copy, on the #2d2d2d strip. */}
+      {/* Header: Write/Preview tabs + copy, on the #2d2d2d strip. When headerTabs
+          is supplied it replaces the default tabs (e.g. Original/Optimized). */}
       <div className="flex items-center justify-between border-b border-white/10 bg-[#2d2d2d] px-2 py-1.5">
         <div className="flex items-center gap-1">
-          {!readOnly && (
-            <TabButton active={tab === "write"} onClick={() => setTab("write")}>
-              Write
-            </TabButton>
+          {headerTabs ?? (
+            <>
+              {!readOnly && (
+                <TabButton active={tab === "write"} onClick={() => setTab("write")}>
+                  Write
+                </TabButton>
+              )}
+              <TabButton
+                active={tab === "preview"}
+                onClick={() => setTab("preview")}
+              >
+                Preview
+              </TabButton>
+            </>
           )}
-          <TabButton active={tab === "preview"} onClick={() => setTab("preview")}>
-            Preview
-          </TabButton>
         </div>
-        <CopyButton text={value} />
+        <div className="flex items-center gap-2">
+          {headerActions}
+          <CopyButton text={value} />
+        </div>
       </div>
 
-      {tab === "write" && !readOnly ? (
+      {children ? (
+        children
+      ) : tab === "write" && !readOnly ? (
         <textarea
           ref={textareaRef}
           value={value}
