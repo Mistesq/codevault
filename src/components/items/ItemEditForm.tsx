@@ -13,6 +13,8 @@ import { ItemContentField } from "@/components/items/ItemContentField";
 import { LanguageSelect } from "@/components/items/LanguageSelect";
 import { CollectionMultiSelect } from "@/components/items/CollectionMultiSelect";
 import { SuggestTagsButton } from "@/components/items/SuggestTagsButton";
+import { GenerateDescriptionButton } from "@/components/items/GenerateDescriptionButton";
+import { typeLabel } from "@/lib/type-icons";
 import { updateItem } from "@/actions/items";
 import {
   CODE_CONTENT_TYPES,
@@ -120,7 +122,19 @@ export function ItemEditForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="item-description">Description</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="item-description">Description</Label>
+            {isPro && (
+              <GenerateDescriptionButton
+                title={title}
+                content={content}
+                type={typeLabel(detail.type.name)}
+                url={url}
+                language={language}
+                onGenerate={setDescription}
+              />
+            )}
+          </div>
           <Textarea
             id="item-description"
             value={description}

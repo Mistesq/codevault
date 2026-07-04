@@ -23,6 +23,7 @@ import { LanguageSelect } from "@/components/items/LanguageSelect";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
 import { CollectionMultiSelect } from "@/components/items/CollectionMultiSelect";
 import { SuggestTagsButton } from "@/components/items/SuggestTagsButton";
+import { GenerateDescriptionButton } from "@/components/items/GenerateDescriptionButton";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import {
   CODE_CONTENT_TYPES,
@@ -243,7 +244,19 @@ export function NewItemDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="new-item-description">Description</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="new-item-description">Description</Label>
+              {isPro && (
+                <GenerateDescriptionButton
+                  title={title}
+                  content={content}
+                  type={typeLabel(type)}
+                  url={url}
+                  language={language}
+                  onGenerate={setDescription}
+                />
+              )}
+            </div>
             <Textarea
               id="new-item-description"
               value={description}

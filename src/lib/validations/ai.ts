@@ -13,3 +13,32 @@ export const autoTagSchema = z.object({
 });
 
 export type AutoTagInput = z.infer<typeof autoTagSchema>;
+
+// Input payload for the AI description action. Every field is optional and
+// normalized to a trimmed string or null, but `superRefine` requires at least
+// one substantive signal (title, content, or url) so we never ask the model to
+// describe an empty item. `type`/`language` add context but don't count as
+// standalone signal.
+const optionalTrimmed = z
+  .string()
+  .nullish()
+  .transform((v) => (v && v.trim().length > 0 ? v.trim() : null));
+
+export const describeItemSchema = z
+  .object({
+    title: optionalTrimmed,
+    content: optionalTrimmed,
+    type: optionalTrimmed,
+    url: optionalTrimmed,
+    language: optionalTrimmed,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.title && !data.content && !data.url) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Add a title or some content first to generate a description.",
+      });
+    }
+  });
+
+export type DescribeItemInput = z.infer<typeof describeItemSchema>;
