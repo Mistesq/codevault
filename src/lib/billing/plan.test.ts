@@ -7,6 +7,7 @@ import {
   isProItemType,
   PLAN_LIMIT_MESSAGES,
   PlanLimitError,
+  planLimitMessage,
   priceIdForInterval,
 } from "@/lib/billing/plan";
 
@@ -91,6 +92,26 @@ describe("PlanLimitError", () => {
     for (const resource of ["item", "collection", "file", "image"] as const) {
       expect(PLAN_LIMIT_MESSAGES[resource]).toMatch(/pro/i);
     }
+  });
+});
+
+describe("planLimitMessage", () => {
+  it("returns the matching CTA message for a PlanLimitError", () => {
+    expect(planLimitMessage(new PlanLimitError("item"))).toBe(
+      PLAN_LIMIT_MESSAGES.item,
+    );
+    expect(planLimitMessage(new PlanLimitError("collection"))).toBe(
+      PLAN_LIMIT_MESSAGES.collection,
+    );
+    expect(planLimitMessage(new PlanLimitError("image"))).toBe(
+      PLAN_LIMIT_MESSAGES.image,
+    );
+  });
+
+  it("returns null for any non-PlanLimitError", () => {
+    expect(planLimitMessage(new Error("boom"))).toBeNull();
+    expect(planLimitMessage("nope")).toBeNull();
+    expect(planLimitMessage(null)).toBeNull();
   });
 });
 

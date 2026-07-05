@@ -10,11 +10,32 @@ import {
   setCollectionFavorite as setCollectionFavoriteQuery,
 } from "@/lib/db/collections";
 import type { DashboardCollection } from "@/lib/db/collections";
-import { PLAN_LIMIT_MESSAGES, PlanLimitError } from "@/lib/billing/plan";
+import { planLimitMessage } from "@/lib/billing/plan";
 import {
   createCollectionSchema,
   updateCollectionSchema,
 } from "@/lib/validations/collections";
+
+/**
+ * Map Prisma's unique-constraint violation (the `@@unique([userId, name])`
+ * constraint → P2002) to the friendly duplicate-name failure shared by
+ * create/update. Returns null for any other error so the caller falls through to
+ * generic handling.
+ */
+function duplicateNameResult(
+  error: unknown,
+): { success: false; error: string } | null {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  ) {
+    return {
+      success: false,
+      error: "A collection with that name already exists.",
+    };
+  }
+  return null;
+}
 
 /**
  * Create a new collection from the New Collection dialog. Requires a signed-in
@@ -40,18 +61,10 @@ export async function createCollection(
     return { success: true, data: created };
   } catch (error) {
     // Free-tier cap → surface the upgrade CTA distinctly.
-    if (error instanceof PlanLimitError) {
-      return { success: false, error: PLAN_LIMIT_MESSAGES[error.resource] };
-    }
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      return {
-        success: false,
-        error: "A collection with that name already exists.",
-      };
-    }
+    const upgradeMessage = planLimitMessage(error);
+    if (upgradeMessage) return { success: false, error: upgradeMessage };
+    const duplicate = duplicateNameResult(error);
+    if (duplicate) return duplicate;
     console.error("Create collection failed:", error);
     return { success: false, error: "Something went wrong. Please try again." };
   }
@@ -80,15 +93,8 @@ export async function updateCollection(
     }
     return { success: true, data: null };
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      return {
-        success: false,
-        error: "A collection with that name already exists.",
-      };
-    }
+    const duplicate = duplicateNameResult(error);
+    if (duplicate) return duplicate;
     console.error("Update collection failed:", error);
     return { success: false, error: "Something went wrong. Please try again." };
   }

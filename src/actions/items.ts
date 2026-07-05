@@ -10,7 +10,7 @@ import {
   updateItem as updateItemQuery,
 } from "@/lib/db/items";
 import type { ItemDetail } from "@/lib/db/items";
-import { PLAN_LIMIT_MESSAGES, PlanLimitError } from "@/lib/billing/plan";
+import { planLimitMessage } from "@/lib/billing/plan";
 import { createItemSchema, updateItemSchema } from "@/lib/validations/items";
 
 /**
@@ -35,9 +35,8 @@ export async function createItem(
     return { success: true, data: created };
   } catch (error) {
     // Free-tier cap / Pro-only surface → surface the upgrade CTA distinctly.
-    if (error instanceof PlanLimitError) {
-      return { success: false, error: PLAN_LIMIT_MESSAGES[error.resource] };
-    }
+    const upgradeMessage = planLimitMessage(error);
+    if (upgradeMessage) return { success: false, error: upgradeMessage };
     console.error("Create item failed:", error);
     return { success: false, error: "Something went wrong. Please try again." };
   }

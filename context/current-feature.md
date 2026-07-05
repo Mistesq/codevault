@@ -2,15 +2,39 @@
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Second DRY pass over `src/actions` (refactor-scanner findings #4–#7). No behavior
+change; pure extraction.
+
+- **#4 AI guard chain (4 × ~20-line blocks):** extract `requireAiAccess(userId,
+  isPro, quotaNoun?)` into `src/lib/ai/guard.ts` (Pro gate → Gemini configured →
+  per-user rate limit). Each AI action collapses the chain to two lines.
+- **#5 AI catch mapping (4 sites):** extract `mapAiError(error, logLabel,
+  fallback)` + `AI_BUSY_ERROR` into the same `guard.ts`; each catch becomes
+  `return mapAiError(...)`.
+- **#6 `PlanLimitError` → message (2 sites):** add `planLimitMessage(error)` to
+  `src/lib/billing/plan.ts`; createItem/createCollection use it instead of the
+  inline `instanceof` + `PLAN_LIMIT_MESSAGES[...]`.
+- **#7 Prisma P2002 duplicate-name (2 sites in collections.ts):** extract a
+  local `duplicateNameResult(error)` helper (stays in the file — collection-
+  specific wording), used by createCollection + updateCollection.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Guard order becomes auth → `requireAiAccess` → Zod parse. The AI tests never
+  combine invalid input with a non-Pro / rate-limited session, so this
+  re-ordering keeps all assertions green; practical behavior is unchanged.
+- `quotaNoun`: "suggestions" for tags/description, "requests" for explain/
+  optimize (preserves the exact existing copy).
+- `mapAiError` preserves each action's `console.error` label + generic fallback
+  string and the shared "AI is busy…" 429 message.
+- `planLimitMessage` returns the CTA string (or null) — keeps `plan.ts` free of
+  the action-result shape.
+- New unit tests: `src/lib/ai/guard.test.ts` + `planLimitMessage` cases in
+  `plan.test.ts`. `duplicateNameResult` stays covered by `collections.test.ts`.
 
 ## History
 
