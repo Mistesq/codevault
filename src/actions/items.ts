@@ -1,6 +1,7 @@
 "use server";
 
-import { auth } from "@/auth";
+import { NOT_SIGNED_IN_ERROR, requireSessionUser } from "@/lib/actions/session";
+import { type ActionResult, parseActionInput } from "@/lib/actions/result";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
@@ -12,11 +13,6 @@ import type { ItemDetail } from "@/lib/db/items";
 import { PLAN_LIMIT_MESSAGES, PlanLimitError } from "@/lib/billing/plan";
 import { createItemSchema, updateItemSchema } from "@/lib/validations/items";
 
-// Coding standards' action pattern: { success, data, error }.
-type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
-
 /**
  * Create a new item from the New Item dialog. Requires a signed-in session,
  * validates the payload with Zod (source of truth), then delegates to the
@@ -25,18 +21,11 @@ type ActionResult<T> =
 export async function createItem(
   input: unknown,
 ): Promise<ActionResult<ItemDetail>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
-  const parsed = createItemSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid details.",
-    };
-  }
+  const parsed = parseActionInput(createItemSchema, input);
+  if (!parsed.success) return parsed;
 
   try {
     const created = await createItemQuery(parsed.data);
@@ -64,18 +53,11 @@ export async function updateItem(
   itemId: string,
   input: unknown,
 ): Promise<ActionResult<ItemDetail>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
-  const parsed = updateItemSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid details.",
-    };
-  }
+  const parsed = parseActionInput(updateItemSchema, input);
+  if (!parsed.success) return parsed;
 
   try {
     const updated = await updateItemQuery(itemId, parsed.data);
@@ -99,10 +81,8 @@ export async function setItemFavorite(
   itemId: string,
   isFavorite: boolean,
 ): Promise<ActionResult<boolean>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
   if (typeof isFavorite !== "boolean") {
     return { success: false, error: "Invalid request." };
@@ -130,10 +110,8 @@ export async function setItemPinned(
   itemId: string,
   isPinned: boolean,
 ): Promise<ActionResult<boolean>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
   if (typeof isPinned !== "boolean") {
     return { success: false, error: "Invalid request." };
@@ -159,10 +137,8 @@ export async function setItemPinned(
 export async function deleteItem(
   itemId: string,
 ): Promise<ActionResult<null>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
   try {
     const deleted = await deleteItemQuery(itemId);

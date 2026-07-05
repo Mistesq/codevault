@@ -2,10 +2,13 @@
 
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { auth, signOut } from "@/auth";
+import { signOut } from "@/auth";
+import { NOT_SIGNED_IN_ERROR, requireSessionUser } from "@/lib/actions/session";
+import { parseActionInput } from "@/lib/actions/result";
 import { changePasswordSchema } from "@/lib/validations/auth";
 
-// Result shape shared by the profile mutations (coding standards' action pattern).
+// The profile mutations return no data, so they keep a local no-data result
+// shape rather than the generic ActionResult<T> used by the other actions.
 type ActionResult = { success: true } | { success: false; error: string };
 
 /**
@@ -14,19 +17,12 @@ type ActionResult = { success: true } | { success: false; error: string };
  * already have a password (email/password users) — OAuth-only accounts have none.
  */
 export async function changePassword(input: unknown): Promise<ActionResult> {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
+  const userId = user.id;
 
-  const parsed = changePasswordSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid details.",
-    };
-  }
+  const parsed = parseActionInput(changePasswordSchema, input);
+  if (!parsed.success) return parsed;
 
   const { currentPassword, newPassword } = parsed.data;
 
@@ -68,11 +64,9 @@ export async function changePassword(input: unknown): Promise<ActionResult> {
  * userId), so it can never delete anyone else.
  */
 export async function deleteAccount(confirmation: unknown): Promise<ActionResult> {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
+  const userId = user.id;
 
   if (confirmation !== "DELETE") {
     return { success: false, error: 'Type "DELETE" to confirm.' };

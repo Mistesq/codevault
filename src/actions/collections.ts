@@ -1,7 +1,8 @@
 "use server";
 
 import { Prisma } from "@/generated/prisma/client";
-import { auth } from "@/auth";
+import { NOT_SIGNED_IN_ERROR, requireSessionUser } from "@/lib/actions/session";
+import { type ActionResult, parseActionInput } from "@/lib/actions/result";
 import {
   createCollection as createCollectionQuery,
   updateCollection as updateCollectionQuery,
@@ -15,11 +16,6 @@ import {
   updateCollectionSchema,
 } from "@/lib/validations/collections";
 
-// Coding standards' action pattern: { success, data, error }.
-type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
-
 /**
  * Create a new collection from the New Collection dialog. Requires a signed-in
  * session, validates the payload with Zod (source of truth), then delegates to
@@ -30,18 +26,11 @@ type ActionResult<T> =
 export async function createCollection(
   input: unknown,
 ): Promise<ActionResult<DashboardCollection>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
-  const parsed = createCollectionSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid details.",
-    };
-  }
+  const parsed = parseActionInput(createCollectionSchema, input);
+  if (!parsed.success) return parsed;
 
   try {
     const created = await createCollectionQuery(parsed.data);
@@ -78,18 +67,11 @@ export async function updateCollection(
   id: string,
   input: unknown,
 ): Promise<ActionResult<null>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
-  const parsed = updateCollectionSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid details.",
-    };
-  }
+  const parsed = parseActionInput(updateCollectionSchema, input);
+  if (!parsed.success) return parsed;
 
   try {
     const updated = await updateCollectionQuery(id, parsed.data);
@@ -122,10 +104,8 @@ export async function setCollectionFavorite(
   id: string,
   isFavorite: boolean,
 ): Promise<ActionResult<boolean>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
   if (typeof isFavorite !== "boolean") {
     return { success: false, error: "Invalid request." };
@@ -151,10 +131,8 @@ export async function setCollectionFavorite(
 export async function deleteCollection(
   id: string,
 ): Promise<ActionResult<null>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
   try {
     const deleted = await deleteCollectionQuery(id);

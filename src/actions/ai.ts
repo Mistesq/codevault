@@ -1,6 +1,7 @@
 "use server";
 
-import { auth } from "@/auth";
+import { NOT_SIGNED_IN_ERROR, requireSessionUser } from "@/lib/actions/session";
+import { type ActionResult, parseActionInput } from "@/lib/actions/result";
 import {
   AI_MODEL,
   EXPLAIN_MODEL,
@@ -37,11 +38,6 @@ import {
   optimizePromptSchema,
 } from "@/lib/validations/ai";
 
-// Coding standards' action pattern: { success, data, error }.
-type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
-
 // Streaming variant: pre-flight checks resolve synchronously to an error, but a
 // successful call hands back a text stream the client reads token-by-token.
 type StreamResult =
@@ -58,13 +54,11 @@ type StreamResult =
 export async function generateAutoTags(
   input: unknown,
 ): Promise<ActionResult<string[]>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
   // Pro gate — matches the UI gating; server-side is the real enforcement.
-  if (!session.user.isPro) {
+  if (!user.isPro) {
     return { success: false, error: PLAN_LIMIT_MESSAGES.ai };
   }
 
@@ -72,16 +66,11 @@ export async function generateAutoTags(
     return { success: false, error: "AI is not configured." };
   }
 
-  const parsed = autoTagSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid details.",
-    };
-  }
+  const parsed = parseActionInput(autoTagSchema, input);
+  if (!parsed.success) return parsed;
 
   // Per-user fairness guard on the shared project quota.
-  const limit = await checkRateLimit(RATE_LIMITS.ai, session.user.id);
+  const limit = await checkRateLimit(RATE_LIMITS.ai, user.id);
   if (!limit.success) {
     return {
       success: false,
@@ -135,13 +124,11 @@ export async function generateAutoTags(
 export async function generateDescription(
   input: unknown,
 ): Promise<ActionResult<string>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
   // Pro gate — matches the UI gating; server-side is the real enforcement.
-  if (!session.user.isPro) {
+  if (!user.isPro) {
     return { success: false, error: PLAN_LIMIT_MESSAGES.ai };
   }
 
@@ -149,16 +136,11 @@ export async function generateDescription(
     return { success: false, error: "AI is not configured." };
   }
 
-  const parsed = describeItemSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid details.",
-    };
-  }
+  const parsed = parseActionInput(describeItemSchema, input);
+  if (!parsed.success) return parsed;
 
   // Per-user fairness guard on the shared project quota.
-  const limit = await checkRateLimit(RATE_LIMITS.ai, session.user.id);
+  const limit = await checkRateLimit(RATE_LIMITS.ai, user.id);
   if (!limit.success) {
     return {
       success: false,
@@ -218,13 +200,11 @@ export async function generateDescription(
  * errors are logged and end the stream (partial content is kept).
  */
 export async function explainCode(input: unknown): Promise<StreamResult> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
   // Pro gate — matches the UI gating; server-side is the real enforcement.
-  if (!session.user.isPro) {
+  if (!user.isPro) {
     return { success: false, error: PLAN_LIMIT_MESSAGES.ai };
   }
 
@@ -232,18 +212,13 @@ export async function explainCode(input: unknown): Promise<StreamResult> {
     return { success: false, error: "AI is not configured." };
   }
 
-  const parsed = explainCodeSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid details.",
-    };
-  }
+  const parsed = parseActionInput(explainCodeSchema, input);
+  if (!parsed.success) return parsed;
 
   // Per-user fairness guard on the shared project quota. Explanations aren't
   // cached server-side, so every click is a fresh call — this stops repeated
   // re-clicks from draining the shared free-tier budget.
-  const limit = await checkRateLimit(RATE_LIMITS.ai, session.user.id);
+  const limit = await checkRateLimit(RATE_LIMITS.ai, user.id);
   if (!limit.success) {
     return {
       success: false,
@@ -314,13 +289,11 @@ export async function explainCode(input: unknown): Promise<StreamResult> {
 export async function optimizePrompt(
   input: unknown,
 ): Promise<ActionResult<string>> {
-  const session = await auth();
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in." };
-  }
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
   // Pro gate — matches the UI gating; server-side is the real enforcement.
-  if (!session.user.isPro) {
+  if (!user.isPro) {
     return { success: false, error: PLAN_LIMIT_MESSAGES.ai };
   }
 
@@ -328,16 +301,11 @@ export async function optimizePrompt(
     return { success: false, error: "AI is not configured." };
   }
 
-  const parsed = optimizePromptSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid details.",
-    };
-  }
+  const parsed = parseActionInput(optimizePromptSchema, input);
+  if (!parsed.success) return parsed;
 
   // Per-user fairness guard on the shared project quota.
-  const limit = await checkRateLimit(RATE_LIMITS.ai, session.user.id);
+  const limit = await checkRateLimit(RATE_LIMITS.ai, user.id);
   if (!limit.success) {
     return {
       success: false,
