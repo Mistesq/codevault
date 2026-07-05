@@ -1,25 +1,16 @@
-# Current Feature: Lib Dedup Refactor
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Lib Dedup Refactor — pure DRY/structure extraction of `src/lib`, no behavior change. Extract duplicated logic into shared helpers:
-
-1. **[High] Token lifecycle** — `verification-token.ts` & `password-reset-token.ts` duplicate the single-use/hashed/expiring token pattern. Extract `src/lib/auth/token.ts` (`hashToken`, `generateRawToken`, `createSingleUseToken`, `consumeSingleUseToken`); make the two modules thin wrappers supplying TTL/identifier/result-shape. (~90 lines)
-2. **[High] Email template** — `email/verification.ts` & `email/password-reset.ts` duplicate the HTML shell, greeting, CTA button, footer, and Resend send/error call. Extract `src/lib/email/template.ts` (`buildEmailHtml(...)`) + `sendTransactionalEmail(...)`.
-3. **[High] Paginated Prisma query** — `getAllItemsPaginated`/`getItemsByTypeSlug` (`db/items.ts`) + `getPaginatedCollections`/`getCollectionWithItems` (`db/collections.ts`) repeat count→clamp→skip/take→map. Add generic `paginatePrismaQuery<Row,T>()` to `lib/pagination.ts`.
-4. **[Med] System-type sort/count** — tie-break comparator + `groupBy(["typeId"])→Map` duplicated between `getSystemItemTypes` (`db/items.ts`) & `getProfileData` (`db/profile.ts`). Add `sortByTypeOrder()` + `countItemsByType(userId)` to `db/items.ts`.
-5. **[Med] `optionalTrimmed` Zod field** — defined 3× (`validations/items.ts`, `validations/collections.ts`, and a drifted variant in `validations/ai.ts`). Extract to `src/lib/validations/shared.ts`; fixes the ai.ts drift (trim-in-transform vs `.trim()`).
-6. **[Low] Lazy-singleton + `isXConfigured()`** — repeated across `ai/client.ts`, `stripe/client.ts`, `r2.ts`, `email/resend.ts`. Env-checks differ per integration; awareness/consistency only, likely skip unless a `createLazySingleton<T>()` proves clean.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Source: refactor-scanner sweep of `src/lib`. Together #1–#3 remove ~250+ lines of near-identical logic.
-- No behavior change — keep ids/copy/result shapes identical; maintain/extend Vitest coverage for touched helpers (`npm test` + `npm run build` before commit).
-- #6 is low priority; only pursue if the extraction stays clean without adding indirection.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -95,3 +86,4 @@ Lib Dedup Refactor — pure DRY/structure extraction of `src/lib`, no behavior c
 - Actions Dedup Refactor - pure DRY extraction of src/actions boilerplate (refactor-scanner #1-#3), no behavior change; new src/lib/actions/session.ts (requireSessionUser + NOT_SIGNED_IN_ERROR, server-only) replaces 18 inline auth guards, src/lib/actions/result.ts (canonical ActionResult<T> + parseActionInput helper) replaces 4 redeclared types + 10 safeParse->error-shaping blocks (callers `return parsed`); profile keeps its no-data result type, billing keeps its fixed "Invalid plan." parse line; 408 tests pass, build+lint clean (Completed)
 - Actions Dedup Refactor (Batch 2) - refactor-scanner #4-#7, no behavior change; new src/lib/ai/guard.ts requireAiAccess() bundles Pro/config/rate-limit (quotaNoun tailors copy) + mapAiError()/AI_BUSY_ERROR collapse the 4 AI catch blocks (ai.ts -160 lines), guard order now auth->requireAiAccess->parse; planLimitMessage() in plan.ts replaces inline PlanLimitError instanceof in createItem/createCollection; local duplicateNameResult() dedupes P2002 across create/updateCollection; +9 tests (guard.test.ts + planLimitMessage), 417 total, build+lint clean (Completed)
 - Components Dedup Refactor - refactor-scanner sweep of src/components, no behavior change; 7 extractions: ItemFieldsFieldset (NewItemDialog/ItemEditForm), editor-chrome (TabButton/HeaderButton/EditorCopyButton) + useCopyToClipboard hook (CodeEditor/MarkdownEditor/CodeExplainer/PromptOptimizer/CopyButton/ItemCard), CollectionFormFields (New/Edit collection dialogs), GitHubAuthButton + ui/OrDivider (SignIn/Register), ui/ConfirmDeleteFooter (delete item/collection/account), useCollectionActions hook (CollectionActions/HeaderActions), useActivateOnEnter hook + PinIndicator (ImageCard/FileRow/FavoritesList/ItemCard); ids/aria/paddings/sizes preserved; +1 test file (use-activate-on-enter), 420 total, build+lint clean (Completed)
+- Lib Dedup Refactor - refactor-scanner sweep of src/lib, no behavior change; 5 extractions: auth/token.ts (hashToken/generateRawToken/createSingleUseToken/consumeSingleUseToken) turns the two token modules into thin wrappers, email/template.ts (buildEmailHtml + sendTransactionalEmail) leaves the emails supplying only copy, pagination.ts paginatePrismaQuery generalizes count→clamp→skip/take→map across the 4 item/collection page queries, db/items.ts sortByTypeOrder + countItemsByType shared by sidebar + profile (typeOrderIndex demoted to private), validations/shared.ts optionalTrimmed deduped from items/collections/ai (fixes ai.ts .trim() drift); #6 lazy-singleton skipped (indirection not worth ~8 lines); DB call shapes/error strings/result shapes preserved, +11 tests, 431 total, build+lint clean (Completed)
