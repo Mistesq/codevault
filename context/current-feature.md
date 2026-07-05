@@ -2,34 +2,15 @@
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Refactor `src/actions` to remove duplicated boilerplate (refactor-scanner
-findings #1–#3). No behavior change; pure DRY extraction.
-
-- **#1 Session-auth guard (18 sites):** extract `requireSessionUser()` +
-  shared `NOT_SIGNED_IN_ERROR` constant into `src/lib/actions/session.ts`
-  (server-only). Every action collapses its 3-4 line auth block to two lines.
-- **#2 `ActionResult<T>` type (4 identical + editor-preferences):** move the
-  canonical `{ success, data } | { success, error }` type into
-  `src/lib/actions/result.ts`; billing/collections/items/ai/editor-preferences
-  import it instead of redeclaring.
-- **#3 Zod parse → error-shaping (10 sites):** extract `parseActionInput(schema,
-  input, fallback?)` into `src/lib/actions/result.ts`; callers `return parsed`
-  on failure and use `parsed.data` on success.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **profile.ts** keeps its local no-data result type (`{ success: true }`) — its
-  shape genuinely differs and `profile.test.ts` asserts `{ success: true }`.
-- **billing.ts** keeps its own parse line (deliberately returns the fixed
-  `"Invalid plan."` message; `billing.test.ts` asserts it) — only #1 and #2
-  apply there. It was not in the scanner's #3 list.
-- The shared `NOT_SIGNED_IN_ERROR` string stays byte-identical to preserve all
-  existing `"You must be signed in."` test assertions.
-- #4/#5 (AI guard chain) deferred to a follow-up per plan.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -102,3 +83,4 @@ findings #1–#3). No behavior change; pure DRY extraction.
 - AI Explain Code - Pro-only streamed markdown explanation of snippets/commands in the item drawer read view via Gemini reasoning tier (EXPLAIN_MODEL=gemini-2.5-flash, flash-lite fallback note); explainCode action returns a ReadableStream<string> (auth+Pro+config+Zod+shared ai rate limit, initial 429 → friendly message before stream opens, mid-stream errors close gracefully); pure explain.ts (buildExplainPrompt + system instruction, reuses tagging truncate/isRateLimitError) + explainCodeSchema; CodeEditor gains headerTabs/headerActions slots + body override (dots hide when tabs present so header can't overflow); CodeExplainer wraps read-only editor with Sparkles Explain → Code/Explain tabs, progressive markdown (Loader2 only until first token), icon-only Regenerate, per-session cache by item id; Free users get Crown button + tooltip toasting upgrade; isPro threaded ItemDrawer→DrawerContentSection→CodeExplainer; 14 tests, 389 total, build+lint clean (Completed)
 - AI Prompt Optimization - Pro-only "Optimize" affordance in the item drawer read view for Prompt items (mirrors AI Explain Code); optimizePrompt action (auth+Pro+config+Zod+shared ai rate limit, EXPLAIN_MODEL, non-streaming ActionResult<string>, graceful 429) returns a refined prompt; pure optimize.ts (buildOptimizePrompt + OPTIMIZE_SYSTEM_INSTRUCTION + parseOptimizedPrompt: trims, strips wrapping code fence, keeps quotes, reuses tagging truncate/isRateLimitError) + optimizePromptSchema; MarkdownEditor gains headerTabs/headerActions + body-override slots; PromptOptimizer wraps read-only editor with Original/Optimized tabs, Sparkles Optimize/Regenerate, accept flow (Use this → updateItem + router.refresh + onUpdated, Discard keeps original), per-session cache by item id, Free users get Crown upgrade toast; DrawerContentSection routes prompts to PromptOptimizer (notes stay plain) with onUpdated threaded; themed .drawer-scroll scrollbar on drawer read/edit scroll areas; 19 tests, 408 total, build+lint clean (Completed)
 - UI Review Fixes - Playwright ui-reviewer findings on public pages: [CRITICAL] added "Sign up with GitHub" button + divider to RegisterForm (parity with SignInForm), extracted shared GitHubIcon component; [MEDIUM] wrapped (auth) layout content in a `<main>` landmark, made homepage AiSection `<pre>` keyboard-focusable (tabIndex/role/aria-label), fixed homepage footer heading level h5→h3; [LOW] 32px touch-target sizing deferred (systemic design-system decision); UI-only, no new tests, 408 total, build+lint clean, Playwright-verified (Completed)
+- Actions Dedup Refactor - pure DRY extraction of src/actions boilerplate (refactor-scanner #1-#3), no behavior change; new src/lib/actions/session.ts (requireSessionUser + NOT_SIGNED_IN_ERROR, server-only) replaces 18 inline auth guards, src/lib/actions/result.ts (canonical ActionResult<T> + parseActionInput helper) replaces 4 redeclared types + 10 safeParse->error-shaping blocks (callers `return parsed`); profile keeps its no-data result type, billing keeps its fixed "Invalid plan." parse line; 408 tests pass, build+lint clean (Completed)
