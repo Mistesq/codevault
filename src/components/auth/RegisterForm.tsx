@@ -3,11 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GitHubIcon } from "@/components/auth/GitHubIcon";
 import { registerSchema } from "@/lib/validations/auth";
 
 export function RegisterForm() {
@@ -18,7 +20,12 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<"credentials" | "github" | null>(null);
+
+  function handleGitHub() {
+    setPending("github");
+    signIn("github", { callbackUrl: "/dashboard" });
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -35,7 +42,7 @@ export function RegisterForm() {
       return;
     }
 
-    setPending(true);
+    setPending("credentials");
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -60,7 +67,7 @@ export function RegisterForm() {
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
-      setPending(false);
+      setPending(null);
     }
   }
 
@@ -71,6 +78,27 @@ export function RegisterForm() {
         <p className="text-sm text-muted-foreground">
           Start building your CodeVault
         </p>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={handleGitHub}
+        disabled={pending !== null}
+      >
+        {pending === "github" ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <GitHubIcon className="size-4" />
+        )}
+        Sign up with GitHub
+      </Button>
+
+      <div className="flex items-center gap-3">
+        <span className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">or</span>
+        <span className="h-px flex-1 bg-border" />
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -128,8 +156,8 @@ export function RegisterForm() {
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <Button type="submit" className="w-full" disabled={pending}>
-          {pending && <Loader2 className="size-4 animate-spin" />}
+        <Button type="submit" className="w-full" disabled={pending !== null}>
+          {pending === "credentials" && <Loader2 className="size-4 animate-spin" />}
           Create account
         </Button>
       </form>

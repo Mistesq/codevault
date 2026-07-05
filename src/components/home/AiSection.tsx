@@ -66,7 +66,12 @@ export function AiSection() {
             <span className="ml-auto text-[0.72rem] lowercase text-h-dim">typescript</span>
           </div>
 
-          <pre className="overflow-x-auto whitespace-pre bg-h-code px-[1.2rem] py-[1.1rem] font-mono text-[0.82rem] leading-[1.7] text-h-text">
+          <pre
+            tabIndex={0}
+            role="region"
+            aria-label="Code example"
+            className="overflow-x-auto whitespace-pre bg-h-code px-[1.2rem] py-[1.1rem] font-mono text-[0.82rem] leading-[1.7] text-h-text"
+          >
             <span className={KEY}>import</span>
             {' { useEffect, useState } '}
             <span className={KEY}>from</span> <span className={STR}>&quot;react&quot;</span>
