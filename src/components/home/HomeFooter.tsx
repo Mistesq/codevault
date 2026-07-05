@@ -48,9 +48,9 @@ export function HomeFooter({ year }: { year: number }) {
         <div className="grid grid-cols-3 gap-6">
           {FOOTER_COLS.map((col) => (
             <div key={col.heading}>
-              <h5 className="mb-[0.9rem] text-[0.8rem] uppercase tracking-[0.06em] text-h-dim">
+              <h3 className="mb-[0.9rem] text-[0.8rem] uppercase tracking-[0.06em] text-h-dim">
                 {col.heading}
-              </h5>
+              </h3>
               {col.links.map((link) => (
                 <a
                   key={link.label}

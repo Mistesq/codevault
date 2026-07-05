@@ -1,16 +1,24 @@
-# Current Feature
+# Current Feature: UI Review Fixes
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+UI review fixes from a Playwright/ui-reviewer pass over the public pages (`/`, `/sign-in`, `/register`, `/forgot-password`). Ranked by severity:
+
+- [CRITICAL] **Add GitHub OAuth button to /register.** `/sign-in` has a "Continue with GitHub" button + "or" divider; `/register` has neither, so GitHub-only users can't sign up and the two forms are inconsistent. Port the GitHub button + divider from `src/components/auth/SignInForm.tsx` (~lines 115-150) into `src/components/auth/RegisterForm.tsx` — same order (OAuth button → divider → credentials fields), call `signIn("github")`.
+- [MEDIUM] **Auth pages missing a `<main>` landmark** (axe `landmark-one-main` / `region`). Screen-reader users can't jump to content on `/sign-in`, `/register`, `/forgot-password`. Wrap the form card in a `<main>` in `src/app/(auth)/layout.tsx` (~lines 12-23).
+- [MEDIUM] **Homepage code block not keyboard-accessible** (axe `scrollable-region-focusable`, serious). The horizontally-scrollable `<pre>` in the AI section can't be reached/scrolled via keyboard. Add `tabIndex={0}` + `role="region" aria-label="Code example"` in `src/components/home/AiSection.tsx:69`.
+- [MEDIUM] **Homepage skips heading levels** (axe `heading-order`). Footer column heading is an `<h5>` jumping from the page's `<h2>`s. Change to `<h3>` in `src/components/home/HomeFooter.tsx:51`, keep visual style via className.
+- [LOW] **32px-tall buttons/inputs are tight touch targets on mobile.** Primary CTAs ("Sign in"/"Create account") are `h-8` (passes WCAG 2.5.8's 24px min, but under the comfortable 44px). Systemic design-system value in `src/components/ui/button.tsx` (~lines 23-24) / `src/components/ui/input.tsx:12` — needs a deliberate decision, not a per-page patch.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Findings came from a rendered Playwright review (ui-reviewer agent), not just code reading. Verified at 375 / 768 / 1280 widths.
+- Clean: no horizontal scroll at any breakpoint, value prop + CTA above the fold at all widths, no color-contrast violations.
+- Priority is the missing GitHub button on /register. The two a11y quick wins (`<main>` landmark, focusable `<pre>`) are low-risk follow-ups.
 
 ## History
 
