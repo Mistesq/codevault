@@ -2,39 +2,15 @@
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Second DRY pass over `src/actions` (refactor-scanner findings #4–#7). No behavior
-change; pure extraction.
-
-- **#4 AI guard chain (4 × ~20-line blocks):** extract `requireAiAccess(userId,
-  isPro, quotaNoun?)` into `src/lib/ai/guard.ts` (Pro gate → Gemini configured →
-  per-user rate limit). Each AI action collapses the chain to two lines.
-- **#5 AI catch mapping (4 sites):** extract `mapAiError(error, logLabel,
-  fallback)` + `AI_BUSY_ERROR` into the same `guard.ts`; each catch becomes
-  `return mapAiError(...)`.
-- **#6 `PlanLimitError` → message (2 sites):** add `planLimitMessage(error)` to
-  `src/lib/billing/plan.ts`; createItem/createCollection use it instead of the
-  inline `instanceof` + `PLAN_LIMIT_MESSAGES[...]`.
-- **#7 Prisma P2002 duplicate-name (2 sites in collections.ts):** extract a
-  local `duplicateNameResult(error)` helper (stays in the file — collection-
-  specific wording), used by createCollection + updateCollection.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Guard order becomes auth → `requireAiAccess` → Zod parse. The AI tests never
-  combine invalid input with a non-Pro / rate-limited session, so this
-  re-ordering keeps all assertions green; practical behavior is unchanged.
-- `quotaNoun`: "suggestions" for tags/description, "requests" for explain/
-  optimize (preserves the exact existing copy).
-- `mapAiError` preserves each action's `console.error` label + generic fallback
-  string and the shared "AI is busy…" 429 message.
-- `planLimitMessage` returns the CTA string (or null) — keeps `plan.ts` free of
-  the action-result shape.
-- New unit tests: `src/lib/ai/guard.test.ts` + `planLimitMessage` cases in
-  `plan.test.ts`. `duplicateNameResult` stays covered by `collections.test.ts`.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -108,3 +84,4 @@ change; pure extraction.
 - AI Prompt Optimization - Pro-only "Optimize" affordance in the item drawer read view for Prompt items (mirrors AI Explain Code); optimizePrompt action (auth+Pro+config+Zod+shared ai rate limit, EXPLAIN_MODEL, non-streaming ActionResult<string>, graceful 429) returns a refined prompt; pure optimize.ts (buildOptimizePrompt + OPTIMIZE_SYSTEM_INSTRUCTION + parseOptimizedPrompt: trims, strips wrapping code fence, keeps quotes, reuses tagging truncate/isRateLimitError) + optimizePromptSchema; MarkdownEditor gains headerTabs/headerActions + body-override slots; PromptOptimizer wraps read-only editor with Original/Optimized tabs, Sparkles Optimize/Regenerate, accept flow (Use this → updateItem + router.refresh + onUpdated, Discard keeps original), per-session cache by item id, Free users get Crown upgrade toast; DrawerContentSection routes prompts to PromptOptimizer (notes stay plain) with onUpdated threaded; themed .drawer-scroll scrollbar on drawer read/edit scroll areas; 19 tests, 408 total, build+lint clean (Completed)
 - UI Review Fixes - Playwright ui-reviewer findings on public pages: [CRITICAL] added "Sign up with GitHub" button + divider to RegisterForm (parity with SignInForm), extracted shared GitHubIcon component; [MEDIUM] wrapped (auth) layout content in a `<main>` landmark, made homepage AiSection `<pre>` keyboard-focusable (tabIndex/role/aria-label), fixed homepage footer heading level h5→h3; [LOW] 32px touch-target sizing deferred (systemic design-system decision); UI-only, no new tests, 408 total, build+lint clean, Playwright-verified (Completed)
 - Actions Dedup Refactor - pure DRY extraction of src/actions boilerplate (refactor-scanner #1-#3), no behavior change; new src/lib/actions/session.ts (requireSessionUser + NOT_SIGNED_IN_ERROR, server-only) replaces 18 inline auth guards, src/lib/actions/result.ts (canonical ActionResult<T> + parseActionInput helper) replaces 4 redeclared types + 10 safeParse->error-shaping blocks (callers `return parsed`); profile keeps its no-data result type, billing keeps its fixed "Invalid plan." parse line; 408 tests pass, build+lint clean (Completed)
+- Actions Dedup Refactor (Batch 2) - refactor-scanner #4-#7, no behavior change; new src/lib/ai/guard.ts requireAiAccess() bundles Pro/config/rate-limit (quotaNoun tailors copy) + mapAiError()/AI_BUSY_ERROR collapse the 4 AI catch blocks (ai.ts -160 lines), guard order now auth->requireAiAccess->parse; planLimitMessage() in plan.ts replaces inline PlanLimitError instanceof in createItem/createCollection; local duplicateNameResult() dedupes P2002 across create/updateCollection; +9 tests (guard.test.ts + planLimitMessage), 417 total, build+lint clean (Completed)
