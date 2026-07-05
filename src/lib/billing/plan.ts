@@ -77,3 +77,14 @@ export const PLAN_LIMIT_MESSAGES: Record<PlanLimitResource, string> = {
   image: "Image uploads are a Pro feature. Upgrade to Pro to upload images.",
   ai: "AI features are a Pro feature. Upgrade to Pro to use AI auto-tagging.",
 };
+
+/**
+ * If `error` is a `PlanLimitError`, the matching upgrade CTA message; otherwise
+ * `null`. Lets create actions surface the "Upgrade to Pro" copy distinctly from
+ * other failures without repeating the `instanceof` + lookup at each call site.
+ */
+export function planLimitMessage(error: unknown): string | null {
+  return error instanceof PlanLimitError
+    ? PLAN_LIMIT_MESSAGES[error.resource]
+    : null;
+}

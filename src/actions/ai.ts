@@ -2,15 +2,10 @@
 
 import { NOT_SIGNED_IN_ERROR, requireSessionUser } from "@/lib/actions/session";
 import { type ActionResult, parseActionInput } from "@/lib/actions/result";
-import {
-  AI_MODEL,
-  EXPLAIN_MODEL,
-  getGemini,
-  isGeminiConfigured,
-} from "@/lib/ai/client";
+import { AI_MODEL, EXPLAIN_MODEL, getGemini } from "@/lib/ai/client";
+import { mapAiError, requireAiAccess } from "@/lib/ai/guard";
 import {
   buildTaggingPrompt,
-  isRateLimitError,
   parseTagSuggestions,
   TAGGING_SYSTEM_INSTRUCTION,
 } from "@/lib/ai/tagging";
@@ -25,12 +20,6 @@ import {
   OPTIMIZE_SYSTEM_INSTRUCTION,
   parseOptimizedPrompt,
 } from "@/lib/ai/optimize";
-import { PLAN_LIMIT_MESSAGES } from "@/lib/billing/plan";
-import {
-  checkRateLimit,
-  RATE_LIMITS,
-  retryAfterMessage,
-} from "@/lib/rate-limit";
 import {
   autoTagSchema,
   describeItemSchema,
@@ -57,26 +46,11 @@ export async function generateAutoTags(
   const user = await requireSessionUser();
   if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
-  // Pro gate — matches the UI gating; server-side is the real enforcement.
-  if (!user.isPro) {
-    return { success: false, error: PLAN_LIMIT_MESSAGES.ai };
-  }
-
-  if (!isGeminiConfigured()) {
-    return { success: false, error: "AI is not configured." };
-  }
+  const access = await requireAiAccess(user.id, user.isPro, "suggestions");
+  if (!access.ok) return { success: false, error: access.error };
 
   const parsed = parseActionInput(autoTagSchema, input);
   if (!parsed.success) return parsed;
-
-  // Per-user fairness guard on the shared project quota.
-  const limit = await checkRateLimit(RATE_LIMITS.ai, user.id);
-  if (!limit.success) {
-    return {
-      success: false,
-      error: `You've used your AI suggestions for now. Try again in ${retryAfterMessage(limit.reset)}.`,
-    };
-  }
 
   try {
     const response = await getGemini().models.generateContent({
@@ -99,18 +73,11 @@ export async function generateAutoTags(
     }
     return { success: true, data: tags };
   } catch (error) {
-    // Provider quota exhausted — surface a friendly, retryable message.
-    if (isRateLimitError(error)) {
-      return {
-        success: false,
-        error: "AI is busy right now. Please try again shortly.",
-      };
-    }
-    console.error("Generate auto tags failed:", error);
-    return {
-      success: false,
-      error: "Something went wrong generating tags. Please try again.",
-    };
+    return mapAiError(
+      error,
+      "Generate auto tags failed:",
+      "Something went wrong generating tags. Please try again.",
+    );
   }
 }
 
@@ -127,26 +94,11 @@ export async function generateDescription(
   const user = await requireSessionUser();
   if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
-  // Pro gate — matches the UI gating; server-side is the real enforcement.
-  if (!user.isPro) {
-    return { success: false, error: PLAN_LIMIT_MESSAGES.ai };
-  }
-
-  if (!isGeminiConfigured()) {
-    return { success: false, error: "AI is not configured." };
-  }
+  const access = await requireAiAccess(user.id, user.isPro, "suggestions");
+  if (!access.ok) return { success: false, error: access.error };
 
   const parsed = parseActionInput(describeItemSchema, input);
   if (!parsed.success) return parsed;
-
-  // Per-user fairness guard on the shared project quota.
-  const limit = await checkRateLimit(RATE_LIMITS.ai, user.id);
-  if (!limit.success) {
-    return {
-      success: false,
-      error: `You've used your AI suggestions for now. Try again in ${retryAfterMessage(limit.reset)}.`,
-    };
-  }
 
   try {
     const response = await getGemini().models.generateContent({
@@ -175,18 +127,11 @@ export async function generateDescription(
     }
     return { success: true, data: description };
   } catch (error) {
-    // Provider quota exhausted — surface a friendly, retryable message.
-    if (isRateLimitError(error)) {
-      return {
-        success: false,
-        error: "AI is busy right now. Please try again shortly.",
-      };
-    }
-    console.error("Generate description failed:", error);
-    return {
-      success: false,
-      error: "Something went wrong generating the description. Please try again.",
-    };
+    return mapAiError(
+      error,
+      "Generate description failed:",
+      "Something went wrong generating the description. Please try again.",
+    );
   }
 }
 
@@ -203,28 +148,13 @@ export async function explainCode(input: unknown): Promise<StreamResult> {
   const user = await requireSessionUser();
   if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
-  // Pro gate — matches the UI gating; server-side is the real enforcement.
-  if (!user.isPro) {
-    return { success: false, error: PLAN_LIMIT_MESSAGES.ai };
-  }
-
-  if (!isGeminiConfigured()) {
-    return { success: false, error: "AI is not configured." };
-  }
+  // Explanations aren't cached server-side, so every click is a fresh call —
+  // the rate limit stops repeated re-clicks from draining the shared quota.
+  const access = await requireAiAccess(user.id, user.isPro, "requests");
+  if (!access.ok) return { success: false, error: access.error };
 
   const parsed = parseActionInput(explainCodeSchema, input);
   if (!parsed.success) return parsed;
-
-  // Per-user fairness guard on the shared project quota. Explanations aren't
-  // cached server-side, so every click is a fresh call — this stops repeated
-  // re-clicks from draining the shared free-tier budget.
-  const limit = await checkRateLimit(RATE_LIMITS.ai, user.id);
-  if (!limit.success) {
-    return {
-      success: false,
-      error: `You've used your AI requests for now. Try again in ${retryAfterMessage(limit.reset)}.`,
-    };
-  }
 
   try {
     // Awaiting here surfaces an initial 429 / RESOURCE_EXHAUSTED (the common
@@ -262,18 +192,11 @@ export async function explainCode(input: unknown): Promise<StreamResult> {
 
     return { success: true, stream };
   } catch (error) {
-    // Provider quota exhausted — surface a friendly, retryable message.
-    if (isRateLimitError(error)) {
-      return {
-        success: false,
-        error: "AI is busy right now. Please try again shortly.",
-      };
-    }
-    console.error("Explain code failed:", error);
-    return {
-      success: false,
-      error: "Something went wrong explaining this code. Please try again.",
-    };
+    return mapAiError(
+      error,
+      "Explain code failed:",
+      "Something went wrong explaining this code. Please try again.",
+    );
   }
 }
 
@@ -292,26 +215,11 @@ export async function optimizePrompt(
   const user = await requireSessionUser();
   if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
 
-  // Pro gate — matches the UI gating; server-side is the real enforcement.
-  if (!user.isPro) {
-    return { success: false, error: PLAN_LIMIT_MESSAGES.ai };
-  }
-
-  if (!isGeminiConfigured()) {
-    return { success: false, error: "AI is not configured." };
-  }
+  const access = await requireAiAccess(user.id, user.isPro, "requests");
+  if (!access.ok) return { success: false, error: access.error };
 
   const parsed = parseActionInput(optimizePromptSchema, input);
   if (!parsed.success) return parsed;
-
-  // Per-user fairness guard on the shared project quota.
-  const limit = await checkRateLimit(RATE_LIMITS.ai, user.id);
-  if (!limit.success) {
-    return {
-      success: false,
-      error: `You've used your AI requests for now. Try again in ${retryAfterMessage(limit.reset)}.`,
-    };
-  }
 
   try {
     const response = await getGemini().models.generateContent({
@@ -334,17 +242,10 @@ export async function optimizePrompt(
     }
     return { success: true, data: optimized };
   } catch (error) {
-    // Provider quota exhausted — surface a friendly, retryable message.
-    if (isRateLimitError(error)) {
-      return {
-        success: false,
-        error: "AI is busy right now. Please try again shortly.",
-      };
-    }
-    console.error("Optimize prompt failed:", error);
-    return {
-      success: false,
-      error: "Something went wrong optimizing this prompt. Please try again.",
-    };
+    return mapAiError(
+      error,
+      "Optimize prompt failed:",
+      "Something went wrong optimizing this prompt. Please try again.",
+    );
   }
 }
