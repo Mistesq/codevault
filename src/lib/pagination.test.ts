@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   clampPage,
   getPageRange,
   pageOffset,
   paginateArray,
+  paginatePrismaQuery,
   parsePageParam,
   totalPagesFor,
 } from "@/lib/pagination";
@@ -120,5 +121,54 @@ describe("getPageRange", () => {
       "ellipsis",
       10,
     ]);
+  });
+});
+
+describe("paginatePrismaQuery", () => {
+  it("clamps the requested page and passes the right skip/take to findMany", async () => {
+    const count = vi.fn().mockResolvedValue(50); // 3 pages at perPage 21
+    const findMany = vi.fn().mockResolvedValue([{ id: "a" }]);
+    const map = vi.fn((rows: { id: string }[]) => rows.map((r) => r.id));
+
+    // Request a too-high page — it should clamp to the last (3rd) page.
+    const result = await paginatePrismaQuery({
+      page: 99,
+      perPage: 21,
+      count,
+      findMany,
+      map,
+    });
+
+    expect(findMany).toHaveBeenCalledWith(42, 21); // pageOffset(3, 21) = 42
+    expect(result).toEqual({
+      items: ["a"],
+      page: 3,
+      totalPages: 3,
+      totalCount: 50,
+    });
+  });
+
+  it("returns a single empty page when there are no rows", async () => {
+    const result = await paginatePrismaQuery({
+      page: 1,
+      perPage: 21,
+      count: vi.fn().mockResolvedValue(0),
+      findMany: vi.fn().mockResolvedValue([]),
+      map: (rows: unknown[]) => rows,
+    });
+
+    expect(result).toEqual({ items: [], page: 1, totalPages: 1, totalCount: 0 });
+  });
+
+  it("awaits an async batch mapper", async () => {
+    const result = await paginatePrismaQuery({
+      page: 1,
+      perPage: 10,
+      count: vi.fn().mockResolvedValue(1),
+      findMany: vi.fn().mockResolvedValue([{ n: 2 }]),
+      map: async (rows: { n: number }[]) => rows.map((r) => r.n * 5),
+    });
+
+    expect(result.items).toEqual([10]);
   });
 });

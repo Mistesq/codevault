@@ -1,16 +1,11 @@
 import { z } from "zod";
+import { optionalTrimmed } from "@/lib/validations/shared";
 
 // Collection create payload. The server action is the source of truth — it
 // validates this before touching the database.
 //
 // `description` is optional: empty/whitespace-only input normalizes to null so
 // we don't persist empty strings (mirrors the item schema's optional fields).
-
-const optionalTrimmed = z
-  .string()
-  .trim()
-  .nullish()
-  .transform((v) => (v && v.length > 0 ? v : null));
 
 export const createCollectionSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),

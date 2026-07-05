@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalTrimmed } from "@/lib/validations/shared";
 
 // Input payload for the AI auto-tagging action. The server action is the source
 // of truth — it validates this before calling Gemini. Title is required (it's
@@ -15,15 +16,10 @@ export const autoTagSchema = z.object({
 export type AutoTagInput = z.infer<typeof autoTagSchema>;
 
 // Input payload for the AI description action. Every field is optional and
-// normalized to a trimmed string or null, but `superRefine` requires at least
-// one substantive signal (title, content, or url) so we never ask the model to
-// describe an empty item. `type`/`language` add context but don't count as
-// standalone signal.
-const optionalTrimmed = z
-  .string()
-  .nullish()
-  .transform((v) => (v && v.trim().length > 0 ? v.trim() : null));
-
+// normalized to a trimmed string or null (see `optionalTrimmed`), but
+// `superRefine` requires at least one substantive signal (title, content, or
+// url) so we never ask the model to describe an empty item. `type`/`language`
+// add context but don't count as standalone signal.
 export const describeItemSchema = z
   .object({
     title: optionalTrimmed,

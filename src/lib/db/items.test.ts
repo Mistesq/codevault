@@ -67,6 +67,7 @@ import {
   linkTags,
   setItemFavorite,
   setItemPinned,
+  sortByTypeOrder,
   updateItem,
 } from "@/lib/db/items";
 import { ITEMS_PER_PAGE } from "@/lib/pagination";
@@ -74,6 +75,30 @@ import { FREE_LIMITS, PlanLimitError } from "@/lib/billing/plan";
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe("sortByTypeOrder", () => {
+  it("orders types by SYSTEM_TYPE_ORDER, tie-breaking unknowns alphabetically", () => {
+    const input = [
+      { name: "Url" },
+      { name: "Zebra" }, // unlisted → end
+      { name: "Snippet" },
+      { name: "Alpha" }, // unlisted → end (before Zebra alphabetically)
+      { name: "Note" },
+    ];
+
+    const sorted = sortByTypeOrder(input).map((t) => t.name);
+
+    expect(sorted).toEqual(["Snippet", "Note", "Url", "Alpha", "Zebra"]);
+  });
+
+  it("returns a new array without mutating the input", () => {
+    const input = [{ name: "Note" }, { name: "Snippet" }];
+    const sorted = sortByTypeOrder(input);
+
+    expect(sorted).not.toBe(input);
+    expect(input.map((t) => t.name)).toEqual(["Note", "Snippet"]);
+  });
 });
 
 describe("getItemsByTypeSlug", () => {

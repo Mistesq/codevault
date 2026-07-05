@@ -8,12 +8,10 @@ import {
 } from "@/lib/db/items";
 import { isAtCollectionLimit, PlanLimitError } from "@/lib/billing/plan";
 import {
-  clampPage,
   COLLECTIONS_PER_PAGE,
   DASHBOARD_COLLECTIONS_LIMIT,
   ITEMS_PER_PAGE,
-  pageOffset,
-  totalPagesFor,
+  paginatePrismaQuery,
   type Paginated,
 } from "@/lib/pagination";
 
@@ -207,24 +205,21 @@ export async function getPaginatedCollections(
   if (!user) return { items: [], page: 1, totalPages: 1, totalCount: 0 };
 
   const where = { userId: user.id };
-  const totalCount = await prisma.collection.count({ where });
-  const totalPages = totalPagesFor(totalCount, COLLECTIONS_PER_PAGE);
-  const current = clampPage(page, totalPages);
 
-  const collections = await prisma.collection.findMany({
-    where,
-    orderBy: { updatedAt: "desc" },
-    skip: pageOffset(current, COLLECTIONS_PER_PAGE),
-    take: COLLECTIONS_PER_PAGE,
-    include: collectionCardInclude,
+  return paginatePrismaQuery({
+    page,
+    perPage: COLLECTIONS_PER_PAGE,
+    count: () => prisma.collection.count({ where }),
+    findMany: (skip, take) =>
+      prisma.collection.findMany({
+        where,
+        orderBy: { updatedAt: "desc" },
+        skip,
+        take,
+        include: collectionCardInclude,
+      }),
+    map: (collections) => mapCollectionCards(collections),
   });
-
-  return {
-    items: await mapCollectionCards(collections),
-    page: current,
-    totalPages,
-    totalCount,
-  };
 }
 
 export interface CollectionWithItems extends Paginated<DashboardItem> {
@@ -259,25 +254,23 @@ export async function getCollectionWithItems(
     userId: user.id,
     collections: { some: { collectionId: id } },
   };
-  const totalCount = await prisma.item.count({ where });
-  const totalPages = totalPagesFor(totalCount, ITEMS_PER_PAGE);
-  const current = clampPage(page, totalPages);
 
-  const rows = await prisma.item.findMany({
-    where,
-    orderBy: { updatedAt: "desc" },
-    skip: pageOffset(current, ITEMS_PER_PAGE),
-    take: ITEMS_PER_PAGE,
-    select: itemSelect,
+  const paged = await paginatePrismaQuery({
+    page,
+    perPage: ITEMS_PER_PAGE,
+    count: () => prisma.item.count({ where }),
+    findMany: (skip, take) =>
+      prisma.item.findMany({
+        where,
+        orderBy: { updatedAt: "desc" },
+        skip,
+        take,
+        select: itemSelect,
+      }),
+    map: (rows) => rows.map(toDashboardItem),
   });
 
-  return {
-    ...collection,
-    items: rows.map(toDashboardItem),
-    page: current,
-    totalPages,
-    totalCount,
-  };
+  return { ...collection, ...paged };
 }
 
 /** Fields the New Collection dialog can set (already Zod-validated upstream). */

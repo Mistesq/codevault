@@ -70,6 +70,37 @@ export function paginateArray<T>(
   };
 }
 
+/**
+ * Run the standard "one page from Prisma" sequence: count the matching rows,
+ * derive total pages, clamp the requested page into range, then fetch just that
+ * page via `findMany(skip, take)` and shape the rows with `map`. Returns the page
+ * slice plus the metadata the UI needs. `map` receives the whole page of rows so
+ * callers can use either a per-row mapper (`(rows) => rows.map(toX)`) or a batch
+ * async mapper.
+ */
+export async function paginatePrismaQuery<Row, T>(opts: {
+  page: number;
+  perPage: number;
+  count: () => Promise<number>;
+  findMany: (skip: number, take: number) => Promise<Row[]>;
+  map: (rows: Row[]) => T[] | Promise<T[]>;
+}): Promise<Paginated<T>> {
+  const { page, perPage, count, findMany, map } = opts;
+
+  const totalCount = await count();
+  const totalPages = totalPagesFor(totalCount, perPage);
+  const current = clampPage(page, totalPages);
+
+  const rows = await findMany(pageOffset(current, perPage), perPage);
+
+  return {
+    items: await map(rows),
+    page: current,
+    totalPages,
+    totalCount,
+  };
+}
+
 export type PageToken = number | "ellipsis";
 
 /**

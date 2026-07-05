@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { typeOrderIndex } from "@/lib/db/items";
+import { countItemsByType, sortByTypeOrder } from "@/lib/db/items";
 
 // Profile data is scoped to the signed-in user (session.user.id), matching the
 // rest of the domain layer (all queries resolve the user from the auth session).
@@ -41,7 +41,7 @@ export async function getProfileData(): Promise<ProfileData> {
     throw new Error("getProfileData called without an authenticated session");
   }
 
-  const [user, totalItems, totalCollections, systemTypes, grouped] =
+  const [user, totalItems, totalCollections, systemTypes, countByType] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
@@ -60,31 +60,21 @@ export async function getProfileData(): Promise<ProfileData> {
         where: { isSystem: true },
         select: { id: true, name: true, icon: true, color: true },
       }),
-      prisma.item.groupBy({
-        by: ["typeId"],
-        where: { userId },
-        _count: { _all: true },
-      }),
+      countItemsByType(userId),
     ]);
 
   if (!user) {
     throw new Error("getProfileData: signed-in user not found in database");
   }
 
-  const countByType = new Map(grouped.map((g) => [g.typeId, g._count._all]));
-
-  const typeBreakdown: ProfileTypeCount[] = systemTypes
-    .slice()
-    .sort((a, b) => {
-      const order = typeOrderIndex(a.name) - typeOrderIndex(b.name);
-      return order !== 0 ? order : a.name.localeCompare(b.name);
-    })
-    .map((type) => ({
+  const typeBreakdown: ProfileTypeCount[] = sortByTypeOrder(systemTypes).map(
+    (type) => ({
       name: type.name,
       icon: type.icon,
       color: type.color,
       count: countByType.get(type.id) ?? 0,
-    }));
+    }),
+  );
 
   return {
     name: user.name ?? "User",
