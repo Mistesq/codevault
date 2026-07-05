@@ -1,47 +1,16 @@
-# Components Dedup Refactor
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Components Dedup Refactor — pure DRY/decomposition pass over `src/components`, no
-behavior change. Extract shared pieces surfaced by the refactor-scanner, ranked
-by impact:
-
-1. **Item create/edit form fields** (~90-100 dup lines, biggest) — `NewItemDialog.tsx:231-342`
-   and `ItemEditForm.tsx:113-209` render the same Title/Description/Language/Content/URL/Tags/Collections
-   blocks (same `show*` conditionals, same Pro-gated AI buttons), differing only by id prefix.
-   → extract a shared `ItemFieldsFieldset` both wrap.
-2. **Editor header micro-components** — `HeaderButton` is byte-identical in
-   `CodeExplainer.tsx:205-230` and `PromptOptimizer.tsx:269-294`; `TabButton` repeats in 3 files
-   (`CodeExplainer`, `PromptOptimizer`, `MarkdownEditor`); clipboard copy-with-timeout is inlined in
-   `CodeEditor.tsx` and `MarkdownEditor.tsx` despite `CopyButton.tsx` existing.
-   → shared `editor-chrome.tsx` (`TabButton`/`HeaderButton`) + `useCopyToClipboard` hook. Shrinks the two largest files.
-3. **New/Edit Collection dialogs** — `NewCollectionDialog.tsx:113-160` and `EditCollectionDialog.tsx:102-149`
-   share the whole name/description field + footer block (~45 lines each).
-   → `CollectionFormFields` component or `useCollectionForm` hook.
-4. **GitHub OAuth button + "or" divider** — duplicated in `SignInForm.tsx:123-142` and
-   `RegisterForm.tsx:83-102`. → `GitHubAuthButton` + an `OrDivider` ui primitive.
-5. **Destructive-confirm footer (3×)** — same spinner/label/`toast.error` footer in
-   `DeleteItemDialog.tsx:79-90`, `DeleteCollectionDialog.tsx:67-78`, `DeleteAccountDialog.tsx:86-96`.
-   → `ConfirmDeleteFooter`/`ConfirmDeleteDialog` in `ui/`.
-6. **Collection actions wiring** — `CollectionActions.tsx` and `CollectionHeaderActions.tsx` duplicate
-   edit/delete state + `useFavoriteToggle` + dialog pair; only trigger markup and `onDeleted` differ.
-   → `useCollectionActions` hook.
-7. **Card a11y + Pin indicator** — Enter/Space activation handler redefined in `ImageCard`, `FileRow`,
-   `FavoritesList`; `isPinned && <Pin/>` badge in those + `ItemCard`.
-   → `useActivateOnEnter` hook + `PinIndicator` component.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Source: refactor-scanner sweep of `src/components` (85 files). No component
-  flagged purely for size — the large files are large *because* of the
-  duplication above, so extraction shrinks them as a side effect.
-- Items 1 and 2 carry most of the weight; suggest tackling as separate branches.
-- Behavior must stay identical (validation/UX, ids, a11y). Maintain tests for
-  any touched utilities/hooks per the workflow.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -116,3 +85,4 @@ by impact:
 - UI Review Fixes - Playwright ui-reviewer findings on public pages: [CRITICAL] added "Sign up with GitHub" button + divider to RegisterForm (parity with SignInForm), extracted shared GitHubIcon component; [MEDIUM] wrapped (auth) layout content in a `<main>` landmark, made homepage AiSection `<pre>` keyboard-focusable (tabIndex/role/aria-label), fixed homepage footer heading level h5→h3; [LOW] 32px touch-target sizing deferred (systemic design-system decision); UI-only, no new tests, 408 total, build+lint clean, Playwright-verified (Completed)
 - Actions Dedup Refactor - pure DRY extraction of src/actions boilerplate (refactor-scanner #1-#3), no behavior change; new src/lib/actions/session.ts (requireSessionUser + NOT_SIGNED_IN_ERROR, server-only) replaces 18 inline auth guards, src/lib/actions/result.ts (canonical ActionResult<T> + parseActionInput helper) replaces 4 redeclared types + 10 safeParse->error-shaping blocks (callers `return parsed`); profile keeps its no-data result type, billing keeps its fixed "Invalid plan." parse line; 408 tests pass, build+lint clean (Completed)
 - Actions Dedup Refactor (Batch 2) - refactor-scanner #4-#7, no behavior change; new src/lib/ai/guard.ts requireAiAccess() bundles Pro/config/rate-limit (quotaNoun tailors copy) + mapAiError()/AI_BUSY_ERROR collapse the 4 AI catch blocks (ai.ts -160 lines), guard order now auth->requireAiAccess->parse; planLimitMessage() in plan.ts replaces inline PlanLimitError instanceof in createItem/createCollection; local duplicateNameResult() dedupes P2002 across create/updateCollection; +9 tests (guard.test.ts + planLimitMessage), 417 total, build+lint clean (Completed)
+- Components Dedup Refactor - refactor-scanner sweep of src/components, no behavior change; 7 extractions: ItemFieldsFieldset (NewItemDialog/ItemEditForm), editor-chrome (TabButton/HeaderButton/EditorCopyButton) + useCopyToClipboard hook (CodeEditor/MarkdownEditor/CodeExplainer/PromptOptimizer/CopyButton/ItemCard), CollectionFormFields (New/Edit collection dialogs), GitHubAuthButton + ui/OrDivider (SignIn/Register), ui/ConfirmDeleteFooter (delete item/collection/account), useCollectionActions hook (CollectionActions/HeaderActions), useActivateOnEnter hook + PinIndicator (ImageCard/FileRow/FavoritesList/ItemCard); ids/aria/paddings/sizes preserved; +1 test file (use-activate-on-enter), 420 total, build+lint clean (Completed)
