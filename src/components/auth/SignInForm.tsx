@@ -10,7 +10,8 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GitHubIcon } from "@/components/auth/GitHubIcon";
+import { OrDivider } from "@/components/ui/or-divider";
+import { GitHubAuthButton } from "@/components/auth/GitHubAuthButton";
 import { signInSchema } from "@/lib/validations/auth";
 
 // Keep redirects on-site: accept a relative path or a same-origin absolute URL,
@@ -120,26 +121,14 @@ export function SignInForm() {
         </p>
       </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full"
-        onClick={handleGitHub}
+      <GitHubAuthButton
+        label="Sign in with GitHub"
+        loading={pending === "github"}
         disabled={pending !== null}
-      >
-        {pending === "github" ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <GitHubIcon className="size-4" />
-        )}
-        Sign in with GitHub
-      </Button>
+        onClick={handleGitHub}
+      />
 
-      <div className="flex items-center gap-3">
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted-foreground">or</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
+      <OrDivider />
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">

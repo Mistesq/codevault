@@ -3,69 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, Copy } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { EditorCopyButton, TabButton } from "@/components/items/editor-chrome";
 
 const MIN_HEIGHT = 150;
 const MAX_HEIGHT = 400;
 
 type Tab = "write" | "preview";
-
-/** Copies the given text and briefly flips the icon to a check. */
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard can reject (e.g. insecure context); silently ignore.
-    }
-  }
-
-  const Icon = copied ? Check : Copy;
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      aria-label="Copy markdown"
-      className="flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-xs text-white/60 transition-colors hover:bg-white/10 hover:text-white/90"
-    >
-      <Icon className={cn("size-3.5", copied && "text-emerald-400")} />
-      {copied ? "Copied" : "Copy"}
-    </button>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors",
-        active
-          ? "bg-white/10 text-white/90"
-          : "text-white/50 hover:bg-white/5 hover:text-white/80",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 /**
  * Markdown editor with Write/Preview tabs, styled to match {@link CodeEditor}'s
@@ -140,7 +85,7 @@ export function MarkdownEditor({
         </div>
         <div className="flex items-center gap-2">
           {headerActions}
-          <CopyButton text={value} />
+          <EditorCopyButton text={value} label="Copy markdown" />
         </div>
       </div>
 

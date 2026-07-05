@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Check, Crown, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
 
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
+import { HeaderButton, TabButton } from "@/components/items/editor-chrome";
 import { optimizePrompt } from "@/actions/ai";
 import { updateItem } from "@/actions/items";
 import { buildItemFields } from "@/lib/item-form";
@@ -235,61 +236,6 @@ export function PromptOptimizer({
         </div>
       ) : undefined}
     </MarkdownEditor>
-  );
-}
-
-/** A pill tab in the editor header, matching MarkdownEditor's tab styling. */
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition-colors",
-        active
-          ? "bg-white/10 text-white/90"
-          : "text-white/50 hover:bg-white/5 hover:text-white/80",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-/** A ghost header button matching MarkdownEditor's Copy control. */
-function HeaderButton({
-  onClick,
-  disabled,
-  title,
-  ariaLabel,
-  children,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  title: string;
-  ariaLabel?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      aria-label={ariaLabel}
-      className="flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-xs text-white/60 transition-colors hover:bg-white/10 hover:text-white/90 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {children}
-    </button>
   );
 }
 

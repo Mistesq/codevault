@@ -1,11 +1,12 @@
 "use client";
 
-import type { KeyboardEvent } from "react";
-import { ImageIcon, Pin, Star } from "lucide-react";
+import { ImageIcon, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { DashboardItem } from "@/lib/db/items";
 import { useItemDrawer } from "@/components/items/item-drawer-context";
+import { useActivateOnEnter } from "@/components/items/use-activate-on-enter";
+import { PinIndicator } from "@/components/items/PinIndicator";
 
 /**
  * Gallery thumbnail card for Image items. Replaces the standard ItemCard on the
@@ -14,13 +15,7 @@ import { useItemDrawer } from "@/components/items/item-drawer-context";
  */
 export function ImageCard({ item }: { item: DashboardItem }) {
   const { openItem } = useItemDrawer();
-
-  function handleKeyDown(e: KeyboardEvent<HTMLElement>) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      openItem(item);
-    }
-  }
+  const handleKeyDown = useActivateOnEnter<HTMLElement>(() => openItem(item));
 
   return (
     <article
@@ -50,9 +45,7 @@ export function ImageCard({ item }: { item: DashboardItem }) {
         <h3 className="min-w-0 flex-1 truncate text-sm font-medium">
           {item.title}
         </h3>
-        {item.isPinned && (
-          <Pin className="size-3.5 shrink-0 text-muted-foreground" />
-        )}
+        <PinIndicator pinned={item.isPinned} />
         <Star
           className={cn(
             "size-4 shrink-0",

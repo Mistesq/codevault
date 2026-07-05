@@ -2,19 +2,16 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 
 import { deleteCollection } from "@/actions/collections";
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import { ConfirmDeleteFooter } from "@/components/ui/confirm-delete-footer";
 
 /**
  * Controlled delete-confirmation dialog (open state owned by the caller). On
@@ -64,17 +61,11 @@ export function DeleteCollectionDialog({
             removed.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={pending}
-          >
-            {pending && <Loader2 className="size-4 animate-spin" />}
-            Delete
-          </Button>
-        </AlertDialogFooter>
+        <ConfirmDeleteFooter
+          pending={pending}
+          confirmLabel="Delete"
+          onConfirm={handleDelete}
+        />
       </AlertDialogContent>
     </AlertDialog>
   );

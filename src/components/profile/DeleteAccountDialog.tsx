@@ -2,20 +2,19 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import { deleteAccount } from "@/actions/profile";
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteFooter } from "@/components/ui/confirm-delete-footer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -83,17 +82,12 @@ export function DeleteAccountDialog() {
           />
         </div>
 
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={!canDelete || pending}
-          >
-            {pending && <Loader2 className="size-4 animate-spin" />}
-            Delete Account
-          </Button>
-        </AlertDialogFooter>
+        <ConfirmDeleteFooter
+          pending={pending}
+          confirmLabel="Delete Account"
+          onConfirm={handleDelete}
+          confirmDisabled={!canDelete}
+        />
       </AlertDialogContent>
     </AlertDialog>
   );

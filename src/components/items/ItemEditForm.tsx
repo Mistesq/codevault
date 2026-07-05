@@ -6,14 +6,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { ItemContentField } from "@/components/items/ItemContentField";
-import { LanguageSelect } from "@/components/items/LanguageSelect";
-import { CollectionMultiSelect } from "@/components/items/CollectionMultiSelect";
-import { SuggestTagsButton } from "@/components/items/SuggestTagsButton";
-import { GenerateDescriptionButton } from "@/components/items/GenerateDescriptionButton";
+import { ItemFieldsFieldset } from "@/components/items/ItemFieldsFieldset";
 import { typeLabel } from "@/lib/type-icons";
 import { updateItem } from "@/actions/items";
 import {
@@ -21,7 +14,7 @@ import {
   CONTENT_FIELD_TYPES,
   LANGUAGE_FIELD_TYPES,
 } from "@/lib/item-content-types";
-import { addTag, buildItemFields, parseTags } from "@/lib/item-form";
+import { buildItemFields } from "@/lib/item-form";
 import type { ItemDetail } from "@/lib/db/items";
 import type { SelectableCollection } from "@/lib/db/collections";
 
@@ -110,103 +103,31 @@ export function ItemEditForm({
       className="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       <div className="drawer-scroll flex-1 space-y-4 overflow-y-auto p-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="item-title">Title</Label>
-          <Input
-            id="item-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            aria-invalid={titleEmpty}
-            required
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="item-description">Description</Label>
-            {isPro && (
-              <GenerateDescriptionButton
-                title={title}
-                content={content}
-                type={typeLabel(detail.type.name)}
-                url={url}
-                language={language}
-                onGenerate={setDescription}
-              />
-            )}
-          </div>
-          <Textarea
-            id="item-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
-          />
-        </div>
-
-        {showLanguage && (
-          <div className="space-y-1.5">
-            <Label htmlFor="item-language">Language</Label>
-            <LanguageSelect
-              id="item-language"
-              value={language}
-              onChange={setLanguage}
-            />
-          </div>
-        )}
-
-        {showContent && (
-          <div className="space-y-1.5">
-            <Label htmlFor="item-content">Content</Label>
-            <ItemContentField
-              isCode={isCodeContent}
-              value={content}
-              onChange={setContent}
-              language={language}
-            />
-          </div>
-        )}
-
-        {showUrl && (
-          <div className="space-y-1.5">
-            <Label htmlFor="item-url">URL</Label>
-            {/* Plain text input (per spec) so the server-side Zod check is the
-                source of truth and its error renders inline, rather than the
-                browser's native type="url" validation short-circuiting submit. */}
-            <Input
-              id="item-url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://example.com"
-            />
-          </div>
-        )}
-
-        <div className="space-y-1.5">
-          <Label htmlFor="item-tags">Tags</Label>
-          <Input
-            id="item-tags"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="Comma-separated, e.g. react, hooks"
-          />
-          {isPro && (
-            <SuggestTagsButton
-              title={title}
-              content={content}
-              currentTags={parseTags(tags)}
-              onAdd={(tag) => setTags((prev) => addTag(prev, tag))}
-            />
-          )}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Collections</Label>
-          <CollectionMultiSelect
-            collections={collections}
-            selectedIds={collectionIds}
-            onChange={setCollectionIds}
-          />
-        </div>
+        <ItemFieldsFieldset
+          idPrefix="item"
+          isPro={isPro}
+          typeLabelText={typeLabel(detail.type.name)}
+          title={title}
+          onTitleChange={setTitle}
+          titleInvalid={titleEmpty}
+          description={description}
+          onDescriptionChange={setDescription}
+          language={language}
+          onLanguageChange={setLanguage}
+          showLanguage={showLanguage}
+          content={content}
+          onContentChange={setContent}
+          showContent={showContent}
+          isCodeContent={isCodeContent}
+          url={url}
+          onUrlChange={setUrl}
+          showUrl={showUrl}
+          tags={tags}
+          onTagsChange={setTags}
+          collections={collections}
+          collectionIds={collectionIds}
+          onCollectionIdsChange={setCollectionIds}
+        />
 
         {/* Type and dates aren't editable here (collections now are, above). */}
         <p className="border-t border-border pt-4 text-xs text-muted-foreground">

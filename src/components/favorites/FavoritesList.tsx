@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { type KeyboardEvent } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, FolderOpen, Pin } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, FolderOpen } from "lucide-react";
 
 import { useItemDrawer } from "@/components/items/item-drawer-context";
+import { useActivateOnEnter } from "@/components/items/use-activate-on-enter";
+import { PinIndicator } from "@/components/items/PinIndicator";
 import { Pagination } from "@/components/ui/pagination";
 import { TabNav } from "@/components/ui/tab-nav";
 import { relativeTime } from "@/lib/dashboard-data";
@@ -125,13 +126,9 @@ function FavoritesSortControl({
 
 function ItemRow({ item }: { item: DashboardItem }) {
   const { openItem } = useItemDrawer();
-
-  function handleKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      openItem(item);
-    }
-  }
+  const handleKeyDown = useActivateOnEnter<HTMLButtonElement>(() =>
+    openItem(item),
+  );
 
   return (
     <button
@@ -148,9 +145,7 @@ function ItemRow({ item }: { item: DashboardItem }) {
       <span className="min-w-0 flex-1 truncate text-foreground">
         {item.title}
       </span>
-      {item.isPinned && (
-        <Pin className="size-3 shrink-0 text-muted-foreground" />
-      )}
+      <PinIndicator pinned={item.isPinned} className="size-3" />
       <Badge label={typeLabel(item.type.name)} color={item.type.color} />
       <span className="w-14 shrink-0 text-right text-xs text-muted-foreground">
         {relativeTime(item.updatedAt)}

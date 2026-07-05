@@ -3,20 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import { deleteItem } from "@/actions/items";
 import {
   AlertDialog,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteFooter } from "@/components/ui/confirm-delete-footer";
 
 /**
  * Trash action in the drawer's action bar, gated behind a shadcn confirmation.
@@ -76,17 +75,11 @@ export function DeleteItemDialog({
             This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={pending}
-          >
-            {pending && <Loader2 className="size-4 animate-spin" />}
-            Delete
-          </Button>
-        </AlertDialogFooter>
+        <ConfirmDeleteFooter
+          pending={pending}
+          confirmLabel="Delete"
+          onConfirm={handleDelete}
+        />
       </AlertDialogContent>
     </AlertDialog>
   );

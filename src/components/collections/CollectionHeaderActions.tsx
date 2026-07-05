@@ -1,14 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Star, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useFavoriteToggle } from "@/components/favorites/use-favorite-toggle";
-import { EditCollectionDialog } from "./EditCollectionDialog";
-import { DeleteCollectionDialog } from "./DeleteCollectionDialog";
+import { useCollectionActions } from "./use-collection-actions";
 
 /** Minimal collection shape the header controls need. */
 interface HeaderCollection {
@@ -29,13 +26,8 @@ export function CollectionHeaderActions({
   collection: HeaderCollection;
 }) {
   const router = useRouter();
-  const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const { favorite, pending, toggle } = useFavoriteToggle(
-    "collection",
-    collection.id,
-    collection.isFavorite,
-  );
+  const { favorite, pending, toggle, openEdit, openDelete, dialogs } =
+    useCollectionActions(collection, () => router.push("/collections"));
 
   return (
     <div className="flex shrink-0 items-center gap-1">
@@ -58,7 +50,7 @@ export function CollectionHeaderActions({
         variant="ghost"
         size="icon-sm"
         aria-label="Edit collection"
-        onClick={() => setEditOpen(true)}
+        onClick={openEdit}
       >
         <Pencil className="size-4" />
       </Button>
@@ -66,22 +58,12 @@ export function CollectionHeaderActions({
         variant="ghost"
         size="icon-sm"
         aria-label="Delete collection"
-        onClick={() => setDeleteOpen(true)}
+        onClick={openDelete}
       >
         <Trash2 className="size-4 text-destructive" />
       </Button>
 
-      <EditCollectionDialog
-        collection={collection}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
-      <DeleteCollectionDialog
-        collection={collection}
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        onDeleted={() => router.push("/collections")}
-      />
+      {dialogs}
     </div>
   );
 }

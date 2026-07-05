@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MoreVertical, Pencil, Star, Trash2 } from "lucide-react";
 
@@ -14,9 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { DashboardCollection } from "@/lib/db/collections";
-import { useFavoriteToggle } from "@/components/favorites/use-favorite-toggle";
-import { EditCollectionDialog } from "./EditCollectionDialog";
-import { DeleteCollectionDialog } from "./DeleteCollectionDialog";
+import { useCollectionActions } from "./use-collection-actions";
 
 /**
  * The 3-dots actions menu shown on a collection card. Edit and Delete open their
@@ -32,13 +29,8 @@ export function CollectionActions({
   className?: string;
 }) {
   const router = useRouter();
-  const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const { favorite, pending, toggle } = useFavoriteToggle(
-    "collection",
-    collection.id,
-    collection.isFavorite,
-  );
+  const { favorite, pending, toggle, openEdit, openDelete, dialogs } =
+    useCollectionActions(collection, () => router.refresh());
 
   return (
     <>
@@ -56,7 +48,7 @@ export function CollectionActions({
           <MoreVertical className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-40">
-          <DropdownMenuItem onClick={() => setEditOpen(true)}>
+          <DropdownMenuItem onClick={openEdit}>
             <Pencil />
             Edit
           </DropdownMenuItem>
@@ -65,27 +57,14 @@ export function CollectionActions({
             {favorite ? "Unfavorite" : "Favorite"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() => setDeleteOpen(true)}
-          >
+          <DropdownMenuItem variant="destructive" onClick={openDelete}>
             <Trash2 />
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <EditCollectionDialog
-        collection={collection}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
-      <DeleteCollectionDialog
-        collection={collection}
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        onDeleted={() => router.refresh()}
-      />
+      {dialogs}
     </>
   );
 }
