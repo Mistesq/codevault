@@ -4,11 +4,9 @@ import { getSessionUser } from "@/lib/db/user";
 import { deleteFromR2, keyFromPublicUrl } from "@/lib/r2";
 import { isAtItemLimit, PlanLimitError } from "@/lib/billing/plan";
 import {
-  clampPage,
   DASHBOARD_RECENT_ITEMS_LIMIT,
   ITEMS_PER_PAGE,
-  pageOffset,
-  totalPagesFor,
+  paginatePrismaQuery,
   type Paginated,
 } from "@/lib/pagination";
 
@@ -178,27 +176,24 @@ export async function getAllItemsPaginated(
   const where = pinnedOnly
     ? { userId: user.id, isPinned: true }
     : { userId: user.id };
-  const totalCount = await prisma.item.count({ where });
-  const totalPages = totalPagesFor(totalCount, ITEMS_PER_PAGE);
-  const current = clampPage(page, totalPages);
 
-  const rows = await prisma.item.findMany({
-    where,
-    // All Items surfaces pinned items first; Recently Used wants pure recency.
-    orderBy: pinnedFirst
-      ? [{ isPinned: "desc" }, { updatedAt: "desc" }]
-      : { updatedAt: "desc" },
-    skip: pageOffset(current, ITEMS_PER_PAGE),
-    take: ITEMS_PER_PAGE,
-    select: itemSelect,
+  return paginatePrismaQuery({
+    page,
+    perPage: ITEMS_PER_PAGE,
+    count: () => prisma.item.count({ where }),
+    findMany: (skip, take) =>
+      prisma.item.findMany({
+        where,
+        // All Items surfaces pinned items first; Recently Used wants pure recency.
+        orderBy: pinnedFirst
+          ? [{ isPinned: "desc" }, { updatedAt: "desc" }]
+          : { updatedAt: "desc" },
+        skip,
+        take,
+        select: itemSelect,
+      }),
+    map: (rows) => rows.map(toDashboardItem),
   });
-
-  return {
-    items: rows.map(toDashboardItem),
-    page: current,
-    totalPages,
-    totalCount,
-  };
 }
 
 /**
@@ -550,26 +545,24 @@ export async function getItemsByTypeSlug(
   if (!user) return { type, items: [], page: 1, totalPages: 1, totalCount: 0 };
 
   const where = { userId: user.id, typeId: type.id };
-  const totalCount = await prisma.item.count({ where });
-  const totalPages = totalPagesFor(totalCount, ITEMS_PER_PAGE);
-  const current = clampPage(page, totalPages);
 
-  const rows = await prisma.item.findMany({
-    where,
-    // Pinned items surface at the top of the listing, then most recent first.
-    orderBy: [{ isPinned: "desc" }, { updatedAt: "desc" }],
-    skip: pageOffset(current, ITEMS_PER_PAGE),
-    take: ITEMS_PER_PAGE,
-    select: itemSelect,
+  const paged = await paginatePrismaQuery({
+    page,
+    perPage: ITEMS_PER_PAGE,
+    count: () => prisma.item.count({ where }),
+    findMany: (skip, take) =>
+      prisma.item.findMany({
+        where,
+        // Pinned items surface at the top of the listing, then most recent first.
+        orderBy: [{ isPinned: "desc" }, { updatedAt: "desc" }],
+        skip,
+        take,
+        select: itemSelect,
+      }),
+    map: (rows) => rows.map(toDashboardItem),
   });
 
-  return {
-    type,
-    items: rows.map(toDashboardItem),
-    page: current,
-    totalPages,
-    totalCount,
-  };
+  return { type, ...paged };
 }
 
 /**
@@ -610,10 +603,39 @@ const SYSTEM_TYPE_ORDER = [
   "url",
 ];
 
-// Exported so other type-breakdown views (e.g. the profile page) share one order.
-export function typeOrderIndex(name: string): number {
+// Rank of a type name within SYSTEM_TYPE_ORDER; unlisted names sort to the end.
+// Private — `sortByTypeOrder` is the shared surface other views build on.
+function typeOrderIndex(name: string): number {
   const i = SYSTEM_TYPE_ORDER.indexOf(name.toLowerCase());
   return i === -1 ? SYSTEM_TYPE_ORDER.length : i;
+}
+
+/**
+ * Sort item types into the sidebar's intended order (SYSTEM_TYPE_ORDER), falling
+ * back to alphabetical for ties / unlisted names. Returns a new array; the input
+ * is left untouched. Shared by the sidebar and the profile type breakdown.
+ */
+export function sortByTypeOrder<T extends { name: string }>(types: T[]): T[] {
+  return types.slice().sort((a, b) => {
+    const order = typeOrderIndex(a.name) - typeOrderIndex(b.name);
+    return order !== 0 ? order : a.name.localeCompare(b.name);
+  });
+}
+
+/**
+ * Count a user's items grouped by type id, as a Map for O(1) lookup while
+ * building per-type views. One grouped query. Shared by the sidebar type list
+ * and the profile type breakdown.
+ */
+export async function countItemsByType(
+  userId: string,
+): Promise<Map<string, number>> {
+  const grouped = await prisma.item.groupBy({
+    by: ["typeId"],
+    where: { userId },
+    _count: { _all: true },
+  });
+  return new Map(grouped.map((g) => [g.typeId, g._count._all]));
 }
 
 /**
@@ -622,26 +644,16 @@ export function typeOrderIndex(name: string): number {
  * sidebar's intended layout (see SYSTEM_TYPE_ORDER).
  */
 export async function getSystemItemTypes(): Promise<SidebarItemType[]> {
-  const types = await prisma.itemType.findMany({
+  const found = await prisma.itemType.findMany({
     where: { isSystem: true },
     select: { id: true, name: true, icon: true, color: true },
   });
-
-  types.sort((a, b) => {
-    const order = typeOrderIndex(a.name) - typeOrderIndex(b.name);
-    return order !== 0 ? order : a.name.localeCompare(b.name);
-  });
+  const types = sortByTypeOrder(found);
 
   const user = await getSessionUser();
   if (!user) return types.map((type) => ({ ...type, count: 0 }));
 
-  // One grouped query for all per-type counts, then merge by type id.
-  const grouped = await prisma.item.groupBy({
-    by: ["typeId"],
-    where: { userId: user.id },
-    _count: { _all: true },
-  });
-  const countByType = new Map(grouped.map((g) => [g.typeId, g._count._all]));
+  const countByType = await countItemsByType(user.id);
 
   return types.map((type) => ({
     ...type,

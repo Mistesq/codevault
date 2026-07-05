@@ -1,16 +1,25 @@
-# Current Feature
+# Current Feature: Lib Dedup Refactor
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Lib Dedup Refactor — pure DRY/structure extraction of `src/lib`, no behavior change. Extract duplicated logic into shared helpers:
+
+1. **[High] Token lifecycle** — `verification-token.ts` & `password-reset-token.ts` duplicate the single-use/hashed/expiring token pattern. Extract `src/lib/auth/token.ts` (`hashToken`, `generateRawToken`, `createSingleUseToken`, `consumeSingleUseToken`); make the two modules thin wrappers supplying TTL/identifier/result-shape. (~90 lines)
+2. **[High] Email template** — `email/verification.ts` & `email/password-reset.ts` duplicate the HTML shell, greeting, CTA button, footer, and Resend send/error call. Extract `src/lib/email/template.ts` (`buildEmailHtml(...)`) + `sendTransactionalEmail(...)`.
+3. **[High] Paginated Prisma query** — `getAllItemsPaginated`/`getItemsByTypeSlug` (`db/items.ts`) + `getPaginatedCollections`/`getCollectionWithItems` (`db/collections.ts`) repeat count→clamp→skip/take→map. Add generic `paginatePrismaQuery<Row,T>()` to `lib/pagination.ts`.
+4. **[Med] System-type sort/count** — tie-break comparator + `groupBy(["typeId"])→Map` duplicated between `getSystemItemTypes` (`db/items.ts`) & `getProfileData` (`db/profile.ts`). Add `sortByTypeOrder()` + `countItemsByType(userId)` to `db/items.ts`.
+5. **[Med] `optionalTrimmed` Zod field** — defined 3× (`validations/items.ts`, `validations/collections.ts`, and a drifted variant in `validations/ai.ts`). Extract to `src/lib/validations/shared.ts`; fixes the ai.ts drift (trim-in-transform vs `.trim()`).
+6. **[Low] Lazy-singleton + `isXConfigured()`** — repeated across `ai/client.ts`, `stripe/client.ts`, `r2.ts`, `email/resend.ts`. Env-checks differ per integration; awareness/consistency only, likely skip unless a `createLazySingleton<T>()` proves clean.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Source: refactor-scanner sweep of `src/lib`. Together #1–#3 remove ~250+ lines of near-identical logic.
+- No behavior change — keep ids/copy/result shapes identical; maintain/extend Vitest coverage for touched helpers (`npm test` + `npm run build` before commit).
+- #6 is low priority; only pursue if the extraction stays clean without adding indirection.
 
 ## History
 

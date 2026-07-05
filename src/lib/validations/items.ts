@@ -1,17 +1,13 @@
 import { z } from "zod";
+import { optionalTrimmed } from "@/lib/validations/shared";
 
 // Item create/update payloads. The server actions are the source of truth —
 // they validate this before touching the database.
 //
 // Optional text fields normalize empty/whitespace-only input to null so we
-// don't persist empty strings. `content` is intentionally NOT trimmed: code and
-// notes can have meaningful leading/trailing whitespace.
-
-const optionalTrimmed = z
-  .string()
-  .trim()
-  .nullish()
-  .transform((v) => (v && v.length > 0 ? v : null));
+// don't persist empty strings (see `optionalTrimmed`). `content` is
+// intentionally NOT trimmed: code and notes can have meaningful leading/trailing
+// whitespace.
 
 // `content` keeps its whitespace (code/notes), only collapsing empty → null.
 const contentField = z
