@@ -5,6 +5,7 @@ import { isEmailVerificationEnabled } from "@/lib/auth/email-verification";
 import { createVerificationToken } from "@/lib/auth/verification-token";
 import { sendVerificationEmail } from "@/lib/email/verification";
 import { registerSchema } from "@/lib/validations/auth";
+import { parseJsonRequest } from "@/lib/api/route-helpers";
 import {
   RATE_LIMITS,
   checkRateLimit,
@@ -19,20 +20,12 @@ export async function POST(request: Request) {
   const limit = await checkRateLimit(RATE_LIMITS.register, ip);
   if (!limit.success) return tooManyRequestsResponse(limit.reset);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
-
-  const parsed = registerSchema.safeParse(body);
-  if (!parsed.success) {
-    // Surface the first validation message for a friendly response.
-    const message =
-      parsed.error.issues[0]?.message ?? "Invalid registration details.";
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
+  const parsed = await parseJsonRequest(
+    request,
+    registerSchema,
+    "Invalid registration details.",
+  );
+  if (!parsed.ok) return parsed.response;
 
   const { name, email, password } = parsed.data;
 

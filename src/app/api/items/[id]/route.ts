@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
+import { requireSessionUser } from "@/lib/actions/session";
 import { getItemDetail } from "@/lib/db/items";
 
 // GET /api/items/[id] — full item detail for the drawer, fetched on click.
@@ -10,8 +10,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
+  const user = await requireSessionUser();
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

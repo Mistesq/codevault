@@ -2,6 +2,7 @@ import { Clock } from "lucide-react";
 
 import { CollectionCard } from "@/components/dashboard/CollectionCard";
 import { ItemCard } from "@/components/dashboard/ItemCard";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination } from "@/components/ui/pagination";
 import { TabNav } from "@/components/ui/tab-nav";
 import { getPaginatedCollections } from "@/lib/db/collections";
@@ -54,17 +55,12 @@ export default async function RecentPage({
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
-      <header className="flex items-center gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-sky-400">
-          <Clock className="size-5" />
-        </span>
-        <div>
-          <h1 className="text-lg font-semibold">Recently Used</h1>
-          <p className="text-xs text-muted-foreground">
-            Your most recently updated items and collections
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        icon={<Clock className="size-5" />}
+        iconClassName="text-sky-400"
+        title="Recently Used"
+        subtitle="Your most recently updated items and collections"
+      />
 
       {isEmpty ? (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">

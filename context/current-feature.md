@@ -1,16 +1,57 @@
-# Current Feature
+# App Folder Dedup Refactor
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+App-folder refactor (refactor-scanner findings #1–#7, no behavior change):
+
+- **#1 — Auth API route boilerplate.** Extract the repeated rate-limit →
+  parse-JSON → Zod-error dance shared by `register`, `request-password-reset`,
+  `resend-verification`, and `reset-password` route handlers into a new
+  `src/lib/api/route-helpers.ts` (e.g. `parseJsonBody(request)` +
+  `parseWithSchema(schema, body)`, mirroring the existing `parseActionInput`
+  in `src/lib/actions/result.ts`). Preserve the "Invalid JSON body." message
+  and existing error-shaping/status codes.
+- **#2 — Page header block.** Extract the copy-pasted "icon badge + title +
+  count" header markup (7 route files: `collections`, `collections/[id]`,
+  `items/[type]`, `items`, `pinned`, `favorites`, `recent`) into a pure
+  `src/components/ui/PageHeader.tsx` primitive (icon, title, subtitle, optional
+  actions slot). Single-source the icon-badge Tailwind string.
+- **#3 — Pluralization ternary.** Replace the inline
+  `{n} {n === 1 ? "item" : "items"}` (and `collection`/`collections`) logic in
+  5 route files with a `pluralize(count, singular, plural?)` helper in
+  `src/lib/utils.ts` (or absorb it into the PageHeader subtitle from #2).
+- **#4 — `typeLabel` drift.** `profile/page.tsx` redefines a label helper that
+  already exists in `src/lib/type-icons.tsx`. Fold the pluralization + the
+  `url → Links` special case into the shared `typeLabel` (optional `plural`
+  param or sibling helper) and delete the local copy. Also move the inline
+  `formatMemberSince` date formatter out of the route file into `src/lib`.
+- **#5 — image/file type predicates.** `collections/[id]/page.tsx` and
+  `items/[type]/page.tsx` each re-define `isImage`/`isFile`
+  (`name.toLowerCase() === ...`). Add `isImageType`/`isFileType` to the
+  existing `src/lib/item-content-types.ts` and reuse across both routes (and
+  the 3rd copy in `src/components/items/ItemContentBody.tsx`).
+- **#6 — inline `SectionHeading`.** `dashboard/page.tsx` defines a
+  presentational icon+label component inline (used 3×). Move it to
+  `src/components/dashboard/` (or generalize the existing `SectionLabel` to
+  take an optional icon) so the route file only composes.
+- **#7 — API auth guard (minor).** `upload`, `items/[id]`, and
+  `items/[id]/download` routes each repeat `auth()` + 401. Reuse the existing
+  `requireSessionUser()` from `src/lib/actions/session.ts`, keeping each
+  route's own 401 response shape.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Pure DRY / structure refactor — no behavior change. IDs, aria, class strings,
+  status codes, and error messages must be preserved.
+- Add/maintain Vitest unit tests for new/changed utilities (`route-helpers.ts`,
+  `pluralize`, `typeLabel`, `isImageType`/`isFileType`). UI components
+  (PageHeader, SectionHeading) stay untested per project policy.
+- Excludes the deliberately-not-flagged items (per-route `layout.tsx` files,
+  favorites/recent tab logic).
 
 ## History
 

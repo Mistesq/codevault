@@ -2,12 +2,13 @@ import { ExternalLink } from "lucide-react";
 
 import { DownloadButton } from "@/components/items/DownloadButton";
 import { formatFileSize } from "@/lib/dashboard-data";
+import { isImageType } from "@/lib/item-content-types";
 import type { ItemDetail } from "@/lib/db/items";
 
 /** Rendered content body for a loaded item (text / url / file). */
 export function ItemContentBody({ detail }: { detail: ItemDetail }) {
   if (detail.contentType === "FILE") {
-    const isImage = detail.type.name.toLowerCase() === "image";
+    const isImage = isImageType(detail.type.name);
     return (
       <div className="space-y-3">
         {isImage && detail.fileUrl && (

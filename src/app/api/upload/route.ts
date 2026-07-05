@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
+import { requireSessionUser } from "@/lib/actions/session";
 import { prisma } from "@/lib/prisma";
 import { buildObjectKey, isR2Configured, uploadToR2 } from "@/lib/r2";
 import { UPLOAD_CONSTRAINTS, validateUpload } from "@/lib/validations/file";
@@ -11,8 +11,8 @@ import type { UploadKind } from "@/lib/validations/file";
 // only handles the upload so it can stream multipart with progress). Requires a
 // signed-in session. The object is namespaced under the signed-in user.
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user) {
+  const sessionUser = await requireSessionUser();
+  if (!sessionUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   // File & image uploads are a Pro feature. The createItem FILE/IMAGE branch
   // enforces the same rule as a second layer.
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: sessionUser.id },
     select: { isPro: true },
   });
   if (!user?.isPro) {
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 
   // Namespace the object under the signed-in user (the key only needs to be
   // stable + unique).
-  const userId = session.user.id ?? "anonymous";
+  const userId = sessionUser.id ?? "anonymous";
 
   try {
     const key = buildObjectKey(userId, kind, file.name);

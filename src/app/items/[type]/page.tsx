@@ -4,13 +4,16 @@ import { ItemCard } from "@/components/dashboard/ItemCard";
 import { FileRow } from "@/components/items/FileRow";
 import { ImageCard } from "@/components/items/ImageCard";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination } from "@/components/ui/pagination";
 import { isProItemType } from "@/lib/billing/plan";
+import { isFileType, isImageType } from "@/lib/item-content-types";
 import { getItemsByTypeSlug } from "@/lib/db/items";
 import { getSelectableCollections } from "@/lib/db/collections";
 import { getSessionUser } from "@/lib/db/user";
 import { parsePageParam } from "@/lib/pagination";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
+import { pluralize } from "@/lib/utils";
 import { CREATE_ITEM_TYPES, type CreateItemType } from "@/lib/validations/items";
 
 // User-specific data fetched from the database — render per request.
@@ -53,40 +56,32 @@ export default async function ItemsByTypePage({
   const heading = `${typeLabel(type.name)}s`;
   const createType = toCreateType(type.name);
   // Image items get a thumbnail gallery instead of the standard item cards.
-  const isImageType = type.name.toLowerCase() === "image";
+  const showImageGallery = isImageType(type.name);
   // File items get a single-column list (Google Drive / Dropbox style).
-  const isFileType = type.name.toLowerCase() === "file";
+  const showFileList = isFileType(type.name);
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
-      <header className="flex items-center gap-3">
-        <span
-          className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted"
-          style={type.color ? { color: type.color } : undefined}
-        >
-          <TypeIcon name={type.icon} className="size-5" />
-        </span>
-        <div>
-          <h1 className="text-lg font-semibold">{heading}</h1>
-          <p className="text-xs text-muted-foreground">
-            {totalCount} {totalCount === 1 ? "item" : "items"}
-          </p>
-        </div>
-        {createType && (
-          <div className="ml-auto">
+      <PageHeader
+        icon={<TypeIcon name={type.icon} className="size-5" />}
+        iconColor={type.color ?? undefined}
+        title={heading}
+        subtitle={pluralize(totalCount, "item")}
+        actions={
+          createType ? (
             <NewItemDialog
               collections={collections}
               defaultType={createType}
               triggerLabel={`New ${typeLabel(type.name)}`}
               isPro={!!user?.isPro}
             />
-          </div>
-        )}
-      </header>
+          ) : undefined
+        }
+      />
 
       {totalCount > 0 ? (
         <>
-          {isFileType ? (
+          {showFileList ? (
             <div className="flex flex-col gap-2">
               {items.map((item) => (
                 <FileRow key={item.id} item={item} />
@@ -95,7 +90,7 @@ export default async function ItemsByTypePage({
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {items.map((item) =>
-                isImageType ? (
+                showImageGallery ? (
                   <ImageCard key={item.id} item={item} />
                 ) : (
                   <ItemCard key={item.id} item={item} />

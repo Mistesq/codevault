@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { consumePasswordResetToken } from "@/lib/auth/password-reset-token";
 import { resetPasswordSchema } from "@/lib/validations/auth";
+import { parseJsonRequest } from "@/lib/api/route-helpers";
 import {
   RATE_LIMITS,
   checkRateLimit,
@@ -18,20 +19,8 @@ export async function POST(request: Request) {
   const limit = await checkRateLimit(RATE_LIMITS.passwordReset, ip);
   if (!limit.success) return tooManyRequestsResponse(limit.reset);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
-
-  const parsed = resetPasswordSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid details." },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseJsonRequest(request, resetPasswordSchema);
+  if (!parsed.ok) return parsed.response;
 
   const { token, password } = parsed.data;
 

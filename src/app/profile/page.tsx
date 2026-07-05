@@ -2,25 +2,10 @@ import { Calendar, Code, FolderOpen, Mail } from "lucide-react";
 
 import { getProfileData } from "@/lib/db/profile";
 import { UserAvatar } from "@/components/auth/UserAvatar";
-import { TypeIcon } from "@/lib/type-icons";
+import { formatLongDate } from "@/lib/dashboard-data";
+import { pluralTypeLabel, TypeIcon } from "@/lib/type-icons";
 
 export const dynamic = "force-dynamic";
-
-function formatMemberSince(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-// Display label for the "Items by Type" cards: capitalized + pluralized, with
-// the URL type shown as "Links" (matches its Link icon).
-function typeLabel(name: string): string {
-  if (name.toLowerCase() === "url") return "Links";
-  const capitalized = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-  return capitalized.endsWith("s") ? capitalized : `${capitalized}s`;
-}
 
 export default async function ProfilePage() {
   // The session is verified by the profile layout's AppShell guard.
@@ -63,7 +48,7 @@ export default async function ProfilePage() {
             <Calendar className="size-4 shrink-0 text-muted-foreground" />
             <dt className="text-muted-foreground">Member since:</dt>
             <dd className="font-medium">
-              {formatMemberSince(profile.createdAt)}
+              {formatLongDate(profile.createdAt)}
             </dd>
           </div>
         </dl>
@@ -117,7 +102,7 @@ export default async function ProfilePage() {
                   className="size-4 shrink-0"
                   style={type.color ? { color: type.color } : undefined}
                 />
-                <span className="truncate">{typeLabel(type.name)}</span>
+                <span className="truncate">{pluralTypeLabel(type.name)}</span>
               </span>
               <span className="font-semibold tabular-nums">{type.count}</span>
             </li>

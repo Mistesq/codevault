@@ -24,3 +24,14 @@ export const LANGUAGE_FIELD_TYPES = CODE_CONTENT_TYPES;
 
 // Types that store an uploaded file/image instead of text content.
 export const FILE_FIELD_TYPES = new Set<string>(["file", "image"]);
+
+// Predicates for the two upload types, shared by the list pages and the drawer
+// so the `type.name.toLowerCase() === ...` check lives in one place. Names are
+// stored lowercase (except "URL"), but lowercase defensively regardless.
+export function isImageType(name: string): boolean {
+  return name.toLowerCase() === "image";
+}
+
+export function isFileType(name: string): boolean {
+  return name.toLowerCase() === "file";
+}

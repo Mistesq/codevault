@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createPasswordResetToken } from "@/lib/auth/password-reset-token";
 import { sendPasswordResetEmail } from "@/lib/email/password-reset";
 import { emailSchema } from "@/lib/validations/auth";
+import { parseJsonRequest } from "@/lib/api/route-helpers";
 import {
   RATE_LIMITS,
   checkRateLimit,
@@ -23,20 +24,8 @@ export async function POST(request: Request) {
   const limit = await checkRateLimit(RATE_LIMITS.passwordResetRequest, ip);
   if (!limit.success) return tooManyRequestsResponse(limit.reset);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
-
-  const parsed = emailSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid email." },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseJsonRequest(request, emailSchema, "Invalid email.");
+  if (!parsed.ok) return parsed.response;
 
   const { email } = parsed.data;
 
