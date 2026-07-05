@@ -1,57 +1,16 @@
-# App Folder Dedup Refactor
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-App-folder refactor (refactor-scanner findings #1–#7, no behavior change):
-
-- **#1 — Auth API route boilerplate.** Extract the repeated rate-limit →
-  parse-JSON → Zod-error dance shared by `register`, `request-password-reset`,
-  `resend-verification`, and `reset-password` route handlers into a new
-  `src/lib/api/route-helpers.ts` (e.g. `parseJsonBody(request)` +
-  `parseWithSchema(schema, body)`, mirroring the existing `parseActionInput`
-  in `src/lib/actions/result.ts`). Preserve the "Invalid JSON body." message
-  and existing error-shaping/status codes.
-- **#2 — Page header block.** Extract the copy-pasted "icon badge + title +
-  count" header markup (7 route files: `collections`, `collections/[id]`,
-  `items/[type]`, `items`, `pinned`, `favorites`, `recent`) into a pure
-  `src/components/ui/PageHeader.tsx` primitive (icon, title, subtitle, optional
-  actions slot). Single-source the icon-badge Tailwind string.
-- **#3 — Pluralization ternary.** Replace the inline
-  `{n} {n === 1 ? "item" : "items"}` (and `collection`/`collections`) logic in
-  5 route files with a `pluralize(count, singular, plural?)` helper in
-  `src/lib/utils.ts` (or absorb it into the PageHeader subtitle from #2).
-- **#4 — `typeLabel` drift.** `profile/page.tsx` redefines a label helper that
-  already exists in `src/lib/type-icons.tsx`. Fold the pluralization + the
-  `url → Links` special case into the shared `typeLabel` (optional `plural`
-  param or sibling helper) and delete the local copy. Also move the inline
-  `formatMemberSince` date formatter out of the route file into `src/lib`.
-- **#5 — image/file type predicates.** `collections/[id]/page.tsx` and
-  `items/[type]/page.tsx` each re-define `isImage`/`isFile`
-  (`name.toLowerCase() === ...`). Add `isImageType`/`isFileType` to the
-  existing `src/lib/item-content-types.ts` and reuse across both routes (and
-  the 3rd copy in `src/components/items/ItemContentBody.tsx`).
-- **#6 — inline `SectionHeading`.** `dashboard/page.tsx` defines a
-  presentational icon+label component inline (used 3×). Move it to
-  `src/components/dashboard/` (or generalize the existing `SectionLabel` to
-  take an optional icon) so the route file only composes.
-- **#7 — API auth guard (minor).** `upload`, `items/[id]`, and
-  `items/[id]/download` routes each repeat `auth()` + 401. Reuse the existing
-  `requireSessionUser()` from `src/lib/actions/session.ts`, keeping each
-  route's own 401 response shape.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Pure DRY / structure refactor — no behavior change. IDs, aria, class strings,
-  status codes, and error messages must be preserved.
-- Add/maintain Vitest unit tests for new/changed utilities (`route-helpers.ts`,
-  `pluralize`, `typeLabel`, `isImageType`/`isFileType`). UI components
-  (PageHeader, SectionHeading) stay untested per project policy.
-- Excludes the deliberately-not-flagged items (per-route `layout.tsx` files,
-  favorites/recent tab logic).
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -128,3 +87,4 @@ App-folder refactor (refactor-scanner findings #1–#7, no behavior change):
 - Actions Dedup Refactor (Batch 2) - refactor-scanner #4-#7, no behavior change; new src/lib/ai/guard.ts requireAiAccess() bundles Pro/config/rate-limit (quotaNoun tailors copy) + mapAiError()/AI_BUSY_ERROR collapse the 4 AI catch blocks (ai.ts -160 lines), guard order now auth->requireAiAccess->parse; planLimitMessage() in plan.ts replaces inline PlanLimitError instanceof in createItem/createCollection; local duplicateNameResult() dedupes P2002 across create/updateCollection; +9 tests (guard.test.ts + planLimitMessage), 417 total, build+lint clean (Completed)
 - Components Dedup Refactor - refactor-scanner sweep of src/components, no behavior change; 7 extractions: ItemFieldsFieldset (NewItemDialog/ItemEditForm), editor-chrome (TabButton/HeaderButton/EditorCopyButton) + useCopyToClipboard hook (CodeEditor/MarkdownEditor/CodeExplainer/PromptOptimizer/CopyButton/ItemCard), CollectionFormFields (New/Edit collection dialogs), GitHubAuthButton + ui/OrDivider (SignIn/Register), ui/ConfirmDeleteFooter (delete item/collection/account), useCollectionActions hook (CollectionActions/HeaderActions), useActivateOnEnter hook + PinIndicator (ImageCard/FileRow/FavoritesList/ItemCard); ids/aria/paddings/sizes preserved; +1 test file (use-activate-on-enter), 420 total, build+lint clean (Completed)
 - Lib Dedup Refactor - refactor-scanner sweep of src/lib, no behavior change; 5 extractions: auth/token.ts (hashToken/generateRawToken/createSingleUseToken/consumeSingleUseToken) turns the two token modules into thin wrappers, email/template.ts (buildEmailHtml + sendTransactionalEmail) leaves the emails supplying only copy, pagination.ts paginatePrismaQuery generalizes count→clamp→skip/take→map across the 4 item/collection page queries, db/items.ts sortByTypeOrder + countItemsByType shared by sidebar + profile (typeOrderIndex demoted to private), validations/shared.ts optionalTrimmed deduped from items/collections/ai (fixes ai.ts .trim() drift); #6 lazy-singleton skipped (indirection not worth ~8 lines); DB call shapes/error strings/result shapes preserved, +11 tests, 431 total, build+lint clean (Completed)
+- App Folder Dedup Refactor - refactor-scanner sweep of src/app (#1-#7), no behavior change; lib/api/route-helpers.ts (parseJsonRequest/parseWithSchema) dedupes the 4 auth routes' rate-limit→JSON→Zod boilerplate (rate-limit left per-route), ui/PageHeader single-sources the 7 list/detail headers (align/titleTrailing/description slots for collections/[id]), pluralize() replaces the "{n} item(s)" ternaries, pluralTypeLabel()+formatLongDate() replace profile's local copies (typeLabel kept → items/[type] still "URLs"), isImageType/isFileType predicates reused by items/[type]+collections/[id]+ItemContentBody, dashboard SectionHeading extracted, upload/items/[id]/download routes reuse requireSessionUser(); +19 tests, 450 total, build+lint clean (Completed)
