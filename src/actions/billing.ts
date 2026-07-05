@@ -1,16 +1,12 @@
 "use server";
 
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { NOT_SIGNED_IN_ERROR, requireSessionUser } from "@/lib/actions/session";
+import type { ActionResult } from "@/lib/actions/result";
 import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { priceIdForInterval } from "@/lib/billing/plan";
 import { checkoutSchema } from "@/lib/validations/billing";
 import { getAppUrl } from "@/lib/email/resend";
-
-// Coding standards' action pattern: { success, data, error }.
-type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
 
 /**
  * Create a Stripe Checkout Session for CodeVault Pro and return its hosted URL.
@@ -24,9 +20,9 @@ type ActionResult<T> =
 export async function createCheckoutSession(
   input: unknown,
 ): Promise<ActionResult<{ url: string }>> {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) return { success: false, error: "You must be signed in." };
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
+  const userId = user.id;
 
   if (!isStripeConfigured()) {
     return { success: false, error: "Billing is not configured." };
@@ -81,9 +77,9 @@ export async function createCheckoutSession(
 export async function createPortalSession(): Promise<
   ActionResult<{ url: string }>
 > {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) return { success: false, error: "You must be signed in." };
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
+  const userId = user.id;
 
   if (!isStripeConfigured()) {
     return { success: false, error: "Billing is not configured." };

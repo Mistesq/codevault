@@ -1,16 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { NOT_SIGNED_IN_ERROR, requireSessionUser } from "@/lib/actions/session";
+import { type ActionResult, parseActionInput } from "@/lib/actions/result";
 import { editorPreferencesSchema } from "@/lib/validations/editor-preferences";
 import type { EditorPreferences } from "@/lib/editor-preferences";
-
-// Result shape shared with the other account mutations (coding standards' action
-// pattern). On success we return the saved preferences so the client can keep
-// its optimistic state in sync with what was actually persisted.
-type ActionResult =
-  | { success: true; data: EditorPreferences }
-  | { success: false; error: string };
 
 /**
  * Persist the signed-in user's Monaco editor preferences to the JSON column.
@@ -20,20 +14,17 @@ type ActionResult =
  */
 export async function updateEditorPreferences(
   input: unknown,
-): Promise<ActionResult> {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
-    return { success: false, error: "You must be signed in." };
-  }
+): Promise<ActionResult<EditorPreferences>> {
+  const user = await requireSessionUser();
+  if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
+  const userId = user.id;
 
-  const parsed = editorPreferencesSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid preferences.",
-    };
-  }
+  const parsed = parseActionInput(
+    editorPreferencesSchema,
+    input,
+    "Invalid preferences.",
+  );
+  if (!parsed.success) return parsed;
 
   try {
     await prisma.user.update({

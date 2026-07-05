@@ -2,15 +2,34 @@
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Refactor `src/actions` to remove duplicated boilerplate (refactor-scanner
+findings #1–#3). No behavior change; pure DRY extraction.
+
+- **#1 Session-auth guard (18 sites):** extract `requireSessionUser()` +
+  shared `NOT_SIGNED_IN_ERROR` constant into `src/lib/actions/session.ts`
+  (server-only). Every action collapses its 3-4 line auth block to two lines.
+- **#2 `ActionResult<T>` type (4 identical + editor-preferences):** move the
+  canonical `{ success, data } | { success, error }` type into
+  `src/lib/actions/result.ts`; billing/collections/items/ai/editor-preferences
+  import it instead of redeclaring.
+- **#3 Zod parse → error-shaping (10 sites):** extract `parseActionInput(schema,
+  input, fallback?)` into `src/lib/actions/result.ts`; callers `return parsed`
+  on failure and use `parsed.data` on success.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **profile.ts** keeps its local no-data result type (`{ success: true }`) — its
+  shape genuinely differs and `profile.test.ts` asserts `{ success: true }`.
+- **billing.ts** keeps its own parse line (deliberately returns the fixed
+  `"Invalid plan."` message; `billing.test.ts` asserts it) — only #1 and #2
+  apply there. It was not in the scanner's #3 list.
+- The shared `NOT_SIGNED_IN_ERROR` string stays byte-identical to preserve all
+  existing `"You must be signed in."` test assertions.
+- #4/#5 (AI guard chain) deferred to a follow-up per plan.
 
 ## History
 
