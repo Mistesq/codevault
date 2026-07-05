@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { requireSessionUser } from "@/lib/actions/session";
 import { getItemDetail } from "@/lib/db/items";
 import { getFromR2, keyFromPublicUrl } from "@/lib/r2";
 
@@ -11,8 +11,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
+  const user = await requireSessionUser();
+  if (!user) {
     return new Response("Unauthorized", { status: 401 });
   }
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { createVerificationToken } from "@/lib/auth/verification-token";
 import { sendVerificationEmail } from "@/lib/email/verification";
 import { emailSchema } from "@/lib/validations/auth";
+import { parseJsonRequest } from "@/lib/api/route-helpers";
 import {
   RATE_LIMITS,
   checkRateLimit,
@@ -18,20 +19,8 @@ const GENERIC = {
 
 // POST /api/auth/resend-verification — re-send the verification email.
 export async function POST(request: Request) {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
-
-  const parsed = emailSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid email." },
-      { status: 400 },
-    );
-  }
+  const parsed = await parseJsonRequest(request, emailSchema, "Invalid email.");
+  if (!parsed.ok) return parsed.response;
 
   const { email } = parsed.data;
 

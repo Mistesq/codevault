@@ -1,10 +1,12 @@
 import { Star } from "lucide-react";
 
 import { FavoritesList } from "@/components/favorites/FavoritesList";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getFavoritesPage } from "@/lib/db/favorites";
 import { parseFavoriteSort } from "@/lib/favorites-sort";
 import { parseListTab, type ListTab } from "@/lib/list-tabs";
 import { parsePageParam } from "@/lib/pagination";
+import { pluralize } from "@/lib/utils";
 
 // User-specific data fetched from the database — render per request.
 export const dynamic = "force-dynamic";
@@ -39,17 +41,12 @@ export default async function FavoritesPage({
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
-      <header className="flex items-center gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-amber-400">
-          <Star className="size-5 fill-amber-400" />
-        </span>
-        <div>
-          <h1 className="text-lg font-semibold">Favorites</h1>
-          <p className="text-xs text-muted-foreground">
-            {total} {total === 1 ? "favorite" : "favorites"}
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        icon={<Star className="size-5 fill-amber-400" />}
+        iconClassName="text-amber-400"
+        title="Favorites"
+        subtitle={pluralize(total, "favorite")}
+      />
 
       {total > 0 ? (
         <FavoritesList

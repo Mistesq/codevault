@@ -5,16 +5,19 @@ import { ItemCard } from "@/components/dashboard/ItemCard";
 import { FileRow } from "@/components/items/FileRow";
 import { ImageCard } from "@/components/items/ImageCard";
 import { CollectionHeaderActions } from "@/components/collections/CollectionHeaderActions";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination } from "@/components/ui/pagination";
+import { isFileType, isImageType } from "@/lib/item-content-types";
 import { getCollectionWithItems } from "@/lib/db/collections";
 import type { DashboardItem } from "@/lib/db/items";
 import { parsePageParam } from "@/lib/pagination";
+import { pluralize } from "@/lib/utils";
 
 // User-specific data fetched from the database — render per request.
 export const dynamic = "force-dynamic";
 
-const isImage = (item: DashboardItem) => item.type.name.toLowerCase() === "image";
-const isFile = (item: DashboardItem) => item.type.name.toLowerCase() === "file";
+const isImage = (item: DashboardItem) => isImageType(item.type.name);
+const isFile = (item: DashboardItem) => isFileType(item.type.name);
 
 export default async function CollectionDetailPage({
   params,
@@ -39,35 +42,28 @@ export default async function CollectionDetailPage({
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
-      <header className="flex items-start gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-          <Folder className="size-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="truncate text-lg font-semibold">{collection.name}</h1>
-            {collection.isFavorite && (
-              <Star className="size-4 shrink-0 fill-amber-400 text-amber-400" />
-            )}
-          </div>
-          {collection.description && (
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {collection.description}
-            </p>
-          )}
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {totalCount} {totalCount === 1 ? "item" : "items"}
-          </p>
-        </div>
-        <CollectionHeaderActions
-          collection={{
-            id: collection.id,
-            name: collection.name,
-            description: collection.description,
-            isFavorite: collection.isFavorite,
-          }}
-        />
-      </header>
+      <PageHeader
+        align="start"
+        icon={<Folder className="size-5" />}
+        title={collection.name}
+        titleTrailing={
+          collection.isFavorite ? (
+            <Star className="size-4 shrink-0 fill-amber-400 text-amber-400" />
+          ) : undefined
+        }
+        description={collection.description ?? undefined}
+        subtitle={pluralize(totalCount, "item")}
+        actions={
+          <CollectionHeaderActions
+            collection={{
+              id: collection.id,
+              name: collection.name,
+              description: collection.description,
+              isFavorite: collection.isFavorite,
+            }}
+          />
+        }
+      />
 
       {totalCount === 0 ? (
         <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">

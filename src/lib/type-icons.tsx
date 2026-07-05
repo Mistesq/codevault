@@ -37,6 +37,15 @@ export function typeLabel(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
+// Display label for pluralized type listings (e.g. the profile "Items by Type"
+// cards): capitalized + pluralized, with the URL type shown as "Links" (matches
+// its Link icon). Distinct from `typeLabel` + "s", which renders URL as "URLs".
+export function pluralTypeLabel(name: string): string {
+  if (name.toLowerCase() === "url") return "Links";
+  const capitalized = typeLabel(name.toLowerCase());
+  return capitalized.endsWith("s") ? capitalized : `${capitalized}s`;
+}
+
 // Renders the lucide icon for an item type. Resolves via a map lookup (not a
 // call) so it's a stable, statically-referenced component, not one created
 // during render.

@@ -2,6 +2,7 @@ import { Clock, Folder, Pin } from "lucide-react";
 
 import { CollectionCard } from "@/components/dashboard/CollectionCard";
 import { ItemCard } from "@/components/dashboard/ItemCard";
+import { SectionHeading } from "@/components/dashboard/SectionHeading";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { getDashboardCollections } from "@/lib/db/collections";
 import {
@@ -13,21 +14,6 @@ import { DASHBOARD_RECENT_ITEMS_LIMIT } from "@/lib/pagination";
 
 // User-specific data fetched from the database — render per request.
 export const dynamic = "force-dynamic";
-
-function SectionHeading({
-  icon: Icon,
-  title,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-}) {
-  return (
-    <div className="mb-3 flex items-center gap-2">
-      <Icon className="size-4 text-muted-foreground" />
-      <h2 className="text-sm font-semibold">{title}</h2>
-    </div>
-  );
-}
 
 export default async function DashboardPage() {
   const [stats, pinnedItems, recentCollections, recentItems] =
