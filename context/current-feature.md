@@ -1,24 +1,16 @@
-# Current Feature: UI Review Fixes
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-UI review fixes from a Playwright/ui-reviewer pass over the public pages (`/`, `/sign-in`, `/register`, `/forgot-password`). Ranked by severity:
-
-- [CRITICAL] **Add GitHub OAuth button to /register.** `/sign-in` has a "Continue with GitHub" button + "or" divider; `/register` has neither, so GitHub-only users can't sign up and the two forms are inconsistent. Port the GitHub button + divider from `src/components/auth/SignInForm.tsx` (~lines 115-150) into `src/components/auth/RegisterForm.tsx` — same order (OAuth button → divider → credentials fields), call `signIn("github")`.
-- [MEDIUM] **Auth pages missing a `<main>` landmark** (axe `landmark-one-main` / `region`). Screen-reader users can't jump to content on `/sign-in`, `/register`, `/forgot-password`. Wrap the form card in a `<main>` in `src/app/(auth)/layout.tsx` (~lines 12-23).
-- [MEDIUM] **Homepage code block not keyboard-accessible** (axe `scrollable-region-focusable`, serious). The horizontally-scrollable `<pre>` in the AI section can't be reached/scrolled via keyboard. Add `tabIndex={0}` + `role="region" aria-label="Code example"` in `src/components/home/AiSection.tsx:69`.
-- [MEDIUM] **Homepage skips heading levels** (axe `heading-order`). Footer column heading is an `<h5>` jumping from the page's `<h2>`s. Change to `<h3>` in `src/components/home/HomeFooter.tsx:51`, keep visual style via className.
-- [LOW] **32px-tall buttons/inputs are tight touch targets on mobile.** Primary CTAs ("Sign in"/"Create account") are `h-8` (passes WCAG 2.5.8's 24px min, but under the comfortable 44px). Systemic design-system value in `src/components/ui/button.tsx` (~lines 23-24) / `src/components/ui/input.tsx:12` — needs a deliberate decision, not a per-page patch.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Findings came from a rendered Playwright review (ui-reviewer agent), not just code reading. Verified at 375 / 768 / 1280 widths.
-- Clean: no horizontal scroll at any breakpoint, value prop + CTA above the fold at all widths, no color-contrast violations.
-- Priority is the missing GitHub button on /register. The two a11y quick wins (`<main>` landmark, focusable `<pre>`) are low-risk follow-ups.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -90,3 +82,4 @@ UI review fixes from a Playwright/ui-reviewer pass over the public pages (`/`, `
 - AI Generate Description - Pro-only "Generate" (Wand2 ghost button) beside the Description label in New Item modal + drawer edit; builds a 1-2 sentence description from whatever's entered (title/content/type/url/language), no save needed; pure description.ts (buildDescriptionPrompt omits empty fields + reuses tagging truncate, parseDescription strips wrapping quotes/collapses whitespace/caps 2 sentences + 300 chars, re-exports isRateLimitError/MAX_CONTENT_CHARS); describeItemSchema (all-optional trimmed, superRefine requires >=1 of title/content/url); generateDescription action (auth+Pro+config+Zod+shared ai rate limit, graceful 429); GenerateDescriptionButton (disabled until signal, onGenerate replaces field); 22 tests, 375 total, build+lint clean (Completed)
 - AI Explain Code - Pro-only streamed markdown explanation of snippets/commands in the item drawer read view via Gemini reasoning tier (EXPLAIN_MODEL=gemini-2.5-flash, flash-lite fallback note); explainCode action returns a ReadableStream<string> (auth+Pro+config+Zod+shared ai rate limit, initial 429 → friendly message before stream opens, mid-stream errors close gracefully); pure explain.ts (buildExplainPrompt + system instruction, reuses tagging truncate/isRateLimitError) + explainCodeSchema; CodeEditor gains headerTabs/headerActions slots + body override (dots hide when tabs present so header can't overflow); CodeExplainer wraps read-only editor with Sparkles Explain → Code/Explain tabs, progressive markdown (Loader2 only until first token), icon-only Regenerate, per-session cache by item id; Free users get Crown button + tooltip toasting upgrade; isPro threaded ItemDrawer→DrawerContentSection→CodeExplainer; 14 tests, 389 total, build+lint clean (Completed)
 - AI Prompt Optimization - Pro-only "Optimize" affordance in the item drawer read view for Prompt items (mirrors AI Explain Code); optimizePrompt action (auth+Pro+config+Zod+shared ai rate limit, EXPLAIN_MODEL, non-streaming ActionResult<string>, graceful 429) returns a refined prompt; pure optimize.ts (buildOptimizePrompt + OPTIMIZE_SYSTEM_INSTRUCTION + parseOptimizedPrompt: trims, strips wrapping code fence, keeps quotes, reuses tagging truncate/isRateLimitError) + optimizePromptSchema; MarkdownEditor gains headerTabs/headerActions + body-override slots; PromptOptimizer wraps read-only editor with Original/Optimized tabs, Sparkles Optimize/Regenerate, accept flow (Use this → updateItem + router.refresh + onUpdated, Discard keeps original), per-session cache by item id, Free users get Crown upgrade toast; DrawerContentSection routes prompts to PromptOptimizer (notes stay plain) with onUpdated threaded; themed .drawer-scroll scrollbar on drawer read/edit scroll areas; 19 tests, 408 total, build+lint clean (Completed)
+- UI Review Fixes - Playwright ui-reviewer findings on public pages: [CRITICAL] added "Sign up with GitHub" button + divider to RegisterForm (parity with SignInForm), extracted shared GitHubIcon component; [MEDIUM] wrapped (auth) layout content in a `<main>` landmark, made homepage AiSection `<pre>` keyboard-focusable (tabIndex/role/aria-label), fixed homepage footer heading level h5→h3; [LOW] 32px touch-target sizing deferred (systemic design-system decision); UI-only, no new tests, 408 total, build+lint clean, Playwright-verified (Completed)
