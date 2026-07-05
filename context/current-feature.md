@@ -1,16 +1,47 @@
-# Current Feature
+# Components Dedup Refactor
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Components Dedup Refactor — pure DRY/decomposition pass over `src/components`, no
+behavior change. Extract shared pieces surfaced by the refactor-scanner, ranked
+by impact:
+
+1. **Item create/edit form fields** (~90-100 dup lines, biggest) — `NewItemDialog.tsx:231-342`
+   and `ItemEditForm.tsx:113-209` render the same Title/Description/Language/Content/URL/Tags/Collections
+   blocks (same `show*` conditionals, same Pro-gated AI buttons), differing only by id prefix.
+   → extract a shared `ItemFieldsFieldset` both wrap.
+2. **Editor header micro-components** — `HeaderButton` is byte-identical in
+   `CodeExplainer.tsx:205-230` and `PromptOptimizer.tsx:269-294`; `TabButton` repeats in 3 files
+   (`CodeExplainer`, `PromptOptimizer`, `MarkdownEditor`); clipboard copy-with-timeout is inlined in
+   `CodeEditor.tsx` and `MarkdownEditor.tsx` despite `CopyButton.tsx` existing.
+   → shared `editor-chrome.tsx` (`TabButton`/`HeaderButton`) + `useCopyToClipboard` hook. Shrinks the two largest files.
+3. **New/Edit Collection dialogs** — `NewCollectionDialog.tsx:113-160` and `EditCollectionDialog.tsx:102-149`
+   share the whole name/description field + footer block (~45 lines each).
+   → `CollectionFormFields` component or `useCollectionForm` hook.
+4. **GitHub OAuth button + "or" divider** — duplicated in `SignInForm.tsx:123-142` and
+   `RegisterForm.tsx:83-102`. → `GitHubAuthButton` + an `OrDivider` ui primitive.
+5. **Destructive-confirm footer (3×)** — same spinner/label/`toast.error` footer in
+   `DeleteItemDialog.tsx:79-90`, `DeleteCollectionDialog.tsx:67-78`, `DeleteAccountDialog.tsx:86-96`.
+   → `ConfirmDeleteFooter`/`ConfirmDeleteDialog` in `ui/`.
+6. **Collection actions wiring** — `CollectionActions.tsx` and `CollectionHeaderActions.tsx` duplicate
+   edit/delete state + `useFavoriteToggle` + dialog pair; only trigger markup and `onDeleted` differ.
+   → `useCollectionActions` hook.
+7. **Card a11y + Pin indicator** — Enter/Space activation handler redefined in `ImageCard`, `FileRow`,
+   `FavoritesList`; `isPinned && <Pin/>` badge in those + `ItemCard`.
+   → `useActivateOnEnter` hook + `PinIndicator` component.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Source: refactor-scanner sweep of `src/components` (85 files). No component
+  flagged purely for size — the large files are large *because* of the
+  duplication above, so extraction shrinks them as a side effect.
+- Items 1 and 2 carry most of the weight; suggest tackling as separate branches.
+- Behavior must stay identical (validation/UX, ids, a11y). Maintain tests for
+  any touched utilities/hooks per the workflow.
 
 ## History
 

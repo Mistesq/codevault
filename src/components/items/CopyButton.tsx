@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useCopyToClipboard } from "@/components/items/use-copy-to-clipboard";
 
 /** Small button that copies text and briefly flips to a check. */
 export function CopyButton({
@@ -22,18 +22,7 @@ export function CopyButton({
   withLabel?: boolean;
   className?: string;
 }) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard can reject (e.g. insecure context); silently ignore.
-    }
-  }
-
+  const { copied, copy } = useCopyToClipboard(text);
   const Icon = copied ? Check : Copy;
 
   return (
@@ -41,7 +30,7 @@ export function CopyButton({
       type="button"
       variant={variant}
       size={size}
-      onClick={handleCopy}
+      onClick={copy}
       aria-label={label}
       className={className}
     >

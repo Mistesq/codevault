@@ -1,6 +1,6 @@
 "use client";
 
-import type { KeyboardEvent, MouseEvent } from "react";
+import type { MouseEvent } from "react";
 import {
   Download,
   File as FileIcon,
@@ -9,12 +9,13 @@ import {
   FileJson,
   FileSpreadsheet,
   FileText,
-  Pin,
   Star,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useItemDrawer } from "@/components/items/item-drawer-context";
+import { useActivateOnEnter } from "@/components/items/use-activate-on-enter";
+import { PinIndicator } from "@/components/items/PinIndicator";
 import { formatFileSize, relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem } from "@/lib/db/items";
 import type { IconComponent } from "@/lib/type-icons";
@@ -55,13 +56,7 @@ function FileTypeIcon({ fileName }: { fileName: string | null }) {
  */
 export function FileRow({ item }: { item: DashboardItem }) {
   const { openItem } = useItemDrawer();
-
-  function handleKeyDown(e: KeyboardEvent<HTMLElement>) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      openItem(item);
-    }
-  }
+  const handleKeyDown = useActivateOnEnter<HTMLElement>(() => openItem(item));
 
   return (
     <article
@@ -79,9 +74,7 @@ export function FileRow({ item }: { item: DashboardItem }) {
         <h3 className="min-w-0 truncate text-sm font-medium">
           {item.fileName ?? item.title}
         </h3>
-        {item.isPinned && (
-          <Pin className="size-3.5 shrink-0 text-muted-foreground" />
-        )}
+        <PinIndicator pinned={item.isPinned} />
         {item.isFavorite && (
           <Star className="size-3.5 shrink-0 fill-amber-400 text-amber-400" />
         )}

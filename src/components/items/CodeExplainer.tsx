@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Crown, Loader2, RefreshCw, Sparkles } from "lucide-react";
 
 import { CodeEditor } from "@/components/items/CodeEditor";
+import { HeaderButton, TabButton } from "@/components/items/editor-chrome";
 import { explainCode } from "@/actions/ai";
 import { cn } from "@/lib/utils";
 
@@ -106,10 +107,14 @@ export function CodeExplainer({
 
   const tabs = showTabs ? (
     <div className="flex items-center gap-1">
-      <TabButton active={tab === "code"} onClick={() => setTab("code")}>
+      <TabButton size="sm" active={tab === "code"} onClick={() => setTab("code")}>
         Code
       </TabButton>
-      <TabButton active={tab === "explain"} onClick={() => setTab("explain")}>
+      <TabButton
+        size="sm"
+        active={tab === "explain"}
+        onClick={() => setTab("explain")}
+      >
         Explain
       </TabButton>
     </div>
@@ -171,60 +176,5 @@ export function CodeExplainer({
         </div>
       ) : undefined}
     </CodeEditor>
-  );
-}
-
-/** A pill tab in the editor header, matching MarkdownEditor's tab styling. */
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "cursor-pointer rounded px-2 py-0.5 text-xs font-medium transition-colors",
-        active
-          ? "bg-white/10 text-white/90"
-          : "text-white/50 hover:bg-white/5 hover:text-white/80",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-/** A ghost header button matching CodeEditor's Copy control. */
-function HeaderButton({
-  onClick,
-  disabled,
-  title,
-  ariaLabel,
-  children,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  title: string;
-  ariaLabel?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      aria-label={ariaLabel}
-      className="flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-xs text-white/60 transition-colors hover:bg-white/10 hover:text-white/90 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {children}
-    </button>
   );
 }

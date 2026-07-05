@@ -15,15 +15,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { ItemContentField } from "@/components/items/ItemContentField";
-import { LanguageSelect } from "@/components/items/LanguageSelect";
 import { FileUpload, type UploadedFile } from "@/components/items/FileUpload";
-import { CollectionMultiSelect } from "@/components/items/CollectionMultiSelect";
-import { SuggestTagsButton } from "@/components/items/SuggestTagsButton";
-import { GenerateDescriptionButton } from "@/components/items/GenerateDescriptionButton";
+import { ItemFieldsFieldset } from "@/components/items/ItemFieldsFieldset";
 import { TypeIcon, typeLabel } from "@/lib/type-icons";
 import {
   CODE_CONTENT_TYPES,
@@ -31,7 +25,7 @@ import {
   FILE_FIELD_TYPES,
   LANGUAGE_FIELD_TYPES,
 } from "@/lib/item-content-types";
-import { addTag, buildItemFields, parseTags } from "@/lib/item-form";
+import { buildItemFields } from "@/lib/item-form";
 import { createItem } from "@/actions/items";
 import type { CreateItemType } from "@/lib/validations/items";
 import type { SelectableCollection } from "@/lib/db/collections";
@@ -228,118 +222,47 @@ export function NewItemDialog({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="new-item-title">Title</Label>
-            <Input
-              id="new-item-title"
-              value={title}
-              onChange={(e) => {
-                setTitle(e.target.value);
-                setTitleTouched(true);
-              }}
-              aria-invalid={titleTouched && titleEmpty}
-              placeholder="Give it a descriptive name"
-              required
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="new-item-description">Description</Label>
-              {isPro && (
-                <GenerateDescriptionButton
-                  title={title}
-                  content={content}
-                  type={typeLabel(type)}
-                  url={url}
-                  language={language}
-                  onGenerate={setDescription}
-                />
-              )}
-            </div>
-            <Textarea
-              id="new-item-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-            />
-          </div>
-
-          {showLanguage && (
-            <div className="space-y-1.5">
-              <Label htmlFor="new-item-language">Language</Label>
-              <LanguageSelect
-                id="new-item-language"
-                value={language}
-                onChange={setLanguage}
-              />
-            </div>
-          )}
-
-          {showContent && (
-            <div className="space-y-1.5">
-              <Label htmlFor="new-item-content">Content</Label>
-              <ItemContentField
-                isCode={isCodeContent}
-                value={content}
-                onChange={setContent}
-                language={language}
-              />
-            </div>
-          )}
-
-          {showUrl && (
-            <div className="space-y-1.5">
-              <Label htmlFor="new-item-url">URL</Label>
-              {/* Plain text input (matching ItemEditForm) so the server-side Zod
-                  check is the source of truth and its error renders inline. */}
-              <Input
-                id="new-item-url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://example.com"
-              />
-            </div>
-          )}
-
-          {showFile && (
-            <div className="space-y-1.5">
-              <Label>{type === "image" ? "Image" : "File"}</Label>
-              <FileUpload
-                kind={type === "image" ? "image" : "file"}
-                value={file}
-                onChange={setFile}
-                onUploadingChange={setUploading}
-              />
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <Label htmlFor="new-item-tags">Tags</Label>
-            <Input
-              id="new-item-tags"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="Comma-separated, e.g. react, hooks"
-            />
-            {isPro && (
-              <SuggestTagsButton
-                title={title}
-                content={content}
-                currentTags={parseTags(tags)}
-                onAdd={(tag) => setTags((prev) => addTag(prev, tag))}
-              />
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Collections</Label>
-            <CollectionMultiSelect
-              collections={collections}
-              selectedIds={collectionIds}
-              onChange={setCollectionIds}
-            />
-          </div>
+          <ItemFieldsFieldset
+            idPrefix="new-item"
+            isPro={isPro}
+            typeLabelText={typeLabel(type)}
+            title={title}
+            onTitleChange={(value) => {
+              setTitle(value);
+              setTitleTouched(true);
+            }}
+            titleInvalid={titleTouched && titleEmpty}
+            description={description}
+            onDescriptionChange={setDescription}
+            language={language}
+            onLanguageChange={setLanguage}
+            showLanguage={showLanguage}
+            content={content}
+            onContentChange={setContent}
+            showContent={showContent}
+            isCodeContent={isCodeContent}
+            url={url}
+            onUrlChange={setUrl}
+            showUrl={showUrl}
+            fileSlot={
+              showFile && (
+                <div className="space-y-1.5">
+                  <Label>{type === "image" ? "Image" : "File"}</Label>
+                  <FileUpload
+                    kind={type === "image" ? "image" : "file"}
+                    value={file}
+                    onChange={setFile}
+                    onUploadingChange={setUploading}
+                  />
+                </div>
+              )
+            }
+            tags={tags}
+            onTagsChange={setTags}
+            collections={collections}
+            collectionIds={collectionIds}
+            onCollectionIdsChange={setCollectionIds}
+          />
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 

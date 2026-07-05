@@ -3,10 +3,10 @@
 import { useState } from "react";
 import Editor, { type OnMount, type BeforeMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
-import { Check, Copy } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { EditorCopyButton } from "@/components/items/editor-chrome";
 import { useEditorPreferences } from "@/components/editor/editor-preferences-context";
 import type { EditorTheme } from "@/lib/editor-preferences";
 
@@ -111,35 +111,6 @@ const defineThemes: BeforeMount = (monaco) => {
   });
 };
 
-/** Copies the editor's text and briefly flips the icon to a check. */
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard can reject (e.g. insecure context); silently ignore.
-    }
-  }
-
-  const Icon = copied ? Check : Copy;
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      aria-label="Copy code"
-      className="flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-xs text-white/60 transition-colors hover:bg-white/10 hover:text-white/90"
-    >
-      <Icon className={cn("size-3.5", copied && "text-emerald-400")} />
-      {copied ? "Copied" : "Copy"}
-    </button>
-  );
-}
-
 /**
  * Monaco-based code editor wrapped in a macOS-style window (traffic-light dots,
  * language label, and a quick copy button in the header). Used for code item
@@ -214,7 +185,7 @@ export function CodeEditor({
             </span>
           )}
           {headerActions}
-          <CopyButton text={value} />
+          <EditorCopyButton text={value} label="Copy code" />
         </div>
       </div>
 

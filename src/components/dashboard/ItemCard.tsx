@@ -1,14 +1,15 @@
 "use client";
 
 import type { CSSProperties, MouseEvent } from "react";
-import { useState } from "react";
-import { Check, Copy, ExternalLink, Pin, Star } from "lucide-react";
+import { Check, Copy, ExternalLink, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { formatFileSize, relativeTime } from "@/lib/dashboard-data";
 import type { DashboardItem } from "@/lib/db/items";
 import { useItemDrawer } from "@/components/items/item-drawer-context";
 import { useFavoriteToggle } from "@/components/favorites/use-favorite-toggle";
+import { useCopyToClipboard } from "@/components/items/use-copy-to-clipboard";
+import { PinIndicator } from "@/components/items/PinIndicator";
 import { TypeIcon } from "@/lib/type-icons";
 
 /** The text the quick-copy button places on the clipboard for a card. */
@@ -20,20 +21,14 @@ function copyableText(item: DashboardItem): string {
 
 /** Quick-copy icon shown on the card; stops the click from opening the drawer. */
 function QuickCopyButton({ item }: { item: DashboardItem }) {
-  const [copied, setCopied] = useState(false);
   const text = copyableText(item);
+  const { copied, copy } = useCopyToClipboard(text);
 
   if (!text) return null;
 
-  async function handleCopy(e: MouseEvent<HTMLButtonElement>) {
+  function handleCopy(e: MouseEvent<HTMLButtonElement>) {
     e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Clipboard can reject (e.g. insecure context); silently ignore.
-    }
+    copy();
   }
 
   const Icon = copied ? Check : Copy;
@@ -151,9 +146,7 @@ export function ItemCard({ item }: { item: DashboardItem }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className="truncate text-sm font-semibold">{item.title}</p>
-            {item.isPinned && (
-              <Pin className="size-3.5 shrink-0 text-muted-foreground" />
-            )}
+            <PinIndicator pinned={item.isPinned} />
           </div>
           {item.description && (
             <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">

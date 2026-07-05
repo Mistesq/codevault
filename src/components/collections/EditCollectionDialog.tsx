@@ -3,9 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,9 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { CollectionFormFields } from "@/components/collections/CollectionFormFields";
 import { updateCollection } from "@/actions/collections";
 
 /** Minimal collection shape the edit form needs. */
@@ -100,48 +96,23 @@ export function EditCollectionDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-collection-name">Name</Label>
-            <Input
-              id="edit-collection-name"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                setNameTouched(true);
-              }}
-              aria-invalid={nameTouched && nameEmpty}
-              placeholder="e.g. React Patterns"
-              required
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-collection-description">Description</Label>
-            <Textarea
-              id="edit-collection-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What's this collection for?"
-              rows={3}
-            />
-          </div>
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <div className="flex flex-row justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitDisabled}>
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              {saving ? "Saving…" : "Save Changes"}
-            </Button>
-          </div>
+          <CollectionFormFields
+            idPrefix="edit-collection"
+            name={name}
+            onNameChange={(value) => {
+              setName(value);
+              setNameTouched(true);
+            }}
+            nameInvalid={nameTouched && nameEmpty}
+            description={description}
+            onDescriptionChange={setDescription}
+            error={error}
+            saving={saving}
+            submitDisabled={submitDisabled}
+            onCancel={() => onOpenChange(false)}
+            submitLabel="Save Changes"
+            savingLabel="Saving…"
+          />
         </form>
       </DialogContent>
     </Dialog>
