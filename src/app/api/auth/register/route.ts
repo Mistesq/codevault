@@ -5,6 +5,7 @@ import { isEmailVerificationEnabled } from "@/lib/auth/email-verification";
 import { createVerificationToken } from "@/lib/auth/verification-token";
 import { sendVerificationEmail } from "@/lib/email/verification";
 import { registerSchema } from "@/lib/validations/auth";
+import { seedNewUserData } from "@/lib/db/onboarding";
 import { parseJsonRequest } from "@/lib/api/route-helpers";
 import {
   RATE_LIMITS,
@@ -56,6 +57,10 @@ export async function POST(request: Request) {
       },
       select: { id: true, name: true, email: true },
     });
+
+    // Starter collections/items so the first dashboard isn't empty. Never
+    // throws — a seeding failure must not fail the registration.
+    await seedNewUserData(user.id);
 
     if (verificationRequired) {
       // Send the verification email. A delivery failure shouldn't fail the

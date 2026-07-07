@@ -1,14 +1,22 @@
-# Current Feature
+# Current Feature — New User Starter Data
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Every newly created account (credentials register AND GitHub OAuth first sign-in) starts with ready-made content so the dashboard, lists, search and drawer aren't empty.
+- Rich showcase with an onboarding-tutorial character: 2 collections (~17 text items — snippets, prompts, commands, notes, URLs) whose content doubles as a mini product guide; a few tags, 1-2 pinned, a few favorites so every dashboard section renders.
+- Seeding failure must never fail registration/sign-in (log + continue).
+- Idempotent: skip if the user already owns any items or collections (protects existing users and double-fires).
+- Stay well under Free limits: 2 of 3 collections, ~17 of 50 items (File/Image types excluded — they need R2 + Pro).
 
 ## Notes
+
+- Content lives in pure `src/lib/onboarding-content.ts` (typed constant, unit-testable without mocks); seeder `seedNewUserData(userId)` in server-only `src/lib/db/onboarding.ts`, reusing the exported `linkTags` helper and `$transaction`.
+- Call sites: POST `/api/auth/register` after `user.create`, and NextAuth `events.createUser` in `src/auth.ts` (fires only for adapter-created users, i.e. OAuth — no double seeding with credentials).
+- Demo user (`prisma/seed.ts`) is untouched — it has its own larger dataset.
 
 <!-- Additional context, constraints, or details from spec -->
 
