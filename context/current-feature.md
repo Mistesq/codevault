@@ -1,22 +1,14 @@
-# Current Feature — New User Starter Data
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Every newly created account (credentials register AND GitHub OAuth first sign-in) starts with ready-made content so the dashboard, lists, search and drawer aren't empty.
-- Rich showcase with an onboarding-tutorial character: 2 collections (~17 text items — snippets, prompts, commands, notes, URLs) whose content doubles as a mini product guide; a few tags, 1-2 pinned, a few favorites so every dashboard section renders.
-- Seeding failure must never fail registration/sign-in (log + continue).
-- Idempotent: skip if the user already owns any items or collections (protects existing users and double-fires).
-- Stay well under Free limits: 2 of 3 collections, ~17 of 50 items (File/Image types excluded — they need R2 + Pro).
+<!-- Bullet points of what success looks like -->
 
 ## Notes
-
-- Content lives in pure `src/lib/onboarding-content.ts` (typed constant, unit-testable without mocks); seeder `seedNewUserData(userId)` in server-only `src/lib/db/onboarding.ts`, reusing the exported `linkTags` helper and `$transaction`.
-- Call sites: POST `/api/auth/register` after `user.create`, and NextAuth `events.createUser` in `src/auth.ts` (fires only for adapter-created users, i.e. OAuth — no double seeding with credentials).
-- Demo user (`prisma/seed.ts`) is untouched — it has its own larger dataset.
 
 <!-- Additional context, constraints, or details from spec -->
 
@@ -96,3 +88,4 @@ In Progress
 - Components Dedup Refactor - refactor-scanner sweep of src/components, no behavior change; 7 extractions: ItemFieldsFieldset (NewItemDialog/ItemEditForm), editor-chrome (TabButton/HeaderButton/EditorCopyButton) + useCopyToClipboard hook (CodeEditor/MarkdownEditor/CodeExplainer/PromptOptimizer/CopyButton/ItemCard), CollectionFormFields (New/Edit collection dialogs), GitHubAuthButton + ui/OrDivider (SignIn/Register), ui/ConfirmDeleteFooter (delete item/collection/account), useCollectionActions hook (CollectionActions/HeaderActions), useActivateOnEnter hook + PinIndicator (ImageCard/FileRow/FavoritesList/ItemCard); ids/aria/paddings/sizes preserved; +1 test file (use-activate-on-enter), 420 total, build+lint clean (Completed)
 - Lib Dedup Refactor - refactor-scanner sweep of src/lib, no behavior change; 5 extractions: auth/token.ts (hashToken/generateRawToken/createSingleUseToken/consumeSingleUseToken) turns the two token modules into thin wrappers, email/template.ts (buildEmailHtml + sendTransactionalEmail) leaves the emails supplying only copy, pagination.ts paginatePrismaQuery generalizes count→clamp→skip/take→map across the 4 item/collection page queries, db/items.ts sortByTypeOrder + countItemsByType shared by sidebar + profile (typeOrderIndex demoted to private), validations/shared.ts optionalTrimmed deduped from items/collections/ai (fixes ai.ts .trim() drift); #6 lazy-singleton skipped (indirection not worth ~8 lines); DB call shapes/error strings/result shapes preserved, +11 tests, 431 total, build+lint clean (Completed)
 - App Folder Dedup Refactor - refactor-scanner sweep of src/app (#1-#7), no behavior change; lib/api/route-helpers.ts (parseJsonRequest/parseWithSchema) dedupes the 4 auth routes' rate-limit→JSON→Zod boilerplate (rate-limit left per-route), ui/PageHeader single-sources the 7 list/detail headers (align/titleTrailing/description slots for collections/[id]), pluralize() replaces the "{n} item(s)" ternaries, pluralTypeLabel()+formatLongDate() replace profile's local copies (typeLabel kept → items/[type] still "URLs"), isImageType/isFileType predicates reused by items/[type]+collections/[id]+ItemContentBody, dashboard SectionHeading extracted, upload/items/[id]/download routes reuse requireSessionUser(); +19 tests, 450 total, build+lint clean (Completed)
+- New User Starter Data - every new account (credentials register + GitHub OAuth createUser event) is seeded with 2 tutorial-style collections / 17 text items via idempotent, never-throwing seedNewUserData(); 12 tests, 462 total (Completed)
