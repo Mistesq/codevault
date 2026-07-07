@@ -1,36 +1,153 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🗃️ CodeVault
 
-## Getting Started
+> **Store Smarter. Build Faster.**
+> A full-stack, AI-enhanced knowledge hub for code snippets, prompts, commands, notes, files, images and links — built end-to-end with a **spec-driven, agentic AI workflow**.
 
-First, run the development server:
+**🌐 Live demo:** [codevault-gray.vercel.app](https://codevault-gray.vercel.app)
+**Demo account:** `demo@codevault.io` / `12345678`
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+![Dashboard](context/screenshots/dashboard-ui-main.png)
+
+**Stack:** Next.js 16 (App Router, React 19) · TypeScript · Prisma 7 + Neon PostgreSQL · NextAuth v5 · Tailwind CSS v4 + shadcn/ui · Google Gemini · Stripe · Cloudflare R2 · Upstash Redis · Vitest
+
+---
+
+## Why this repo is interesting
+
+This project is as much about **how** it was built as **what** it does. Every feature — from auth to Stripe billing to AI-powered code explanations — went through a repeatable, documented AI-assisted development loop. The full paper trail is checked into the repo:
+
+| Artifact | What it shows |
+| --- | --- |
+| [`context/`](context/) | The project "brain": [overview](context/project-overview.md), [coding standards](context/coding-standards.md), [AI interaction rules](context/ai-interaction.md) loaded into every AI session |
+| [`context/features/`](context/features/) | **36 feature specs** — every feature was specced before a line of code was written |
+| [`context/research/`](context/research/) | Research documents generated before complex integrations (Stripe, AI, item CRUD) |
+| [`.claude/agents/`](.claude/agents/) | **4 custom AI agents** for automated review: security auditor, code scanner, refactor scanner, UI reviewer |
+| [`.claude/skills/`](.claude/skills/) | Custom slash commands that drive the workflow (`/feature`, `/research`, `/cleanup`) |
+| [`docs/`](docs/) | Architecture plans and audit results produced by the agents |
+| [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | Agent entry points: project context, DB safety rules, framework-version guardrails |
+
+**~230 commits, 450 unit tests, zero drive-by code** — every change traceable back to a spec.
+
+---
+
+## The AI development workflow
+
+Each feature runs through the same loop, orchestrated with [Claude Code](https://claude.com/claude-code):
+
+```
+Research → Spec → Branch → Implement → Test → Review → Merge → Document
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. **Research** — for complex integrations, `/research` generates a research doc first (e.g. [Stripe research](context/research/stripe-integration-research.md) → [integration plan](docs/stripe-integration-plan.md)).
+2. **Spec** — the feature is written up in [`context/current-feature.md`](context/current-feature.md) with goals and constraints; finished specs are archived in [`context/features/`](context/features/).
+3. **Implement** — on a dedicated branch, following the checked-in [coding standards](context/coding-standards.md) (strict layer boundaries, "components only render UI", server-only modules).
+4. **Test** — unit tests (Vitest) for every server action and utility, plus `npm run build` + lint gates before any commit.
+5. **Review** — custom agents audit the result:
+   - **`code-scanner`** — security / performance / modularity audit (findings in [`docs/audit-results/`](docs/audit-results/))
+   - **`auth-auditor`** — dedicated security review of the auth surface (token flows, session validation, password reset)
+   - **`refactor-scanner`** — DRY sweeps per folder; drove 5 dedicated dedup refactors (actions, components, lib, app)
+   - **`ui-reviewer`** — Playwright-driven visual & accessibility review of rendered pages
+6. **Document** — feature is logged to the project history; context files stay in sync with the code.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+MCP servers wire the agent into real infrastructure: **Neon** (database branches with prod-protection rules), **Context7** (live library docs), **Playwright** (browser verification of UI work).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## The product
 
-To learn more about Next.js, take a look at the following resources:
+CodeVault solves a familiar problem: snippets in VS Code, prompts buried in chat history, commands in `.txt` files, links in bookmarks. It puts all of it in **one searchable, AI-enhanced hub**.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Features
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **7 item types** — Snippet, Prompt, Command, Note, File, Image, URL — with type-aware editors:
+  - **Monaco code editor** (VS Code engine) with themes, per-user editor preferences and syntax highlighting for snippets/commands
+  - **Markdown editor** with live GFM preview for notes/prompts
+  - **File & image uploads** to Cloudflare R2 with progress tracking, gallery and list views
+- **Collections** — many-to-many organization with mixed item types
+- **Global search** — ⌘K command palette across items and collections
+- **AI superpowers** (Google Gemini):
+  - 🏷️ **Auto-tagging** — suggest tags from item content
+  - 📝 **Generate description** — one-click summaries
+  - 💡 **Explain Code** — streamed markdown explanation of any snippet
+  - ✨ **Prompt optimization** — rewrite prompts with accept/discard flow
+- **Full auth** — NextAuth v5: credentials + GitHub OAuth, email verification, password reset, rate limiting (Upstash Redis sliding window)
+- **Stripe billing** — Free/Pro plans, checkout + customer portal, webhook-driven subscription sync, plan gating enforced server-side
+- **Quality of life** — favorites, pinned items, recently used, server-side pagination, dark-mode-first UI, responsive layout with mobile drawer
 
-## Deploy on Vercel
+### Architecture highlights
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Server Components by default**, Server Actions for mutations, API routes only where warranted (webhooks, uploads, auth)
+- **Strict layer separation** (enforced by the coding standards + agent audits): components never fetch data or hold domain logic; reads in `src/lib/db`, mutations in `src/actions`, domain helpers in `src/lib` — all `server-only` guarded
+- **Defense in depth** — ownership-scoped queries (`updateMany`/`deleteMany` + count checks), Zod validation on every input, hashed single-use tokens, R2 URL verification, per-user AI rate limits
+- **450 unit tests** with fully mocked collaborators (no real DB/network in tests)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Getting started
+
+```bash
+git clone <repo-url> && cd codevault
+npm install
+cp .env.example .env   # fill in the keys below
+npx prisma migrate dev
+npm run db:seed        # demo user + sample data
+npm run dev            # http://localhost:3000
+```
+
+<details>
+<summary>Environment variables</summary>
+
+```bash
+DATABASE_URL=                # Neon PostgreSQL
+AUTH_SECRET=                 # NextAuth v5
+AUTH_GITHUB_ID=
+AUTH_GITHUB_SECRET=
+GEMINI_API_KEY=              # Google AI Studio
+RESEND_API_KEY=              # transactional email
+EMAIL_VERIFICATION_ENABLED=  # optional toggle
+R2_ACCOUNT_ID=               # Cloudflare R2
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+R2_PUBLIC_URL=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_MONTHLY=
+STRIPE_PRICE_YEARLY=
+UPSTASH_REDIS_REST_URL=      # rate limiting
+UPSTASH_REDIS_REST_TOKEN=
+```
+
+External services (R2, Gemini, Stripe, Resend, Redis) degrade gracefully when unconfigured — the app runs with just `DATABASE_URL` and `AUTH_SECRET`.
+
+</details>
+
+### Commands
+
+```bash
+npm run dev          # dev server
+npm run build        # production build
+npm test             # run the test suite (Vitest)
+npm run lint         # ESLint
+npm run db:seed      # seed demo data
+```
+
+---
+
+## Project structure
+
+```
+├── context/              # AI context: overview, standards, specs, research
+│   └── features/         # 36 archived feature specs
+├── .claude/
+│   ├── agents/           # custom review agents (security, quality, DRY, UI)
+│   └── skills/           # workflow slash commands (/feature, /research, ...)
+├── docs/                 # architecture plans + agent audit results
+├── prisma/               # schema, migrations, seed
+└── src/
+    ├── app/              # routes (App Router) — thin composition only
+    ├── actions/          # Server Actions (mutations, Zod-validated)
+    ├── components/       # UI by feature; ui/ = pure primitives
+    ├── lib/              # domain logic, db reads, validations (server-only)
+    └── types/            # shared types
+```
