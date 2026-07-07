@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import authConfig from "@/auth.config";
 import { isEmailVerificationEnabled } from "@/lib/auth/email-verification";
 import { signInSchema } from "@/lib/validations/auth";
+import { seedNewUserData } from "@/lib/db/onboarding";
 import { RATE_LIMITS, checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 // Thrown when credentials are valid but the email hasn't been verified yet. The
@@ -92,6 +93,14 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       },
     });
   }),
+  events: {
+    // Fires only when the Prisma adapter creates a brand-new user, i.e. a
+    // first GitHub OAuth sign-in. Credentials accounts are created manually in
+    // the register route, which seeds there — so no double seeding.
+    async createUser({ user }) {
+      if (user.id) await seedNewUserData(user.id);
+    },
+  },
   callbacks: {
     // Re-read isPro from the DB on every token pass so the client
     // `useSession().data.user.isPro` reflects webhook-driven plan changes after a
