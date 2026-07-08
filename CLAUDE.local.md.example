@@ -1,0 +1,20 @@
+<!--
+  Template for CLAUDE.local.md (which is gitignored).
+  Copy this file to CLAUDE.local.md and fill in your own values.
+  It holds machine/account-specific values (infrastructure identifiers)
+  that must stay out of the public repository. It loads alongside
+  CLAUDE.md; the rules referencing these identifiers live there.
+-->
+
+# CodeVault — Local Context
+
+## Neon MCP — Project & Branch Identifiers
+
+Whenever using the Neon MCP for this project, **always** target:
+
+- **Project**: CodeVault — `<neon-project-id>`
+- **Branch**: `development` — `<neon-development-branch-id>`
+
+The **production** branch (never touch unless explicitly requested):
+
+- **Branch**: `production` — `<neon-production-branch-id>`

@@ -24,19 +24,18 @@ Read the following to get the full context of the project:
 
 ## Neon MCP — Database Access Rules
 
-Whenever using the Neon MCP for this project, **always** target:
-
-- **Project**: CodeVault — `old-rice-43499761`
-- **Branch**: `development` — `br-autumn-sunset-asqlkegf`
+Concrete Neon project/branch identifiers are machine/account-specific and live
+in `CLAUDE.local.md` (gitignored; copy `CLAUDE.local.md.example` to create it).
+The rules below reference branches by role; resolve the actual IDs from that
+file.
 
 Rules:
 
 - Default every Neon query/operation to the **development** branch. Always pass
-  its `branchId` (`br-autumn-sunset-asqlkegf`) explicitly — never rely on the
-  default branch, since the default is production.
-- **NEVER** touch the **production** branch (`br-blue-darkness-asren7eo`) — no
-  reads, writes, schema changes, or migrations — unless I explicitly name
-  "production" in my request.
+  the development branch's `branchId` (from `CLAUDE.local.md`) explicitly —
+  never rely on the default branch, since the default is production.
+- **NEVER** touch the **production** branch — no reads, writes, schema changes,
+  or migrations — unless I explicitly name "production" in my request.
 - Never run destructive SQL (`DROP`, `DELETE`, `TRUNCATE`, `UPDATE`/`INSERT`
   without confirmation) or any branch/project deletion without asking me first,
   even on development.
