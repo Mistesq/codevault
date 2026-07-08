@@ -1,16 +1,30 @@
-# Current Feature
+# Current Feature: GitHub Actions CI Pipeline
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Every PR targeting `main` and every push to `main` runs an automated pipeline (`.github/workflows/ci.yml`): install → Prisma generate → lint → unit tests → production build.
+- A failing step fails the whole pipeline and marks the PR check red; a clean run is green in under 10 minutes (hard timeout 15).
+- Outdated runs for the same branch/PR are cancelled on new pushes (`concurrency` + `cancel-in-progress`).
+- No real secrets in CI — lint/tests/build pass with dummy `DATABASE_URL` and `AUTH_SECRET` values.
+- Reproducible installs via `npm ci` (never `npm install`); single sequential job, no matrix/Docker/deploy.
+- CI status badge at the top of `README.md` reflecting `main`.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Full spec: `context/features/ci-github-actions.md` (baseline workflow YAML included there).
+- Open questions — resolved against the codebase:
+  1. Test runner: `npm test` is `vitest run` (non-watch) → CI uses `npm test` as-is.
+  2. `postinstall: prisma generate` exists → explicit generate step dropped (`prisma generate` needs no DB connection).
+  3. No `engines` / `.nvmrc` → Node 22 LTS per spec default (local dev on 24; Next 16 supports both).
+  4. Default branch confirmed `main`; remote is `Mistesq/codevault` (badge URL).
+- Edge case verified: local lint + 462 tests + `next build` all pass with ONLY dummy `DATABASE_URL`/`AUTH_SECRET` (real `.env`/`.env.production` temporarily hidden). Every route except `/_not-found` is already dynamic → no build-time DB access, no `force-dynamic` changes needed. Only `.env.example` is git-tracked, so CI has no real env files.
+- Watch-mode test hang is covered by the 15-minute timeout as a safety net.
+- Windows→Linux path case-sensitivity failures surfacing in CI are a goal, not a defect.
+- Out of scope: e2e (Playwright) job, deploy/Docker/matrix, branch protection config (manual one-time GitHub UI step after first green run).
 
 ## History
 

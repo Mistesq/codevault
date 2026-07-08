@@ -1,5 +1,7 @@
 # 🗃️ CodeVault
 
+[![CI](https://github.com/Mistesq/codevault/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Mistesq/codevault/actions/workflows/ci.yml)
+
 > **Store Smarter. Build Faster.**
 > A full-stack, AI-enhanced knowledge hub for code snippets, prompts, commands, notes, files, images and links — built end-to-end with a **spec-driven, agentic AI workflow**.
 

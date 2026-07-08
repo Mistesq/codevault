@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Dummy values only — no CI step connects to real infrastructure.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci_dummy
+      AUTH_SECRET: ci-only-dummy-secret-do-not-use-anywhere
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # postinstall runs `prisma generate` (no DB connection needed)
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
