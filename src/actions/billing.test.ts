@@ -83,6 +83,24 @@ describe("createCheckoutSession", () => {
     expect(checkoutCreate).not.toHaveBeenCalled();
   });
 
+  it("rejects the demo account before touching Stripe", async () => {
+    auth.mockResolvedValue(signedIn);
+    user.findUnique.mockResolvedValue({
+      email: "demo@codevault.io",
+      isPro: false,
+      stripeCustomerId: null,
+      isDemo: true,
+    });
+
+    const result = await createCheckoutSession({ interval: "monthly" });
+
+    expect(result).toEqual({
+      success: false,
+      error: "This action is disabled on the demo account.",
+    });
+    expect(checkoutCreate).not.toHaveBeenCalled();
+  });
+
   it("returns the checkout url on the happy path (new customer)", async () => {
     auth.mockResolvedValue(signedIn);
     user.findUnique.mockResolvedValue({
@@ -174,6 +192,22 @@ describe("createPortalSession", () => {
     expect(result).toEqual({
       success: false,
       error: "No active subscription found.",
+    });
+    expect(portalCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects the demo account before touching Stripe", async () => {
+    auth.mockResolvedValue(signedIn);
+    user.findUnique.mockResolvedValue({
+      stripeCustomerId: "cus_existing",
+      isDemo: true,
+    });
+
+    const result = await createPortalSession();
+
+    expect(result).toEqual({
+      success: false,
+      error: "This action is disabled on the demo account.",
     });
     expect(portalCreate).not.toHaveBeenCalled();
   });

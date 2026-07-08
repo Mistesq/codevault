@@ -31,6 +31,12 @@ model User {
   stripeCustomerId     String? @unique
   stripeSubscriptionId String? @unique
 
+  // Shared public demo account: account-level mutations are blocked and the
+  // workspace is reset to the canonical seed on login (throttled via
+  // demoLastResetAt). See src/lib/demo/.
+  isDemo          Boolean   @default(false)
+  demoLastResetAt DateTime?
+
   // Monaco editor preferences (font size, tab size, word wrap, minimap, theme).
   // Stored as JSON; shape + defaults live in src/lib/editor-preferences.ts.
   editorPreferences Json?

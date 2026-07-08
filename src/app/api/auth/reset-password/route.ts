@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { consumePasswordResetToken } from "@/lib/auth/password-reset-token";
+import { DEMO_ACCOUNT_ERROR } from "@/lib/demo/guard";
 import { resetPasswordSchema } from "@/lib/validations/auth";
 import { parseJsonRequest } from "@/lib/api/route-helpers";
 import {
@@ -38,6 +39,16 @@ export async function POST(request: Request) {
         },
         { status: 400 },
       );
+    }
+
+    // The shared demo account's published credentials must never change — the
+    // reset flow is a password-change path, so it gets the same server guard.
+    const target = await prisma.user.findUnique({
+      where: { email: result.email },
+      select: { isDemo: true },
+    });
+    if (target?.isDemo) {
+      return NextResponse.json({ error: DEMO_ACCOUNT_ERROR }, { status: 403 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);

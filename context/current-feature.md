@@ -1,16 +1,30 @@
-# Current Feature
+# Current Feature: Demo Account Protection & Reset-on-Login
 
 ## Status
 
-Not Started
+Complete
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Add `isDemo Boolean @default(false)` and `demoLastResetAt DateTime?` to the `User` model (migration); flag the demo user in seed.
+- Server-side guards in account-level server actions (change password, change email, delete account, and any other persistent account settings found during implementation): if the server-loaded user has `isDemo`, return the standard action error with a friendly message (e.g. "This action is disabled on the demo account") before any mutation. UI controls hidden/disabled for the demo session as polish only.
+- Reset-on-login: after successful demo credential verification, reset the demo workspace to a canonical seed — throttled to at most once per 30-minute window (constant in code). Throttle check + timestamp update happen inside the same transaction as the reset (guards against concurrent-login double reset).
+- Reset is atomic: within one transaction, delete all demo-user-owned content (resolve exact model list from the Prisma schema; use cascades where defined), insert the canonical seed, update `demoLastResetAt`. The demo user row itself is never deleted/recreated.
+- Canonical seed as a typed constant module (e.g. `src/lib/demo/seed-data.ts`) shared by the reset routine and the DB seed script — 6–8 curated snippets across multiple languages, with tags, pre-filled AI fields (real one-time output, not lorem ipsum), at least one favorite.
+- Fail-open: reset errors are logged and login still succeeds. Non-demo logins get zero extra queries and no behavior change.
+- Unit tests: guard rejection per blocked action, guard pass-through for regular users, throttle logic (fresh reset / skip within window), seed-reset equivalence.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Demo identification must come from the DB record (`isDemo` flag), never client input or session claims; if `isDemo` lands in JWT/session for UI, it's display-only.
+- Flag chosen over hardcoded user ID: survives re-seeds, allows a second demo account later with zero code changes.
+- Reset-on-login chosen over cron: fresh showcase at the moment a reviewer arrives, no new infrastructure (no cron/route handler/CRON_SECRET). Throttle timestamp lives in Postgres (participates in the reset transaction), not Upstash.
+- Accepted edge cases: reset wiping an active visitor's work after the window (demo work is ephemeral); demo user seeing their own junk when re-logging within the window; harmless double-reset residual race.
+- AI abuse via the demo account is out of scope (existing per-user rate limiting covers it — verify demo gets the standard limit).
+- Also out of scope: cron/scheduled resets, reset-admin UI, per-visitor sandboxes, README changes.
+- Reset should add no more than ~1s to demo login latency.
+- Acceptance includes a post-deploy walkthrough: README credentials login shows the curated showcase with zero user actions.
+- **Deviation from spec (user-requested):** canonical seed expanded from 6–8 items to 47 meaningful curated items (25 snippets across 7 languages, 8 commands, 5 prompts, 4 notes, 5 URLs) so pagination is visible on /items (3 pages) and /items/snippets (2 pages); still under Free limits (50 items / 3 collections) so visitors can create content. insertDemoContent batched with createManyAndReturn (~7 queries) to keep the login-reset within its latency budget.
 
 ## History
 

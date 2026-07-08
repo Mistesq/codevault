@@ -2,6 +2,7 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { insertDemoContent } from "../src/lib/demo/insert-demo-content";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -37,322 +38,25 @@ async function main() {
       name: "Demo User",
       password,
       isPro: false,
+      // Shared public demo account: account mutations are blocked and the
+      // workspace resets to the canonical seed on login (see src/lib/demo/).
+      isDemo: true,
+      // Freshly seeded content is already canonical — start the throttle
+      // window now so the first login doesn't immediately re-run the reset.
+      demoLastResetAt: new Date(),
       emailVerified: new Date(),
     },
   });
 
   // System item types (shared across all users).
-  const typeId: Record<string, string> = {};
   for (const t of SYSTEM_TYPES) {
-    const created = await prisma.itemType.create({
-      data: { ...t, isSystem: true },
-    });
-    typeId[t.name] = created.id;
+    await prisma.itemType.create({ data: { ...t, isSystem: true } });
   }
 
-  type SeedItem = {
-    title: string;
-    typeName: string;
-    content?: string;
-    language?: string;
-    url?: string;
-    description?: string;
-    isPinned?: boolean;
-    isFavorite?: boolean;
-  };
-
-  async function seedCollection(
-    name: string,
-    description: string,
-    items: SeedItem[],
-  ) {
-    const collection = await prisma.collection.create({
-      data: { name, description, userId: user.id },
-    });
-    // Items belong to collections via the ItemCollection join table; create each
-    // item then link it to this collection (matching the many-to-many schema).
-    for (const it of items) {
-      const item = await prisma.item.create({
-        data: {
-          title: it.title,
-          content: it.content ?? null,
-          language: it.language ?? null,
-          url: it.url ?? null,
-          description: it.description ?? null,
-          isPinned: it.isPinned ?? false,
-          isFavorite: it.isFavorite ?? false,
-          typeId: typeId[it.typeName],
-          userId: user.id,
-        },
-        select: { id: true },
-      });
-      await prisma.itemCollection.create({
-        data: { itemId: item.id, collectionId: collection.id },
-      });
-    }
-  }
-
-  await seedCollection("React Patterns", "Reusable React patterns and hooks", [
-    {
-      title: "useDebounce hook",
-      typeName: "snippet",
-      language: "ts",
-      description: "Debounce a rapidly changing value.",
-      isFavorite: true,
-      content: `import { useEffect, useState } from "react";
-
-export function useDebounce<T>(value: T, delay = 300): T {
-  const [debounced, setDebounced] = useState(value);
-
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(id);
-  }, [value, delay]);
-
-  return debounced;
-}`,
-    },
-    {
-      title: "Theme context provider",
-      typeName: "snippet",
-      language: "tsx",
-      description: "Compound-component style context with a typed hook.",
-      content: `import { createContext, useContext, useState, type ReactNode } from "react";
-
-type Theme = "light" | "dark";
-
-const ThemeContext = createContext<{ theme: Theme; toggle: () => void } | null>(
-  null,
-);
-
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-  const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
-
-  return (
-    <ThemeContext.Provider value={{ theme, toggle }}>
-      {children}
-    </ThemeContext.Provider>
-  );
-}
-
-export function useTheme() {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
-  return ctx;
-}`,
-    },
-    {
-      title: "cn() className utility",
-      typeName: "snippet",
-      language: "ts",
-      description: "Merge Tailwind classes without conflicts.",
-      content: `import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}`,
-    },
-  ]);
-
-  await seedCollection("AI Workflows", "AI prompts and workflow automations", [
-    {
-      title: "Code review prompt",
-      typeName: "prompt",
-      description: "Structured, severity-ranked code review.",
-      isPinned: true,
-      content: `You are a senior software engineer performing a thorough code review.
-
-Review the code below for: correctness, security, performance, and readability.
-Return findings grouped by severity (Critical / Major / Minor), each with a
-concrete suggested fix. End with a short overall assessment.
-
-\`\`\`
-{{code}}
-\`\`\``,
-    },
-    {
-      title: "Documentation generation prompt",
-      typeName: "prompt",
-      description: "Generate docs from a code block.",
-      content: `Generate clear developer documentation for the following code.
-
-Include: a one-line summary, a description of what it does, parameters and their
-types, the return value, edge cases, and a minimal usage example.
-
-\`\`\`
-{{code}}
-\`\`\``,
-    },
-    {
-      title: "Refactoring assistant prompt",
-      typeName: "prompt",
-      description: "Behavior-preserving refactor with rationale.",
-      content: `Refactor the following code to improve readability and maintainability
-WITHOUT changing its behavior. Prefer small, well-named functions and remove
-duplication. List each change as a bullet with a one-line rationale.
-
-\`\`\`
-{{code}}
-\`\`\``,
-    },
-  ]);
-
-  await seedCollection(
-    "DevOps",
-    "Infrastructure and deployment resources",
-    [
-      {
-        title: "Multi-stage Next.js Dockerfile",
-        typeName: "snippet",
-        language: "dockerfile",
-        description: "Lean production image via multi-stage build.",
-        content: `# Multi-stage build for a Next.js app
-FROM node:22-alpine AS deps
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-
-FROM node:22-alpine AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN npm run build
-
-FROM node:22-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
-EXPOSE 3000
-CMD ["npm", "start"]`,
-      },
-      {
-        title: "Deploy to Vercel (production)",
-        typeName: "command",
-        language: "bash",
-        description: "Prebuilt production deploy.",
-        content: `npx vercel pull --yes --environment=production
-npx vercel build --prod
-npx vercel deploy --prebuilt --prod`,
-      },
-      {
-        title: "Docker documentation",
-        typeName: "URL",
-        url: "https://docs.docker.com/",
-        description: "Official Docker docs.",
-      },
-      {
-        title: "GitHub Actions documentation",
-        typeName: "URL",
-        url: "https://docs.github.com/en/actions",
-        description: "CI/CD with GitHub Actions.",
-      },
-    ],
-  );
-
-  await seedCollection(
-    "Terminal Commands",
-    "Useful shell commands for everyday development",
-    [
-      {
-        title: "Undo last commit (keep changes)",
-        typeName: "command",
-        language: "bash",
-        description: "Soft reset to the previous commit.",
-        content: "git reset --soft HEAD~1",
-      },
-      {
-        title: "Prune unused Docker resources",
-        typeName: "command",
-        language: "bash",
-        description: "Remove dangling images, containers, and volumes.",
-        content: "docker system prune -af --volumes",
-      },
-      {
-        title: "Kill the process on a port",
-        typeName: "command",
-        language: "bash",
-        description: "Free up a port that is already in use.",
-        content: "lsof -ti:3000 | xargs kill -9",
-      },
-      {
-        title: "Clean reinstall of dependencies",
-        typeName: "command",
-        language: "bash",
-        description: "Nuke node_modules and the lockfile, then reinstall.",
-        content: "rm -rf node_modules package-lock.json && npm install",
-      },
-    ],
-  );
-
-  await seedCollection("Design Resources", "UI/UX resources and references", [
-    {
-      title: "Tailwind CSS documentation",
-      typeName: "URL",
-      url: "https://tailwindcss.com/docs",
-      description: "Utility-first CSS reference.",
-    },
-    {
-      title: "shadcn/ui",
-      typeName: "URL",
-      url: "https://ui.shadcn.com",
-      description: "Composable React component library.",
-    },
-    {
-      title: "Radix UI",
-      typeName: "URL",
-      url: "https://www.radix-ui.com",
-      description: "Unstyled, accessible primitives & design system.",
-    },
-    {
-      title: "Lucide icons",
-      typeName: "URL",
-      url: "https://lucide.dev/icons",
-      description: "Open-source icon set used across the app.",
-    },
-  ]);
-
-  // --- Bulk data so the paginated list pages span more than one page ---
-
-  // 30 snippets in one collection. This pushes both /items/snippets and this
-  // collection's detail page past a single page (ITEMS_PER_PAGE = 21).
-  const librarySnippets: SeedItem[] = Array.from({ length: 30 }, (_, i) => {
-    const n = i + 1;
-    return {
-      title: `Utility helper #${n}`,
-      typeName: "snippet",
-      language: "ts",
-      description: `Generated sample snippet number ${n}.`,
-      content: `export function helper${n}(input: string) {
-  return input.repeat(${n});
-}`,
-    };
-  });
-  await seedCollection(
-    "Snippet Library",
-    "A large set of sample snippets for pagination testing",
-    librarySnippets,
-  );
-
-  // Extra collections to push the total past one page of /collections
-  // (COLLECTIONS_PER_PAGE = 21). Each gets a single note so the cards aren't empty.
-  for (let i = 1; i <= 20; i++) {
-    await seedCollection(
-      `Sample Collection ${String(i).padStart(2, "0")}`,
-      "Generated collection for pagination testing",
-      [
-        {
-          title: `Sample note ${i}`,
-          typeName: "note",
-          description: "Placeholder note.",
-          content: `This is sample note ${i}.`,
-        },
-      ],
-    );
-  }
+  // Demo workspace content comes from the same canonical module the
+  // reset-on-login routine uses, so "fresh deploy" and "just reset" states
+  // can never drift apart.
+  await insertDemoContent(prisma, user.id);
 
   const [collections, items, types] = await Promise.all([
     prisma.collection.count({ where: { userId: user.id } }),
@@ -361,7 +65,7 @@ npx vercel deploy --prebuilt --prod`,
   ]);
 
   console.log("✅ Seed complete");
-  console.log(`   User:        ${user.email}`);
+  console.log(`   User:        ${user.email} (demo, canonical content)`);
   console.log(`   Item types:  ${types}`);
   console.log(`   Collections: ${collections}`);
   console.log(`   Items:       ${items}`);

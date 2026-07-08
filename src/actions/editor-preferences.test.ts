@@ -6,7 +6,7 @@ import { DEFAULT_EDITOR_PREFERENCES } from "@/lib/editor-preferences";
 // No real session or database.
 const { auth, user } = vi.hoisted(() => ({
   auth: vi.fn(),
-  user: { update: vi.fn() },
+  user: { update: vi.fn(), findUnique: vi.fn() },
 }));
 
 vi.mock("@/auth", () => ({
@@ -23,6 +23,8 @@ const signedIn = { user: { id: "user_1" } };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Regular (non-demo) account is the baseline; the demo test overrides.
+  user.findUnique.mockResolvedValue({ isDemo: false });
 });
 
 describe("updateEditorPreferences", () => {
@@ -32,6 +34,19 @@ describe("updateEditorPreferences", () => {
     const result = await updateEditorPreferences(DEFAULT_EDITOR_PREFERENCES);
 
     expect(result).toEqual({ success: false, error: "You must be signed in." });
+    expect(user.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects the demo account (preferences persist on the shared user row)", async () => {
+    auth.mockResolvedValue(signedIn);
+    user.findUnique.mockResolvedValue({ isDemo: true });
+
+    const result = await updateEditorPreferences(DEFAULT_EDITOR_PREFERENCES);
+
+    expect(result).toEqual({
+      success: false,
+      error: "This action is disabled on the demo account.",
+    });
     expect(user.update).not.toHaveBeenCalled();
   });
 

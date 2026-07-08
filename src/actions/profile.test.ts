@@ -66,6 +66,32 @@ describe("changePassword", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects the demo account before any password work", async () => {
+    auth.mockResolvedValue(signedIn);
+    user.findUnique.mockResolvedValue({ password: "stored-hash", isDemo: true });
+
+    const result = await changePassword(validChange);
+
+    expect(result).toEqual({
+      success: false,
+      error: "This action is disabled on the demo account.",
+    });
+    expect(bcryptCompare).not.toHaveBeenCalled();
+    expect(user.update).not.toHaveBeenCalled();
+  });
+
+  it("passes regular users through the demo guard untouched", async () => {
+    auth.mockResolvedValue(signedIn);
+    user.findUnique.mockResolvedValue({ password: "stored-hash", isDemo: false });
+    bcryptCompare.mockResolvedValue(true);
+    bcryptHash.mockResolvedValue("new-hash");
+    user.update.mockResolvedValue({});
+
+    const result = await changePassword(validChange);
+
+    expect(result).toEqual({ success: true });
+  });
+
   it("rejects accounts that have no password (OAuth-only)", async () => {
     auth.mockResolvedValue(signedIn);
     user.findUnique.mockResolvedValue({ password: null });
@@ -144,8 +170,23 @@ describe("deleteAccount", () => {
     expect(user.delete).not.toHaveBeenCalled();
   });
 
+  it("rejects deleting the demo account", async () => {
+    auth.mockResolvedValue(signedIn);
+    user.findUnique.mockResolvedValue({ isDemo: true });
+
+    const result = await deleteAccount("DELETE");
+
+    expect(result).toEqual({
+      success: false,
+      error: "This action is disabled on the demo account.",
+    });
+    expect(user.delete).not.toHaveBeenCalled();
+    expect(signOut).not.toHaveBeenCalled();
+  });
+
   it("deletes only the caller's own account, then signs out", async () => {
     auth.mockResolvedValue(signedIn);
+    user.findUnique.mockResolvedValue({ isDemo: false });
     user.delete.mockResolvedValue({});
     signOut.mockResolvedValue(undefined);
 

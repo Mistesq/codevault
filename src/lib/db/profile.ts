@@ -20,6 +20,9 @@ export interface ProfileData {
   // ISO string so it crosses the server/client boundary cleanly.
   createdAt: string;
   isPro: boolean;
+  // Shared public demo account — account-level controls are hidden in the UI
+  // (the server actions enforce the actual block).
+  isDemo: boolean;
   // Whether the account has a password set — gates the change-password action
   // (GitHub OAuth-only accounts have no password).
   hasPassword: boolean;
@@ -51,6 +54,7 @@ export async function getProfileData(): Promise<ProfileData> {
           image: true,
           createdAt: true,
           isPro: true,
+          isDemo: true,
           password: true,
         },
       }),
@@ -82,6 +86,7 @@ export async function getProfileData(): Promise<ProfileData> {
     image: user.image,
     createdAt: user.createdAt.toISOString(),
     isPro: user.isPro,
+    isDemo: user.isDemo,
     hasPassword: user.password !== null,
     totalItems,
     totalCollections,
