@@ -7,6 +7,7 @@ import authConfig from "@/auth.config";
 import { isEmailVerificationEnabled } from "@/lib/auth/email-verification";
 import { signInSchema } from "@/lib/validations/auth";
 import { seedNewUserData } from "@/lib/db/onboarding";
+import { resetDemoWorkspace } from "@/lib/demo/reset";
 import { RATE_LIMITS, checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 // Thrown when credentials are valid but the email hasn't been verified yet. The
@@ -66,6 +67,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             image: true,
             password: true,
             emailVerified: true,
+            isDemo: true,
           },
         });
 
@@ -81,6 +83,14 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         // entirely when email verification is disabled.
         if (isEmailVerificationEnabled() && !user.emailVerified) {
           throw new EmailNotVerifiedError();
+        }
+
+        // Shared demo account: restore the canonical showcase workspace on
+        // login (throttled inside the routine, fail-open — a reset failure
+        // never blocks the login). Regular users skip this entirely, so
+        // non-demo sign-in costs zero extra queries.
+        if (user.isDemo) {
+          await resetDemoWorkspace(user.id);
         }
 
         // Never leak the password hash into the session/JWT.

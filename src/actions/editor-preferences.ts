@@ -5,6 +5,7 @@ import { NOT_SIGNED_IN_ERROR, requireSessionUser } from "@/lib/actions/session";
 import { type ActionResult, parseActionInput } from "@/lib/actions/result";
 import { editorPreferencesSchema } from "@/lib/validations/editor-preferences";
 import type { EditorPreferences } from "@/lib/editor-preferences";
+import { DEMO_ACCOUNT_ERROR, isDemoUser } from "@/lib/demo/guard";
 
 /**
  * Persist the signed-in user's Monaco editor preferences to the JSON column.
@@ -18,6 +19,12 @@ export async function updateEditorPreferences(
   const user = await requireSessionUser();
   if (!user) return { success: false, error: NOT_SIGNED_IN_ERROR };
   const userId = user.id;
+
+  // Editor preferences persist on the shared demo account (and survive the
+  // workspace reset), so they're locked like the other account settings.
+  if (await isDemoUser(userId)) {
+    return { success: false, error: DEMO_ACCOUNT_ERROR };
+  }
 
   const parsed = parseActionInput(
     editorPreferencesSchema,

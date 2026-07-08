@@ -7,6 +7,7 @@ import { getStripe, isStripeConfigured } from "@/lib/stripe/client";
 import { priceIdForInterval } from "@/lib/billing/plan";
 import { checkoutSchema } from "@/lib/validations/billing";
 import { getAppUrl } from "@/lib/email/resend";
+import { DEMO_ACCOUNT_ERROR } from "@/lib/demo/guard";
 
 /**
  * Create a Stripe Checkout Session for CodeVault Pro and return its hosted URL.
@@ -37,9 +38,11 @@ export async function createCheckoutSession(
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, isPro: true, stripeCustomerId: true },
+      select: { email: true, isPro: true, stripeCustomerId: true, isDemo: true },
     });
     if (!user) return { success: false, error: "Account not found." };
+    // Subscription state is account-level — locked on the shared demo account.
+    if (user.isDemo) return { success: false, error: DEMO_ACCOUNT_ERROR };
     if (user.isPro) return { success: false, error: "You're already Pro." };
 
     const stripe = getStripe();
@@ -88,8 +91,12 @@ export async function createPortalSession(): Promise<
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { stripeCustomerId: true },
+      select: { stripeCustomerId: true, isDemo: true },
     });
+    // Subscription state is account-level — locked on the shared demo account.
+    if (user?.isDemo) {
+      return { success: false, error: DEMO_ACCOUNT_ERROR };
+    }
     if (!user?.stripeCustomerId) {
       return { success: false, error: "No active subscription found." };
     }

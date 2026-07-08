@@ -6,6 +6,7 @@ import { signOut } from "@/auth";
 import { NOT_SIGNED_IN_ERROR, requireSessionUser } from "@/lib/actions/session";
 import { parseActionInput } from "@/lib/actions/result";
 import { changePasswordSchema } from "@/lib/validations/auth";
+import { DEMO_ACCOUNT_ERROR, isDemoUser } from "@/lib/demo/guard";
 
 // The profile mutations return no data, so they keep a local no-data result
 // shape rather than the generic ActionResult<T> used by the other actions.
@@ -29,8 +30,14 @@ export async function changePassword(input: unknown): Promise<ActionResult> {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { password: true },
+      select: { password: true, isDemo: true },
     });
+
+    // The shared demo account must stay reachable with the published
+    // credentials — block the change before any password work.
+    if (user?.isDemo) {
+      return { success: false, error: DEMO_ACCOUNT_ERROR };
+    }
 
     if (!user?.password) {
       return {
@@ -70,6 +77,12 @@ export async function deleteAccount(confirmation: unknown): Promise<ActionResult
 
   if (confirmation !== "DELETE") {
     return { success: false, error: 'Type "DELETE" to confirm.' };
+  }
+
+  // A visitor deleting the shared demo account would break the demo for
+  // everyone — the flag is read from the DB record, never client input.
+  if (await isDemoUser(userId)) {
+    return { success: false, error: DEMO_ACCOUNT_ERROR };
   }
 
   try {

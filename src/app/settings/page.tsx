@@ -36,19 +36,28 @@ export default async function SettingsPage({
       {/* Billing / plan (Upgrade for Free, Manage subscription for Pro). */}
       <BillingSection isPro={profile.isPro} />
 
-      {/* Account actions */}
+      {/* Account actions (hidden on the demo account — the server actions
+          enforce the actual block; this is cosmetic). */}
       <section className="rounded-xl border border-border bg-card p-6">
         <h2 className="text-sm font-semibold">Account</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {profile.hasPassword
-            ? "Change your password or permanently delete your account."
-            : "Permanently delete your account."}
-        </p>
+        {profile.isDemo ? (
+          <p className="mt-1 text-sm text-muted-foreground">
+            Account settings are disabled on the shared demo account.
+          </p>
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {profile.hasPassword
+                ? "Change your password or permanently delete your account."
+                : "Permanently delete your account."}
+            </p>
 
-        <div className="mt-6 flex flex-wrap gap-3 border-t border-border pt-6">
-          {profile.hasPassword && <ChangePasswordDialog />}
-          <DeleteAccountDialog />
-        </div>
+            <div className="mt-6 flex flex-wrap gap-3 border-t border-border pt-6">
+              {profile.hasPassword && <ChangePasswordDialog />}
+              <DeleteAccountDialog />
+            </div>
+          </>
+        )}
       </section>
     </div>
   );
