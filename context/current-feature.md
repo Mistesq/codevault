@@ -1,16 +1,27 @@
-# Current Feature
+# Current Feature: Chore — Move Neon Identifiers to CLAUDE.local.md
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Audit all committed files for Neon infrastructure identifiers (project ID, branch IDs) — at minimum `CLAUDE.md`, `.mcp.json`, `.claude/agents/*`, `.claude/skills/*`, `context/**`, `README.md`; resolve or explicitly defer each finding.
+- Create `CLAUDE.local.md` (gitignored) holding the identifiers verbatim with their original structure, plus a header noting it stores machine/account-specific values.
+- Edit `CLAUDE.md`: strip concrete identifiers, keep all security guardrails reworded identifier-free (rules reference roles like "the production branch"), add a pointer line to `CLAUDE.local.md`.
+- Add `CLAUDE.local.md` to `.gitignore`; verify with `git check-ignore` and clean `git status` before committing.
+- Verify no Neon project/branch identifiers remain in any committed path (grep over working tree, excluding gitignored files).
+- Agent runtime context unchanged — combined `CLAUDE.md` + `CLAUDE.local.md` context must let Claude resolve the correct Neon project/branch for MCP operations.
+- Commit on branch `chore/move-neon-ids-local`; no history rewrite, no credential rotation.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Identifiers are not secrets (no access without a Neon API key), but publishing production infrastructure IDs in a public repo violates attack-surface minimization — this is hygiene, not leak containment, hence no history rewrite/rotation.
+- `CLAUDE.local.md` is Claude Code's native mechanism for personal per-project context; it loads alongside `CLAUDE.md`, so the move is transparent to the agent.
+- Env vars (`${VAR}` expansion) are the fallback for any identifiers found in `.mcp.json` during the audit; prose context requires the local file.
+- Reworded guardrails must not degrade into vagueness — manual review of the reworded rules is part of acceptance.
+- Out of scope: history rewriting, credential rotation, `CLAUDE.md` restructuring beyond identifier extraction, `.env` handling changes, agent behavior changes.
+- Edge case: `CLAUDE.local.md` is not shared across git worktrees (not applicable to current single-checkout setup; noted for awareness).
 
 ## History
 

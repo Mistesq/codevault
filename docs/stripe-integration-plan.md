@@ -515,8 +515,8 @@ model User {
 }
 ```
 
-Then (respecting the Neon rules — **development** branch
-`br-autumn-sunset-asqlkegf`, never production):
+Then (respecting the Neon rules — **development** branch only, never
+production; branch ID in `CLAUDE.local.md`):
 
 ```bash
 npx prisma migrate dev --name add_stripe_billing_fields
@@ -724,8 +724,8 @@ declare module "next-auth/jwt" {
   saved (double-linked in `sync.ts`).
 - **Idempotency:** all webhook handlers are safe to re-run; return 500 on handler
   errors so Stripe retries.
-- **Neon safety:** any migration runs on **development** (`br-autumn-sunset-asqlkegf`)
-  only — never production.
+- **Neon safety:** any migration runs on the **development** branch only
+  (ID in `CLAUDE.local.md`) — never production.
 
 ```
 

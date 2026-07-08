@@ -76,7 +76,7 @@ billing actions all exist).
 8. *(Optional)* `prisma/schema.prisma` — add `stripePriceId` +
    `stripeCurrentPeriodEnd` for renewal-date / interval UI, then
    `npx prisma migrate dev --name add_stripe_billing_fields`. **Neon development
-   branch `br-autumn-sunset-asqlkegf` only — never production.** If skipped, drop
+   branch only (ID in `CLAUDE.local.md`) — never production.** If skipped, drop
    the corresponding lines in `sync.ts`.
 
 ## Environment Variables
@@ -137,4 +137,4 @@ STRIPE_WEBHOOK_SECRET=whsec_...   # from `stripe listen` locally; dashboard endp
 
 - Plan: [docs/stripe-integration-plan.md](../../docs/stripe-integration-plan.md) §4.7–§4.9, §5–§8
 - Route/webhook patterns: `src/app/api/auth/register/route.ts`, `src/app/api/upload/route.ts`
-- Neon rules: development branch `br-autumn-sunset-asqlkegf` only
+- Neon rules: development branch only (ID in `CLAUDE.local.md`)
