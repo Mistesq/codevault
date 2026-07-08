@@ -1,30 +1,16 @@
-# Current Feature: Demo Account Protection & Reset-on-Login
+# Current Feature
 
 ## Status
 
-Complete
+Not Started
 
 ## Goals
 
-- Add `isDemo Boolean @default(false)` and `demoLastResetAt DateTime?` to the `User` model (migration); flag the demo user in seed.
-- Server-side guards in account-level server actions (change password, change email, delete account, and any other persistent account settings found during implementation): if the server-loaded user has `isDemo`, return the standard action error with a friendly message (e.g. "This action is disabled on the demo account") before any mutation. UI controls hidden/disabled for the demo session as polish only.
-- Reset-on-login: after successful demo credential verification, reset the demo workspace to a canonical seed — throttled to at most once per 30-minute window (constant in code). Throttle check + timestamp update happen inside the same transaction as the reset (guards against concurrent-login double reset).
-- Reset is atomic: within one transaction, delete all demo-user-owned content (resolve exact model list from the Prisma schema; use cascades where defined), insert the canonical seed, update `demoLastResetAt`. The demo user row itself is never deleted/recreated.
-- Canonical seed as a typed constant module (e.g. `src/lib/demo/seed-data.ts`) shared by the reset routine and the DB seed script — 6–8 curated snippets across multiple languages, with tags, pre-filled AI fields (real one-time output, not lorem ipsum), at least one favorite.
-- Fail-open: reset errors are logged and login still succeeds. Non-demo logins get zero extra queries and no behavior change.
-- Unit tests: guard rejection per blocked action, guard pass-through for regular users, throttle logic (fresh reset / skip within window), seed-reset equivalence.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Demo identification must come from the DB record (`isDemo` flag), never client input or session claims; if `isDemo` lands in JWT/session for UI, it's display-only.
-- Flag chosen over hardcoded user ID: survives re-seeds, allows a second demo account later with zero code changes.
-- Reset-on-login chosen over cron: fresh showcase at the moment a reviewer arrives, no new infrastructure (no cron/route handler/CRON_SECRET). Throttle timestamp lives in Postgres (participates in the reset transaction), not Upstash.
-- Accepted edge cases: reset wiping an active visitor's work after the window (demo work is ephemeral); demo user seeing their own junk when re-logging within the window; harmless double-reset residual race.
-- AI abuse via the demo account is out of scope (existing per-user rate limiting covers it — verify demo gets the standard limit).
-- Also out of scope: cron/scheduled resets, reset-admin UI, per-visitor sandboxes, README changes.
-- Reset should add no more than ~1s to demo login latency.
-- Acceptance includes a post-deploy walkthrough: README credentials login shows the curated showcase with zero user actions.
-- **Deviation from spec (user-requested):** canonical seed expanded from 6–8 items to 47 meaningful curated items (25 snippets across 7 languages, 8 commands, 5 prompts, 4 notes, 5 URLs) so pagination is visible on /items (3 pages) and /items/snippets (2 pages); still under Free limits (50 items / 3 collections) so visitors can create content. insertDemoContent batched with createManyAndReturn (~7 queries) to keep the login-reset within its latency budget.
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -105,3 +91,4 @@ Complete
 - New User Starter Data - every new account (credentials register + GitHub OAuth createUser event) is seeded with 2 tutorial-style collections / 17 text items via idempotent, never-throwing seedNewUserData(); 12 tests, 462 total (Completed)
 - GitHub Actions CI Pipeline - .github/workflows/ci.yml single sequential job on PR/push to main (npm ci with postinstall prisma generate → lint → vitest → next build), dummy DATABASE_URL/AUTH_SECRET only, concurrency cancel-in-progress + 15-min timeout, Node 22 + npm cache, README CI badge; verified locally on dummy env (Completed)
 - Chore: Neon IDs to CLAUDE.local.md - moved Neon project/branch identifiers out of committed files (CLAUDE.md + 2 docs) into gitignored CLAUDE.local.md with committed .example template; guardrails kept in CLAUDE.md reworded identifier-free; no history rewrite (Completed)
+- Demo Account Protection & Reset-on-Login - isDemo/demoLastResetAt on User (migration), demo guards returning "This action is disabled on the demo account" in changePassword/deleteAccount/updateEditorPreferences/billing actions + reset-password route (/settings hides account controls), reset-on-login in credentials authorize: transaction claims 30-min throttle via conditional updateMany (isDemo re-checked, race-safe) then wipes demo content + re-inserts canonical seed, fail-open, zero extra queries for regular users; shared src/lib/demo/seed-data.ts (47 curated items / 25 snippets across 7 languages, tags/descriptions/favorites/pinned, paginates /items & /items/snippets, under Free limits) used by both seed script and reset via batched insertDemoContent (createManyAndReturn); 30 tests (guards/throttle/equivalence/curation), 492 total, build+lint clean, Playwright-verified incl. live reset e2e (Completed)
