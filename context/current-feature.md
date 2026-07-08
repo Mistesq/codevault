@@ -1,30 +1,16 @@
-# Current Feature: GitHub Actions CI Pipeline
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Every PR targeting `main` and every push to `main` runs an automated pipeline (`.github/workflows/ci.yml`): install → Prisma generate → lint → unit tests → production build.
-- A failing step fails the whole pipeline and marks the PR check red; a clean run is green in under 10 minutes (hard timeout 15).
-- Outdated runs for the same branch/PR are cancelled on new pushes (`concurrency` + `cancel-in-progress`).
-- No real secrets in CI — lint/tests/build pass with dummy `DATABASE_URL` and `AUTH_SECRET` values.
-- Reproducible installs via `npm ci` (never `npm install`); single sequential job, no matrix/Docker/deploy.
-- CI status badge at the top of `README.md` reflecting `main`.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Full spec: `context/features/ci-github-actions.md` (baseline workflow YAML included there).
-- Open questions — resolved against the codebase:
-  1. Test runner: `npm test` is `vitest run` (non-watch) → CI uses `npm test` as-is.
-  2. `postinstall: prisma generate` exists → explicit generate step dropped (`prisma generate` needs no DB connection).
-  3. No `engines` / `.nvmrc` → Node 22 LTS per spec default (local dev on 24; Next 16 supports both).
-  4. Default branch confirmed `main`; remote is `Mistesq/codevault` (badge URL).
-- Edge case verified: local lint + 462 tests + `next build` all pass with ONLY dummy `DATABASE_URL`/`AUTH_SECRET` (real `.env`/`.env.production` temporarily hidden). Every route except `/_not-found` is already dynamic → no build-time DB access, no `force-dynamic` changes needed. Only `.env.example` is git-tracked, so CI has no real env files.
-- Watch-mode test hang is covered by the 15-minute timeout as a safety net.
-- Windows→Linux path case-sensitivity failures surfacing in CI are a goal, not a defect.
-- Out of scope: e2e (Playwright) job, deploy/Docker/matrix, branch protection config (manual one-time GitHub UI step after first green run).
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -103,3 +89,4 @@ In Progress
 - Lib Dedup Refactor - refactor-scanner sweep of src/lib, no behavior change; 5 extractions: auth/token.ts (hashToken/generateRawToken/createSingleUseToken/consumeSingleUseToken) turns the two token modules into thin wrappers, email/template.ts (buildEmailHtml + sendTransactionalEmail) leaves the emails supplying only copy, pagination.ts paginatePrismaQuery generalizes count→clamp→skip/take→map across the 4 item/collection page queries, db/items.ts sortByTypeOrder + countItemsByType shared by sidebar + profile (typeOrderIndex demoted to private), validations/shared.ts optionalTrimmed deduped from items/collections/ai (fixes ai.ts .trim() drift); #6 lazy-singleton skipped (indirection not worth ~8 lines); DB call shapes/error strings/result shapes preserved, +11 tests, 431 total, build+lint clean (Completed)
 - App Folder Dedup Refactor - refactor-scanner sweep of src/app (#1-#7), no behavior change; lib/api/route-helpers.ts (parseJsonRequest/parseWithSchema) dedupes the 4 auth routes' rate-limit→JSON→Zod boilerplate (rate-limit left per-route), ui/PageHeader single-sources the 7 list/detail headers (align/titleTrailing/description slots for collections/[id]), pluralize() replaces the "{n} item(s)" ternaries, pluralTypeLabel()+formatLongDate() replace profile's local copies (typeLabel kept → items/[type] still "URLs"), isImageType/isFileType predicates reused by items/[type]+collections/[id]+ItemContentBody, dashboard SectionHeading extracted, upload/items/[id]/download routes reuse requireSessionUser(); +19 tests, 450 total, build+lint clean (Completed)
 - New User Starter Data - every new account (credentials register + GitHub OAuth createUser event) is seeded with 2 tutorial-style collections / 17 text items via idempotent, never-throwing seedNewUserData(); 12 tests, 462 total (Completed)
+- GitHub Actions CI Pipeline - .github/workflows/ci.yml single sequential job on PR/push to main (npm ci with postinstall prisma generate → lint → vitest → next build), dummy DATABASE_URL/AUTH_SECRET only, concurrency cancel-in-progress + 15-min timeout, Node 22 + npm cache, README CI badge; verified locally on dummy env (Completed)
