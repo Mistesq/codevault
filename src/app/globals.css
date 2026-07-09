@@ -350,25 +350,33 @@ html:has(.home) {
   background: var(--muted-foreground);
 }
 
-/* Slim scrollbar for the item drawer's scrollable content, themed with the app
- * tokens so it blends with the drawer surface (and adapts in light mode) rather
- * than showing the chunky, bright default browser scrollbar. */
-.drawer-scroll {
+/* Slim scrollbar for the item drawer's scrollable content and the app shell's
+ * main scroll area, themed with the app tokens so it blends with the dark
+ * surface (and adapts in light mode) rather than showing the chunky, bright
+ * default browser scrollbar. */
+.drawer-scroll,
+.main-scroll {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
-.drawer-scroll::-webkit-scrollbar {
+.drawer-scroll::-webkit-scrollbar,
+.main-scroll::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 .drawer-scroll::-webkit-scrollbar-track,
-.drawer-scroll::-webkit-scrollbar-corner {
+.drawer-scroll::-webkit-scrollbar-corner,
+.main-scroll::-webkit-scrollbar-track,
+.main-scroll::-webkit-scrollbar-corner {
   background: transparent;
 }
-.drawer-scroll::-webkit-scrollbar-thumb {
+.drawer-scroll::-webkit-scrollbar-thumb,
+.main-scroll::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 4px;
 }
-.drawer-scroll::-webkit-scrollbar-thumb:hover {
+.drawer-scroll::-webkit-scrollbar-thumb:hover,
+.main-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
 }
 
