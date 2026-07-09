@@ -8,9 +8,9 @@
 **🌐 Live demo:** [codevault-gray.vercel.app](https://codevault-gray.vercel.app)
 **Demo account:** `demo@codevault.io` / `12345678`
 
-![Dashboard](context/screenshots/dashboard-ui-main.png)
+![CodeVault homepage](docs/assets/homepage.png)
 
-**Stack:** Next.js 16 (App Router, React 19) · TypeScript · Prisma 7 + Neon PostgreSQL · NextAuth v5 · Tailwind CSS v4 + shadcn/ui · Google Gemini · Stripe · Cloudflare R2 · Upstash Redis · Vitest
+**Stack:** Next.js 16 (App Router, React 19) · TypeScript · Prisma 7 + Neon PostgreSQL · NextAuth v5 · Tailwind CSS v4 + shadcn/ui · Google Gemini · Stripe · Cloudflare R2 · Upstash Redis · Resend · Vitest
 
 ---
 
@@ -21,14 +21,14 @@ This project is as much about **how** it was built as **what** it does. Every fe
 | Artifact | What it shows |
 | --- | --- |
 | [`context/`](context/) | The project "brain": [overview](context/project-overview.md), [coding standards](context/coding-standards.md), [AI interaction rules](context/ai-interaction.md) loaded into every AI session |
-| [`context/features/`](context/features/) | **36 feature specs** — every feature was specced before a line of code was written |
+| [`context/features/`](context/features/) | **39 feature specs** — every feature was specced before a line of code was written |
 | [`context/research/`](context/research/) | Research documents generated before complex integrations (Stripe, AI, item CRUD) |
 | [`.claude/agents/`](.claude/agents/) | **4 custom AI agents** for automated review: security auditor, code scanner, refactor scanner, UI reviewer |
 | [`.claude/skills/`](.claude/skills/) | Custom slash commands that drive the workflow (`/feature`, `/research`, `/cleanup`) |
-| [`docs/`](docs/) | Architecture plans and audit results produced by the agents |
+| [`docs/`](docs/) | Architecture & integration plans that guided the complex features |
 | [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | Agent entry points: project context, DB safety rules, framework-version guardrails |
 
-**~230 commits, 450 unit tests, zero drive-by code** — every change traceable back to a spec.
+**~240 commits, 492 unit tests, zero drive-by code** — every change traceable back to a spec.
 
 ---
 
@@ -45,7 +45,7 @@ Research → Spec → Branch → Implement → Test → Review → Merge → Doc
 3. **Implement** — on a dedicated branch, following the checked-in [coding standards](context/coding-standards.md) (strict layer boundaries, "components only render UI", server-only modules).
 4. **Test** — unit tests (Vitest) for every server action and utility, plus `npm run build` + lint gates before any commit.
 5. **Review** — custom agents audit the result:
-   - **`code-scanner`** — security / performance / modularity audit (findings in [`docs/audit-results/`](docs/audit-results/))
+   - **`code-scanner`** — security / performance / modularity audit; findings drove dedicated audit-fix batches
    - **`auth-auditor`** — dedicated security review of the auth surface (token flows, session validation, password reset)
    - **`refactor-scanner`** — DRY sweeps per folder; drove 5 dedicated dedup refactors (actions, components, lib, app)
    - **`ui-reviewer`** — Playwright-driven visual & accessibility review of rendered pages
@@ -72,7 +72,9 @@ CodeVault solves a familiar problem: snippets in VS Code, prompts buried in chat
   - 📝 **Generate description** — one-click summaries
   - 💡 **Explain Code** — streamed markdown explanation of any snippet
   - ✨ **Prompt optimization** — rewrite prompts with accept/discard flow
-- **Full auth** — NextAuth v5: credentials + GitHub OAuth, email verification, password reset, rate limiting (Upstash Redis sliding window)
+- **Full auth** — NextAuth v5: credentials + GitHub OAuth, password reset, rate limiting (Upstash Redis sliding window)
+- **Transactional email** — [Resend](https://resend.com) integration delivering the verification and password-reset emails
+- **Email verification** — signup email confirmation, toggleable via the `EMAIL_VERIFICATION_ENABLED` flag; enabled once the Resend account has a verified sending domain (without one, Resend delivers only to the account owner's address, so the live demo runs with the flag off)
 - **Stripe billing** — Free/Pro plans, checkout + customer portal, webhook-driven subscription sync, plan gating enforced server-side
 - **Quality of life** — favorites, pinned items, recently used, server-side pagination, dark-mode-first UI, responsive layout with mobile drawer
 
@@ -81,7 +83,7 @@ CodeVault solves a familiar problem: snippets in VS Code, prompts buried in chat
 - **Server Components by default**, Server Actions for mutations, API routes only where warranted (webhooks, uploads, auth)
 - **Strict layer separation** (enforced by the coding standards + agent audits): components never fetch data or hold domain logic; reads in `src/lib/db`, mutations in `src/actions`, domain helpers in `src/lib` — all `server-only` guarded
 - **Defense in depth** — ownership-scoped queries (`updateMany`/`deleteMany` + count checks), Zod validation on every input, hashed single-use tokens, R2 URL verification, per-user AI rate limits
-- **450 unit tests** with fully mocked collaborators (no real DB/network in tests)
+- **492 unit tests** with fully mocked collaborators (no real DB/network in tests)
 
 ---
 
@@ -105,8 +107,9 @@ AUTH_SECRET=                 # NextAuth v5
 AUTH_GITHUB_ID=
 AUTH_GITHUB_SECRET=
 GEMINI_API_KEY=              # Google AI Studio
-RESEND_API_KEY=              # transactional email
-EMAIL_VERIFICATION_ENABLED=  # optional toggle
+RESEND_API_KEY=              # transactional email (Resend)
+EMAIL_FROM=                  # optional sender; defaults to onboarding@resend.dev
+EMAIL_VERIFICATION_ENABLED=  # signup email verification feature flag
 R2_ACCOUNT_ID=               # Cloudflare R2
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
@@ -118,6 +121,7 @@ STRIPE_PRICE_MONTHLY=
 STRIPE_PRICE_YEARLY=
 UPSTASH_REDIS_REST_URL=      # rate limiting
 UPSTASH_REDIS_REST_TOKEN=
+NEXT_PUBLIC_APP_URL=         # base URL for email links & Stripe redirects (defaults to http://localhost:3000)
 ```
 
 External services (R2, Gemini, Stripe, Resend, Redis) degrade gracefully when unconfigured — the app runs with just `DATABASE_URL` and `AUTH_SECRET`.
@@ -140,11 +144,11 @@ npm run db:seed      # seed demo data
 
 ```
 ├── context/              # AI context: overview, standards, specs, research
-│   └── features/         # 36 archived feature specs
+│   └── features/         # 39 archived feature specs
 ├── .claude/
 │   ├── agents/           # custom review agents (security, quality, DRY, UI)
 │   └── skills/           # workflow slash commands (/feature, /research, ...)
-├── docs/                 # architecture plans + agent audit results
+├── docs/                 # architecture & integration plans
 ├── prisma/               # schema, migrations, seed
 └── src/
     ├── app/              # routes (App Router) — thin composition only
