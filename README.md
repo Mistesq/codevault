@@ -28,7 +28,7 @@ This project is as much about **how** it was built as **what** it does. Every fe
 | [`docs/`](docs/) | Architecture & integration plans that guided the complex features |
 | [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | Agent entry points: project context, DB safety rules, framework-version guardrails |
 
-**~240 commits, 492 unit tests, zero drive-by code** — every change traceable back to a spec.
+**~250 commits, 492 unit tests, zero drive-by code** — every change traceable back to a spec.
 
 ---
 
