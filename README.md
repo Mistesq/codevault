@@ -8,6 +8,8 @@
 **🌐 Live demo:** [codevault-gray.vercel.app](https://codevault-gray.vercel.app)
 **Demo account:** `demo@codevault.io` / `12345678`
 
+> ℹ️ The demo account resets to the seeded sample data on login (throttled), so feel free to create, edit and delete anything.
+
 ![CodeVault homepage](docs/assets/homepage.png)
 
 **Stack:** Next.js 16 (App Router, React 19) · TypeScript · Prisma 7 + Neon PostgreSQL · NextAuth v5 · Tailwind CSS v4 + shadcn/ui · Google Gemini · Stripe · Cloudflare R2 · Upstash Redis · Resend · Vitest
@@ -18,15 +20,15 @@
 
 This project is as much about **how** it was built as **what** it does. Every feature — from auth to Stripe billing to AI-powered code explanations — went through a repeatable, documented AI-assisted development loop. The full paper trail is checked into the repo:
 
-| Artifact | What it shows |
-| --- | --- |
-| [`context/`](context/) | The project "brain": [overview](context/project-overview.md), [coding standards](context/coding-standards.md), [AI interaction rules](context/ai-interaction.md) loaded into every AI session |
-| [`context/features/`](context/features/) | **39 feature specs** — every feature was specced before a line of code was written |
-| [`context/research/`](context/research/) | Research documents generated before complex integrations (Stripe, AI, item CRUD) |
-| [`.claude/agents/`](.claude/agents/) | **4 custom AI agents** for automated review: security auditor, code scanner, refactor scanner, UI reviewer |
-| [`.claude/skills/`](.claude/skills/) | Custom slash commands that drive the workflow (`/feature`, `/research`, `/cleanup`) |
-| [`docs/`](docs/) | Architecture & integration plans that guided the complex features |
-| [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | Agent entry points: project context, DB safety rules, framework-version guardrails |
+| Artifact                                            | What it shows                                                                                                                                                                                 |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`context/`](context/)                              | The project "brain": [overview](context/project-overview.md), [coding standards](context/coding-standards.md), [AI interaction rules](context/ai-interaction.md) loaded into every AI session |
+| [`context/features/`](context/features/)            | **39 feature specs** — every feature was specced before a line of code was written                                                                                                            |
+| [`context/research/`](context/research/)            | Research documents generated before complex integrations (Stripe, AI, item CRUD)                                                                                                              |
+| [`.claude/agents/`](.claude/agents/)                | **4 custom AI agents** for automated review: security auditor, code scanner, refactor scanner, UI reviewer                                                                                    |
+| [`.claude/skills/`](.claude/skills/)                | Custom slash commands that drive the workflow (`/feature`, `/research`, `/cleanup`)                                                                                                           |
+| [`docs/`](docs/)                                    | Architecture & integration plans that guided the complex features                                                                                                                             |
+| [`CLAUDE.md`](CLAUDE.md) / [`AGENTS.md`](AGENTS.md) | Agent entry points: project context, DB safety rules, framework-version guardrails                                                                                                            |
 
 **~250 commits, 492 unit tests, zero drive-by code** — every change traceable back to a spec.
 
@@ -84,6 +86,20 @@ CodeVault solves a familiar problem: snippets in VS Code, prompts buried in chat
 - **Strict layer separation** (enforced by the coding standards + agent audits): components never fetch data or hold domain logic; reads in `src/lib/db`, mutations in `src/actions`, domain helpers in `src/lib` — all `server-only` guarded
 - **Defense in depth** — ownership-scoped queries (`updateMany`/`deleteMany` + count checks), Zod validation on every input, hashed single-use tokens, R2 URL verification, per-user AI rate limits
 - **492 unit tests** with fully mocked collaborators (no real DB/network in tests)
+
+### Key technical decisions
+
+- **Two-tier AI model strategy** — the cheap, fast `gemini-2.5-flash-lite` handles high-frequency, low-stakes calls (auto-tagging, descriptions), while `gemini-2.5-flash` is reserved for the quality-sensitive features (code explanation, prompt optimization). Keeps AI cost near zero without degrading the flagship features.
+- **Cloudflare R2 over S3** — zero egress fees make R2 the rational object storage for a public demo with unpredictable traffic; the S3-compatible API kept the integration standard.
+- **Server Actions over a hand-rolled REST layer** — mutations run through Server Actions with Zod validation; API routes exist only where the platform requires them (Stripe webhooks, uploads, auth). Smaller attack surface, end-to-end types.
+- **Demo account protection by reset, not read-only locks** — the demo user carries an `isDemo` flag and its data is restored on login (throttled), so visitors can genuinely exercise every CRUD and AI feature instead of hitting "disabled in demo" walls.
+- **Keyboard shortcuts read `event.code`, not `event.key`** — layout-independent key detection, so shortcuts keep working on non-Latin keyboard layouts (a real bug caught by testing with a Cyrillic layout).
+
+### Known limitations
+
+- **No E2E suite (deliberate)** — coverage is 492 unit tests plus agent-driven Playwright review of rendered pages. Full E2E was deferred as low ROI for a solo project at this stage; the layered architecture keeps the door open.
+- **Cross-region latency** — Vercel functions run in `iad1` (US East) while the Neon database lives in Frankfurt, adding fixed latency to every query. Accepted trade-off for the demo; a production deployment would co-locate compute and data.
+- **Demo runs with email verification off** — see the Resend note above; the flag flips on once a verified sending domain is configured.
 
 ---
 
@@ -157,3 +173,13 @@ npm run db:seed      # seed demo data
     ├── lib/              # domain logic, db reads, validations (server-only)
     └── types/            # shared types
 ```
+
+---
+
+## Author
+
+Built by **Oleksii Shapovalov**, full-stack developer (React / Node.js / TypeScript).
+
+[LinkedIn](https://www.linkedin.com/in/oleksii-shapovalov-006b27189/) · [GitHub profile](https://github.com/Mistesq) · mistesqr@gmail.com
+
+Licensed under the [MIT License](LICENSE).
