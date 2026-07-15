@@ -34,7 +34,7 @@ This project is as much about **how** it was built as **what** it does. Every fe
 
 ### Origin
 
-The spec-driven workflow and the product concept come from Brad Traversy's ["Coding With AI"](https://www.udemy.com/course/coding-with-ai/) course. This repo is not a copy of the course code: I ran the workflow myself end to end, with my own prompts, sessions, technical decisions and design. Some feature specs were adapted from the course materials, the rest written new; the review subagents started as course templates and were extended and hardened here (fixed tool configurations, added axe-core accessibility checks, grep-first scanning strategy). The course taught the method — this repo is where it was internalized, and the same workflow has since been applied to a commercial client project. See [Key technical decisions](#key-technical-decisions) for the choices made along the way.
+The spec-driven workflow and the product concept come from Brad Traversy's ["Coding With AI"](https://www.udemy.com/course/coding-with-ai/) course. This repo is not a copy of the course code: I ran the workflow myself end to end, with my own prompts, sessions, technical decisions and design. Some feature specs were adapted from the course materials, the rest written new; the review subagents started as course templates and were extended and hardened here (fixed tool configurations, added axe-core accessibility checks, grep-first scanning strategy). The course taught the method — this repo is where it was internalized and made repeatable. See [Key technical decisions](#key-technical-decisions) for the choices made along the way.
 
 ---
 
